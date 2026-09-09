@@ -1,0 +1,15 @@
+{
+  "name": "dotagents-workflow-trial",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "check": "bun run lint && bun run complexity",
+    "lint": "oxlint --deny-warnings --no-error-on-unmatched-pattern .",
+    "complexity": "biome lint ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "oxlint": "1.80.0"
+  }
+}
