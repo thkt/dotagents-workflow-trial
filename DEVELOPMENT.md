@@ -106,3 +106,13 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに�
 既存の検出条件を削らず、7ルールと書式検査を追加しました。違反を含む一時TSで7ルールの拒否と書式検査の失敗、整形後の書式検査成功を確認しています。一時ファイルは削除し、型検査・制御26件・E2E18件を維持します。
 
 設定の詳細は[Oxlint configuration](https://oxc.rs/docs/guide/usage/linter/config.html)と[Oxfmt configuration](https://oxc.rs/docs/guide/usage/formatter/config.html)を参照してください。
+
+## 型情報を使う検証（Issue #21）
+
+Oxlintの`typeAware`を有効にし、固定版`oxlint-tsgolint` 7.0.2001を追加します。TSには`no-floating-promises`（`ignoreVoid: false`）、`no-misused-promises`、`await-thenable`、`no-unsafe-assignment` / `call` / `member-access` / `argument` / `return`をerrorで適用します。既存correctnessの型情報を必要とするルールも有効になります。tscは維持し、`noUncheckedIndexedAccess`を追加します。
+
+現在の診断ではJSON由来のanyと未確認のCLI引数が中心でした。Promiseの待ち忘れが多数見つかったという結果ではありません。設定と保存状態は`input.ts`で必要な形・値を確認してから使います。テスト側はJSONをunknownのレコードとして扱い、期待値を独立に検証します。型アサーション・明示的any・disableで回避しません。
+
+不正な設定、予約・消費量・イベント・結果の記録、CLI引数不足の回帰テストを追加しました。正常時の進行・上限・状態ファイル形式と既存テストは維持します。不正入力の拒否は強まりますが、保存履歴の真正性や完全な意味的一貫性まで保証しません。違反を含む一時TSで8ルールと配列アクセスの検出を確認し、一時ファイルを削除しました。
+
+Oxfmt、Biomeの認知的複雑度15、既存の静的検証とE2Eは維持し、既存の検出条件を削りません。型付きlintの仕組みは[公式ドキュメント](https://oxc.rs/docs/guide/usage/linter/type-aware)を参照してください。

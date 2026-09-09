@@ -1,33 +1,10 @@
+import { assertConfig, assertState } from './input.ts';
+import type { Config, State, ActorRole, StopReason } from './input.ts';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename, lstat, readlink, rm } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 
-type ActorRole = 'repair' | 'review';
-type StopReason =
-  | 'execution_limit'
-  | 'repair_failed'
-  | 'review_failed'
-  | 'requirements_changed'
-  | 'source_changed'
-  | 'check_unavailable'
-  | 'invalid_review'
-  | 'invalid_repair'
-  | 'human_decision_required'
-  | 'ready_for_human_review'
-  | 'target_changed_after_stop';
-export interface Config {
-  cwd: string;
-  runDir: string;
-  issue: string[];
-  check: string[];
-  repair: string[];
-  review: string[];
-  repairLimit: number;
-  reviewLimit: number;
-  modelTimeMs: number;
-  checkTimeMs: number;
-}
 interface CommandResult {
   code: number | null;
   stdout: string;
@@ -35,30 +12,9 @@ interface CommandResult {
   timedOut: boolean;
   ms: number;
 }
-interface Event {
-  role: ActorRole | 'check';
-  source?: string;
-  code: number | null;
-  timedOut: boolean;
-  ms?: number;
-  prefix: string;
-}
-interface State {
-  configHash: string;
-  issueHash: string;
-  repair: number;
-  review: number;
-  checks: number;
-  modelMs: number;
-  active: { role: ActorRole | 'check'; prefix: string } | null;
-  events: Event[];
-  source?: string;
-  result?: StopReason | null;
-}
 type Persist = () => Promise<void>;
 type ModelResult = { stdout: string } | { stop: StopReason };
 const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
-const positive = (value: number) => Number.isFinite(value) && value > 0;
 
 async function save(path: string, value: State) {
   await writeFile(`${path}.tmp`, JSON.stringify(value, null, 2));
@@ -107,7 +63,11 @@ async function command(
     stderr = '',
     timedOut = false;
   const start = performance.now();
-  const child = spawn(argv[0], argv.slice(1), {
+  const [executable, ...args] = argv;
+  if (!executable) {
+    throw Error('Command executable is required');
+  }
+  const child = spawn(executable, args, {
     cwd,
     detached: true,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -170,23 +130,6 @@ async function snapshot(cwd: string) {
 }
 
 function validate(config: Config) {
-  for (const role of ['issue', 'check', 'repair', 'review'] as const) {
-    if (
-      !Array.isArray(config[role]) ||
-      !config[role].length ||
-      config[role].some((v) => typeof v !== 'string')
-    ) {
-      throw Error(`Invalid ${role} command`);
-    }
-  }
-  for (const key of ['repairLimit', 'reviewLimit'] as const) {
-    if (!Number.isInteger(config[key]) || !positive(config[key])) {
-      throw Error(`Invalid ${key}`);
-    }
-  }
-  if (!positive(config.modelTimeMs) || !positive(config.checkTimeMs)) {
-    throw Error('Invalid time limit');
-  }
   const relation = relative(resolve(config.cwd), resolve(config.runDir));
   if (!relation.startsWith('..') && !relation.startsWith('/')) {
     throw Error('Evidence must be outside the worktree');
@@ -376,7 +319,9 @@ async function execute(config: Config): Promise<State> {
   const path = resolve(config.runDir, 'state.json');
   let state: State | undefined;
   try {
-    state = JSON.parse(await readFile(path, 'utf8'));
+    const value: unknown = JSON.parse(await readFile(path, 'utf8'));
+    assertState(value);
+    state = value;
   } catch (error) {
     if (!isMissing(error)) {
       throw error;
@@ -418,7 +363,13 @@ if (import.meta.main) {
   process.on('SIGINT', interrupt);
   process.on('SIGTERM', interrupt);
   try {
-    const result = await run(JSON.parse(await readFile(process.argv[2], 'utf8')));
+    const configFile = process.argv[2];
+    if (!configFile) {
+      throw Error('Usage: bun scripts/correction.ts CONFIG_FILE');
+    }
+    const config: unknown = JSON.parse(await readFile(configFile, 'utf8'));
+    assertConfig(config);
+    const result = await run(config);
     assertRunning();
     console.log(JSON.stringify(result, null, 2));
     process.exitCode = result.result === 'ready_for_human_review' ? 0 : 1;
