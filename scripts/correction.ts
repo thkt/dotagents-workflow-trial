@@ -3,16 +3,61 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename, lstat, readlink, rm } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 
-const digest = value => createHash('sha256').update(value).digest('hex');
-const positive = value => Number.isFinite(value) && value > 0;
+type ActorRole = 'repair' | 'review';
+type StopReason = 'execution_limit' | 'repair_failed' | 'review_failed' | 'requirements_changed'
+  | 'source_changed' | 'check_unavailable' | 'invalid_review' | 'invalid_repair'
+  | 'human_decision_required' | 'ready_for_human_review' | 'target_changed_after_stop';
+export interface Config {
+  cwd: string;
+  runDir: string;
+  issue: string[];
+  check: string[];
+  repair: string[];
+  review: string[];
+  repairLimit: number;
+  reviewLimit: number;
+  modelTimeMs: number;
+  checkTimeMs: number;
+}
+interface CommandResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+  ms: number;
+}
+interface Event {
+  role: ActorRole | 'check';
+  source?: string;
+  code: number | null;
+  timedOut: boolean;
+  ms?: number;
+  prefix: string;
+}
+interface State {
+  configHash: string;
+  issueHash: string;
+  repair: number;
+  review: number;
+  checks: number;
+  modelMs: number;
+  active: { role: ActorRole | 'check'; prefix: string } | null;
+  events: Event[];
+  source?: string;
+  result?: StopReason | null;
+}
+type Persist = () => Promise<void>;
+type ModelResult = { stdout: string } | { stop: StopReason };
+const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+const positive = (value: number) => Number.isFinite(value) && value > 0;
 
-async function save(path, value) {
+async function save(path: string, value: State) {
   await writeFile(`${path}.tmp`, JSON.stringify(value, null, 2));
   await rename(`${path}.tmp`, path);
 }
 
 // A process group includes tools launched by the actor, not just its CLI parent.
-async function command(argv, cwd, input, timeoutMs, files) {
+async function command(argv: string[], cwd: string, input: string, timeoutMs: number, files?: string): Promise<CommandResult> {
   let stdout = '', stderr = '', timedOut = false;
   const start = performance.now();
   const child = spawn(argv[0], argv.slice(1), { cwd, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -22,21 +67,24 @@ async function command(argv, cwd, input, timeoutMs, files) {
   child.stderr.on('data', data => { stderr += data; });
   const timer = setTimeout(() => {
     timedOut = true;
-    try { process.kill(-child.pid, 'SIGKILL'); } catch { /* Already exited. */ }
+    try { if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL'); } catch { /* Already exited. */ }
   }, timeoutMs);
-  const result = await new Promise(resolveResult => {
-    child.on('error', error => resolveResult({ code: null, error: error.message }));
-    child.on('close', (code, signal) => resolveResult({ code, signal }));
+  const code = await new Promise<number | null>(resolveCode => {
+    child.on('error', error => {
+      stderr += `${error.message}\n`;
+      resolveCode(null);
+    });
+    child.on('close', resolveCode);
   });
   clearTimeout(timer);
   if (files) {
     await writeFile(`${files}.stdout`, stdout);
     await writeFile(`${files}.stderr`, stderr);
   }
-  return { ...result, stdout, stderr, timedOut, ms: performance.now() - start };
+  return { code, stdout, stderr, timedOut, ms: performance.now() - start };
 }
 
-async function snapshot(cwd) {
+async function snapshot(cwd: string) {
   const list = await command(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd, '', 10000);
   if (list.code !== 0) throw Error('Cannot identify source files');
   const entries = [];
@@ -47,18 +95,18 @@ async function snapshot(cwd) {
       const bytes = stat.isSymbolicLink() ? await readlink(path) : await readFile(path);
       entries.push([name, stat.mode, digest(bytes)]);
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      if (!isMissing(error)) throw error;
       entries.push([name, 'deleted']);
     }
   }
   return digest(JSON.stringify(entries));
 }
 
-function validate(config) {
-  for (const role of ['issue', 'check', 'repair', 'review']) {
+function validate(config: Config) {
+  for (const role of ['issue', 'check', 'repair', 'review'] as const) {
     if (!Array.isArray(config[role]) || !config[role].length || config[role].some(v => typeof v !== 'string')) throw Error(`Invalid ${role} command`);
   }
-  for (const key of ['repairLimit', 'reviewLimit']) {
+  for (const key of ['repairLimit', 'reviewLimit'] as const) {
     if (!Number.isInteger(config[key]) || !positive(config[key])) throw Error(`Invalid ${key}`);
   }
   if (!positive(config.modelTimeMs) || !positive(config.checkTimeMs)) throw Error('Invalid time limit');
@@ -66,20 +114,29 @@ function validate(config) {
   if (!relation.startsWith('..') && !relation.startsWith('/')) throw Error('Evidence must be outside the worktree');
 }
 
-async function readIssue(config) {
+async function readIssue(config: Config) {
   const result = await command(config.issue, config.cwd, '', 30000);
   if (result.code !== 0 || result.timedOut || !result.stdout.trim()) throw Error('Issue unavailable');
   return result.stdout;
 }
 
-function parseReview(stdout) {
-  const result = JSON.parse(stdout);
-  if (!['accepted', 'needs_changes'].includes(result.status) || typeof result.findings !== 'string') throw Error('Invalid review result');
-  if (result.status === 'needs_changes' && !result.findings.trim()) throw Error('Missing review findings');
-  return result;
+function parseReply(stdout: string): { status: string; findings: string } | null {
+  let value: unknown;
+  try { value = JSON.parse(stdout); } catch { return null; }
+  if (typeof value !== 'object' || value === null) return null;
+  if (!('status' in value) || typeof value.status !== 'string') return null;
+  if (!('findings' in value) || typeof value.findings !== 'string') return null;
+  return { status: value.status, findings: value.findings };
 }
 
-async function runModel(config, state, role, prompt, persist) {
+function parseReview(stdout: string) {
+  const reply = parseReply(stdout);
+  if (!reply || !['accepted', 'needs_changes'].includes(reply.status)) return null;
+  if (reply.status === 'needs_changes' && !reply.findings.trim()) return null;
+  return reply;
+}
+
+async function runModel(config: Config, state: State, role: ActorRole, prompt: string, persist: Persist): Promise<ModelResult> {
   const remaining = config.modelTimeMs - state.modelMs;
   if (state[role] >= config[`${role}Limit`] || remaining <= 0) return { stop: 'execution_limit' };
   state[role]++;
@@ -97,7 +154,7 @@ async function runModel(config, state, role, prompt, persist) {
   return result;
 }
 
-async function cycle(config, state, issue, persist) {
+async function cycle(config: Config, state: State, issue: string, persist: Persist): Promise<StopReason | null> {
   if (digest(await readIssue(config)) !== state.issueHash) return 'requirements_changed';
   state.source = await snapshot(config.cwd);
   const prefix = resolve(config.runDir, `check-${++state.checks}`);
@@ -112,34 +169,47 @@ async function cycle(config, state, issue, persist) {
   if (checked.timedOut || checked.code === null) return 'check_unavailable';
   let findings = `check failed. Read ${prefix}.stdout and ${prefix}.stderr.\n${checked.stdout}\n${checked.stderr}`;
   if (checked.code === 0) {
-    const reviewed = await runModel(config, state, 'review', `Independently inspect requirements, code, meaningful tests and required documentation. Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims. Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary"}.\nRequirements:\n${issue}`, persist);
-    if (reviewed.stop) return reviewed.stop;
+    const prompt = [
+      'Independently inspect requirements, code, meaningful tests and required documentation.',
+      'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
+      'Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary"}.',
+      `Requirements:\n${issue}`,
+    ].join('\n');
+    const reviewed = await runModel(config, state, 'review', prompt, persist);
+    if ('stop' in reviewed) return reviewed.stop;
     const changed = await targetChange(config, state);
     if (changed) return changed;
-    let review;
-    try { review = parseReview(reviewed.stdout); } catch { return 'invalid_review'; }
+    const review = parseReview(reviewed.stdout);
+    if (!review) return 'invalid_review';
     if (review.status === 'accepted') return 'ready_for_human_review';
     findings = review.findings;
   }
-  const repaired = await runModel(config, state, 'repair', `Repair only within these agreed requirements. Read the current files and fix the root cause. Do not weaken tests or acceptance criteria. Do not commit, push or publish. The host will run check and an independent review after your changes. Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision. If requirements, permissions or execution limits must change, report needs_human without changing them.\nRequirements:\n${issue}\nFailure evidence:\n${findings}`, persist);
-  if (repaired.stop) return repaired.stop;
+  const prompt = [
+    'Repair only within these agreed requirements. Read the current files and fix the root cause.',
+    'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
+    'The host will run check and an independent review after your changes.',
+    'Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision.',
+    'If requirements, permissions or execution limits must change, report needs_human without changing them.',
+    `Requirements:\n${issue}\nFailure evidence:\n${findings}`,
+  ].join('\n');
+  const repaired = await runModel(config, state, 'repair', prompt, persist);
+  if ('stop' in repaired) return repaired.stop;
   return repairOutcome(repaired.stdout);
 }
 
-function repairOutcome(stdout) {
-  let value;
-  try { value = JSON.parse(stdout); } catch { return 'invalid_repair'; }
-  if (!['repaired', 'needs_human'].includes(value.status) || typeof value.findings !== 'string') return 'invalid_repair';
+function repairOutcome(stdout: string): StopReason | null {
+  const value = parseReply(stdout);
+  if (!value || !['repaired', 'needs_human'].includes(value.status)) return 'invalid_repair';
   return value.status === 'needs_human' ? 'human_decision_required' : null;
 }
 
-async function targetChange(config, state) {
+async function targetChange(config: Config, state: State): Promise<StopReason | null> {
   if (digest(await readIssue(config)) !== state.issueHash) return 'requirements_changed';
   if (await snapshot(config.cwd) !== state.source) return 'source_changed';
   return null;
 }
 
-export async function run(config) {
+async function run(config: Config) {
   validate(config);
   await mkdir(config.runDir, { recursive: true });
   const lock = resolve(config.runDir, 'lock');
@@ -148,10 +218,14 @@ export async function run(config) {
   finally { await rm(lock, { recursive: true }); }
 }
 
-async function execute(config) {
+function isMissing(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+
+async function execute(config: Config): Promise<State> {
   const path = resolve(config.runDir, 'state.json');
-  let state;
-  try { state = JSON.parse(await readFile(path, 'utf8')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  let state: State | undefined;
+  try { state = JSON.parse(await readFile(path, 'utf8')); } catch (error) { if (!isMissing(error)) throw error; }
   const configHash = digest(JSON.stringify(config));
   if (state && state.configHash !== configHash) throw Error('Run configuration changed; do not reset the existing limits');
   if (state?.active) throw Error('Interrupted execution: reconcile existing process and evidence before continuing');
@@ -174,7 +248,7 @@ if (import.meta.main) {
     console.log(JSON.stringify(result, null, 2));
     process.exitCode = result.result === 'ready_for_human_review' ? 0 : 1;
   } catch (error) {
-    console.error(error.message);
+    console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }
 }

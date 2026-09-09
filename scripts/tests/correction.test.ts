@@ -1,14 +1,21 @@
-import { test, expect } from 'bun:test';
+import { test, expect, afterEach } from 'bun:test';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import type { Config } from '../correction.ts';
 
-const controller = resolve(import.meta.dir, '../../scripts/correction.js');
-async function trial(mode, overrides = {}) {
+const controller = resolve(import.meta.dir, '../correction.ts');
+const roots: string[] = [];
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })));
+});
+async function trial(mode: string, overrides: Partial<Config> = {}) {
   const root = await mkdtemp(join(tmpdir(), 'correction-test-'));
+  roots.push(root);
   const cwd = join(root, 'work');
-  spawnSync('git', ['init', '-q', cwd]);
+  const initialized = spawnSync('git', ['init', '-q', cwd]);
+  if (initialized.status !== 0) throw Error('Test repository initialization failed');
   await writeFile(join(cwd, 'source.txt'), 'broken');
   const helper = join(root, 'helper.js');
   await writeFile(helper, `
@@ -20,6 +27,7 @@ if(role==='check') {
  process.exit(readFileSync('source.txt','utf8')==='broken'?1:0);
 }
 if(role==='repair') {
+ if(mode==='null_repair') {console.log('null');process.exit(0);}
  if(mode==='timeout') await new Promise(r=>setTimeout(r,10000));
  if(mode==='human') {console.log(JSON.stringify({status:'needs_human',findings:'Need changed requirements'}));process.exit(0);}
  if(mode!=='exhaust') writeFileSync('source.txt','correct');
@@ -27,6 +35,7 @@ if(role==='repair') {
  console.log(JSON.stringify({status:'repaired',findings:'fixed'}));
 }
 if(role==='review') {
+ if(mode==='null_review') {console.log('null');process.exit(0);}
  if(mode==='review_failed') process.exit(2);
  if(mode==='issue_changed') writeFileSync(${JSON.stringify(join(root, 'issue-changed'))},'yes');
  if(mode==='malformed') console.log('success');
@@ -35,7 +44,7 @@ if(role==='review') {
  else console.log(JSON.stringify({status:'accepted',findings:'checked'}));
 }
 `);
-  const config = { cwd, runDir: join(root, 'evidence'), issue: [process.execPath, helper, 'issue'],
+  const config: Config = { cwd, runDir: join(root, 'evidence'), issue: [process.execPath, helper, 'issue'],
     check: [process.execPath, helper, 'check'], repair: [process.execPath, helper, 'repair'], review: [process.execPath, helper, 'review'],
     repairLimit: 2, reviewLimit: 2, modelTimeMs: 15000, checkTimeMs: 1000, ...overrides };
   const configFile = join(root, 'config.json');
@@ -46,6 +55,8 @@ if(role==='review') {
 
 for (const [mode, result, repairs, reviews] of [
   ['normal', 'ready_for_human_review', 1, 1],
+  ['null_repair', 'invalid_repair', 1, 0],
+  ['null_review', 'invalid_review', 1, 1],
   ['human', 'human_decision_required', 1, 0],
   ['issue_changed', 'requirements_changed', 1, 1],
   ['review_failed', 'review_failed', 1, 1],
@@ -53,92 +64,88 @@ for (const [mode, result, repairs, reviews] of [
   ['malformed', 'invalid_review', 1, 1],
   ['changed', 'source_changed', 1, 1],
   ['exhaust', 'execution_limit', 2, 0],
-]) {
+] as const) {
   test(mode, async () => {
     const t = await trial(mode);
-    try {
-      t.execute();
-      const state = await t.state();
-      expect(state.result).toBe(result);
-      expect(state.repair).toBe(repairs);
-      expect(state.review).toBe(reviews);
-      const before = JSON.stringify(state);
-      t.execute();
-      expect(JSON.stringify(await t.state())).toBe(before);
-    } finally { await rm(t.root, { recursive: true, force: true }); }
+    expect(t.execute().status).toBe(result === 'ready_for_human_review' ? 0 : 1);
+    const state = await t.state();
+    expect(state.result).toBe(result);
+    expect(state.repair).toBe(repairs);
+    expect(state.review).toBe(reviews);
+    const before = JSON.stringify(state);
+    t.execute();
+    expect(JSON.stringify(await t.state())).toBe(before);
   });
 }
 
 test('time limit terminates actor and keeps consumed reservation', async () => {
   const t = await trial('timeout', { modelTimeMs: 100 });
-  try {
-    t.execute();
-    const state = await t.state();
-    expect(state.result).toBe('execution_limit');
-    expect(state.repair).toBe(1);
-    expect(state.active).toBeNull();
-    expect(state.events.at(-1).timedOut).toBe(true);
-    t.execute();
-    expect((await t.state()).repair).toBe(1);
-  } finally { await rm(t.root, { recursive: true, force: true }); }
+  t.execute();
+  const state = await t.state();
+  expect(state.result).toBe('execution_limit');
+  expect(state.repair).toBe(1);
+  expect(state.active).toBeNull();
+  expect(state.events.at(-1).timedOut).toBe(true);
+  t.execute();
+  expect((await t.state()).repair).toBe(1);
 });
 
 test('changed limits cannot reset an existing trial', async () => {
   const t = await trial('exhaust');
-  try {
-    t.execute();
-    await writeFile(t.configFile, JSON.stringify({ ...t.config, repairLimit: 10 }));
-    const result = t.execute();
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('configuration changed');
-    expect((await t.state()).repair).toBe(2);
-  } finally { await rm(t.root, { recursive: true, force: true }); }
+  t.execute();
+  await writeFile(t.configFile, JSON.stringify({ ...t.config, repairLimit: 10 }));
+  const result = t.execute();
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('configuration changed');
+  expect((await t.state()).repair).toBe(2);
 });
 
 test('interrupted reservation blocks restart instead of calling another actor', async () => {
   const t = await trial('normal');
-  try {
-    t.execute();
-    const state = await t.state();
-    state.active = { role: 'review' };
-    await writeFile(join(t.config.runDir, 'state.json'), JSON.stringify(state));
-    const result = t.execute();
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Interrupted execution');
-    expect((await t.state()).review).toBe(1);
-  } finally { await rm(t.root, { recursive: true, force: true }); }
+  t.execute();
+  const state = await t.state();
+  state.active = { role: 'review' };
+  await writeFile(join(t.config.runDir, 'state.json'), JSON.stringify(state));
+  const result = t.execute();
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('Interrupted execution');
+  expect((await t.state()).review).toBe(1);
 });
 
 test('terminal success is not reused for changed documentation', async () => {
   const t = await trial('normal');
-  try {
-    t.execute();
-    await writeFile(join(t.config.cwd, 'README.md'), 'new documentation');
-    const result = t.execute();
-    expect(result.status).toBe(1);
-    expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
-    expect((await t.state()).review).toBe(1);
-  } finally { await rm(t.root, { recursive: true, force: true }); }
+  t.execute();
+  await writeFile(join(t.config.cwd, 'README.md'), 'new documentation');
+  const result = t.execute();
+  expect(result.status).toBe(1);
+  expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
+  expect((await t.state()).review).toBe(1);
 });
 
 test('review limit prevents a third-party evaluator from being called again', async () => {
   const t = await trial('docs', { reviewLimit: 1 });
-  try {
-    t.execute();
-    const state = await t.state();
-    expect(state.result).toBe('execution_limit');
-    expect(state.review).toBe(1);
-    expect(state.repair).toBe(2);
-  } finally { await rm(t.root, { recursive: true, force: true }); }
+  t.execute();
+  const state = await t.state();
+  expect(state.result).toBe('execution_limit');
+  expect(state.review).toBe(1);
+  expect(state.repair).toBe(2);
 });
 
 test('check timeout is unavailable evidence and does not start a model', async () => {
   const t = await trial('check_timeout', { checkTimeMs: 100 });
-  try {
-    t.execute();
-    const state = await t.state();
-    expect(state.result).toBe('check_unavailable');
-    expect(state.repair + state.review).toBe(0);
-    expect(state.events[0].timedOut).toBe(true);
-  } finally { await rm(t.root, { recursive: true, force: true }); }
+  t.execute();
+  const state = await t.state();
+  expect(state.result).toBe('check_unavailable');
+  expect(state.repair + state.review).toBe(0);
+  expect(state.events[0].timedOut).toBe(true);
+});
+
+test('check startup failure retains the error without starting a model', async () => {
+  const t = await trial('normal', { check: ['/nonexistent-correction-test-command'] });
+  expect(t.execute().status).toBe(1);
+  const state = await t.state();
+  expect(state.result).toBe('check_unavailable');
+  expect(state.repair + state.review).toBe(0);
+  const error = await readFile(join(t.config.runDir, 'check-1.stderr'), 'utf8');
+  expect(error).toContain('ENOENT');
 });
