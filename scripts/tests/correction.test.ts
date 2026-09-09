@@ -8,20 +8,24 @@ import type { Config } from '../correction.ts';
 const controller = resolve(import.meta.dir, '../correction.ts');
 const roots: string[] = [];
 afterEach(async () => {
-  await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })));
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 async function trial(mode: string, overrides: Partial<Config> = {}) {
   const root = await mkdtemp(join(tmpdir(), 'correction-test-'));
   roots.push(root);
   const cwd = join(root, 'work');
   const initialized = spawnSync('git', ['init', '-q', cwd]);
-  if (initialized.status !== 0) throw Error('Test repository initialization failed');
+  if (initialized.status !== 0) {
+    throw Error('Test repository initialization failed');
+  }
   await writeFile(join(cwd, 'source.txt'), 'broken');
   const helper = join(root, 'helper.js');
-  await writeFile(helper, `
+  await writeFile(
+    helper,
+    `
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 const role=process.argv[2], mode=${JSON.stringify(mode)};
-if(role==='issue') console.log(mode==='issue_changed'&&existsSync(${JSON.stringify(join(root, "issue-changed"))})?'Changed requirement':'Agreed requirement: correct source and docs');
+if(role==='issue') console.log(mode==='issue_changed'&&existsSync(${JSON.stringify(join(root, 'issue-changed'))})?'Changed requirement':'Agreed requirement: correct source and docs');
 if(role==='check') {
  if(mode==='check_timeout') await new Promise(r=>setTimeout(r,10000));
  process.exit(readFileSync('source.txt','utf8')==='broken'?1:0);
@@ -43,14 +47,32 @@ if(role==='review') {
  else if(mode==='docs'&&!existsSync('README.md')) {writeFileSync(${JSON.stringify(join(root, 'reviewed'))},'1');console.log(JSON.stringify({status:'needs_changes',findings:'README missing'}));}
  else console.log(JSON.stringify({status:'accepted',findings:'checked'}));
 }
-`);
-  const config: Config = { cwd, runDir: join(root, 'evidence'), issue: [process.execPath, helper, 'issue'],
-    check: [process.execPath, helper, 'check'], repair: [process.execPath, helper, 'repair'], review: [process.execPath, helper, 'review'],
-    repairLimit: 2, reviewLimit: 2, modelTimeMs: 15000, checkTimeMs: 1000, ...overrides };
+`,
+  );
+  const config: Config = {
+    cwd,
+    runDir: join(root, 'evidence'),
+    issue: [process.execPath, helper, 'issue'],
+    check: [process.execPath, helper, 'check'],
+    repair: [process.execPath, helper, 'repair'],
+    review: [process.execPath, helper, 'review'],
+    repairLimit: 2,
+    reviewLimit: 2,
+    modelTimeMs: 15000,
+    checkTimeMs: 1000,
+    ...overrides,
+  };
   const configFile = join(root, 'config.json');
   await writeFile(configFile, JSON.stringify(config));
-  const execute = () => spawnSync(process.execPath, [controller, configFile], { encoding: 'utf8', timeout: 20000 });
-  return { root, config, configFile, execute, state: async () => JSON.parse(await readFile(join(config.runDir, 'state.json'), 'utf8')) };
+  const execute = () =>
+    spawnSync(process.execPath, [controller, configFile], { encoding: 'utf8', timeout: 20000 });
+  return {
+    root,
+    config,
+    configFile,
+    execute,
+    state: async () => JSON.parse(await readFile(join(config.runDir, 'state.json'), 'utf8')),
+  };
 }
 
 for (const [mode, result, repairs, reviews] of [
@@ -131,8 +153,12 @@ test('check startup failure retains the error without starting a model', async (
 async function waitForFile(path: string) {
   const deadline = Date.now() + 4000;
   while (Date.now() < deadline) {
-    try { return await readFile(path, 'utf8'); } catch (error) {
-      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+    try {
+      return await readFile(path, 'utf8');
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+        throw error;
+      }
     }
     await Bun.sleep(20);
   }
@@ -143,11 +169,15 @@ for (const role of ['check', 'repair', 'review'] as const) {
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGKILL'] as const) {
     test(`${signal} during ${role} preserves reservation and blocks duplicate execution`, async () => {
       const t = await trial('normal', { checkTimeMs: 15000 });
-      if (role === 'review') await writeFile(join(t.config.cwd, 'source.txt'), 'correct');
+      if (role === 'review') {
+        await writeFile(join(t.config.cwd, 'source.txt'), 'correct');
+      }
       const pidFile = join(t.root, 'actor.pid');
       const heartbeat = join(t.config.cwd, 'heartbeat');
       const worker = join(t.root, 'worker.js');
-      await writeFile(worker, `
+      await writeFile(
+        worker,
+        `
 import {spawn} from 'node:child_process';
 import {writeFileSync} from 'node:fs';
 const [heartbeat, pidFile] = process.argv.slice(2);
@@ -157,11 +187,15 @@ if (pidFile) {
 } else {
   setInterval(() => writeFileSync(heartbeat, String(Date.now())), 20);
 }
-`);
-      await writeFile(t.configFile, JSON.stringify({ ...t.config, [role]: [process.execPath, worker, heartbeat, pidFile] }));
+`,
+      );
+      await writeFile(
+        t.configFile,
+        JSON.stringify({ ...t.config, [role]: [process.execPath, worker, heartbeat, pidFile] }),
+      );
       const child = spawn(process.execPath, [controller, t.configFile], { stdio: 'ignore' });
       const stateFile = join(t.config.runDir, 'state.json');
-      const closed = new Promise<number | null>(resolve => child.on('close', resolve));
+      const closed = new Promise<number | null>((resolve) => child.on('close', resolve));
       let group: number | undefined;
       try {
         group = Number(await waitForFile(pidFile));
@@ -187,7 +221,11 @@ if (pidFile) {
       } finally {
         child.kill('SIGKILL');
         if (group !== undefined) {
-          try { process.kill(-group, 'SIGKILL'); } catch { /* Already stopped. */ }
+          try {
+            process.kill(-group, 'SIGKILL');
+          } catch {
+            /* Already stopped. */
+          }
         }
         await closed;
       }
