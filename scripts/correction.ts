@@ -56,18 +56,39 @@ async function save(path: string, value: State) {
   await rename(`${path}.tmp`, path);
 }
 
+let interrupted = false;
+let activeGroup: number | undefined;
+
+function killGroup(pid: number | undefined) {
+  if (pid === undefined) return;
+  try { process.kill(-pid, 'SIGKILL'); } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ESRCH')) throw error;
+  }
+}
+
+function interrupt() {
+  interrupted = true;
+  killGroup(activeGroup);
+}
+
+function assertRunning() {
+  if (interrupted) throw Error('Interrupted execution: reconcile existing process and evidence before continuing');
+}
+
 // A process group includes tools launched by the actor, not just its CLI parent.
 async function command(argv: string[], cwd: string, input: string, timeoutMs: number, files?: string): Promise<CommandResult> {
+  assertRunning();
   let stdout = '', stderr = '', timedOut = false;
   const start = performance.now();
   const child = spawn(argv[0], argv.slice(1), { cwd, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  activeGroup = child.pid;
   child.stdin.on('error', () => {});
   child.stdin.end(input);
   child.stdout.on('data', data => { stdout += data; });
   child.stderr.on('data', data => { stderr += data; });
   const timer = setTimeout(() => {
     timedOut = true;
-    try { if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL'); } catch { /* Already exited. */ }
+    killGroup(child.pid);
   }, timeoutMs);
   const code = await new Promise<number | null>(resolveCode => {
     child.on('error', error => {
@@ -77,10 +98,12 @@ async function command(argv: string[], cwd: string, input: string, timeoutMs: nu
     child.on('close', resolveCode);
   });
   clearTimeout(timer);
+  activeGroup = undefined;
   if (files) {
     await writeFile(`${files}.stdout`, stdout);
     await writeFile(`${files}.stderr`, stderr);
   }
+  assertRunning(); // Keep the persisted active reservation when interrupted.
   return { code, stdout, stderr, timedOut, ms: performance.now() - start };
 }
 
@@ -243,12 +266,18 @@ async function execute(config: Config): Promise<State> {
 }
 
 if (import.meta.main) {
+  process.on('SIGINT', interrupt);
+  process.on('SIGTERM', interrupt);
   try {
     const result = await run(JSON.parse(await readFile(process.argv[2], 'utf8')));
+    assertRunning();
     console.log(JSON.stringify(result, null, 2));
     process.exitCode = result.result === 'ready_for_human_review' ? 0 : 1;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
+  } finally {
+    process.off('SIGINT', interrupt);
+    process.off('SIGTERM', interrupt);
   }
 }
