@@ -15,7 +15,7 @@
 
 初期整備は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で進めています。
 
-CIの検証設定を用意しています。マージ保護・商品一覧・検索機能は未実装です。
+CIとmainの保護設定を適用済みです。商品一覧・検索機能は未実装です。
 
 ## セットアップと検証
 
@@ -40,5 +40,10 @@ PRのhead commitを検証し、1実行の上限は10分です。
 同じPRの古い実行をキャンセルし、変更パスによる検証省略は行いません。
 PRのコードを実行するjobにはAppの鍵や書き込みtokenを渡しません。
 
-マージ保護の有効化と人の承認による制御は、Issue #1の後続作業です。
+mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の解消を要求します。
+新しい差分では古い承認を取り消し、baseの更新時は最新mainとの整合を求めます。
+直接push、force push、削除を制限し、bypass対象は設けていません。
+人は差分と検証結果を確認してApproveします。エージェントは人の承認を代行しません。
+
+設定と実際のPRによる確認結果は[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)で追跡します。
 このCIだけで検証の改変・jobの削除やスキップを防げるとは扱いません。
