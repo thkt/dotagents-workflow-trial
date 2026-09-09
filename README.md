@@ -15,7 +15,7 @@
 
 初期整備は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で進めています。
 
-CIとmainの保護設定を適用済みです。商品一覧・検索機能は未実装です。
+CIとmainの保護設定を適用済みです。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。検索は未実装です。
 
 ## セットアップと検証
 
@@ -23,19 +23,47 @@ Bun 1.4.2を用意して、次を実行します。
 
 ```sh
 bun install --frozen-lockfile --ignore-scripts
+bun run setup:e2e
+bun run start
+```
+
+`http://127.0.0.1:3000` をブラウザーで開きます。終了は Ctrl+C です。
+別のポートを使う場合は `PORT=3001 bun run start` とします。
+画面は静的な HTML/CSS、配信は Bun です。ビルドや外部サービスは不要です。
+固定データは [public/index.html](public/index.html) の `tbody` にあり、青いノート（NOTE-001）、赤いノート（NOTE-002）、黒いペン（PEN-001）、白いマグ（MUG-001）の順です。
+
+検証は次の共通コマンドで実行します。
+
+```sh
 bun run check
 ```
 
 `check` はOxlintのcorrectnessルールと、Biomeの
-`noExcessiveCognitiveComplexity`（上限15）を実行します。
+`noExcessiveCognitiveComplexity`（上限15）、Playwrightによる実ブラウザーE2Eを順に実行します。
 Biomeの他のlintルール・formatter・assistは有効にしません。
 違反や検証コマンドの失敗は終了コードに反映します。
 
-現時点ではアプリのコードがないため、Oxlintの対象ファイル0件は許容します。
-この結果はアプリの動作やテストの十分性を保証しません。
-実装を追加するPRで、要求に対応したテストや型検証を共通の`check`へ組み込みます。
+`setup:e2e` はPlaywrightに対応するChromiumを `node_modules` 内へインストールします。
+初回はネットワーク接続が必要で、LinuxではOS依存ライブラリのインストール権限も必要です。
+JavaScriptを使用しており、TypeScriptの型検証はありません。
 
-GitHub Actionsの`checks` jobも同じコマンドを使います。
+E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。このポートは空けてください。
+[tests/product-list.spec.js](tests/product-list.spec.js) はIssueの固定期待値を使い、Chromiumのデスクトップ（1280×800）とモバイル（375×812）で全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、検索入力がないことを検証します。
+実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
+Firefox・WebKit・実機・支援技術の動作はこのE2Eの検出範囲外です。
+
+スクリーンショットの再取得（E2Eも実行）:
+
+```sh
+bun run test:e2e
+```
+
+成功時に `artifacts/product-list-desktop.png` と `artifacts/product-list-mobile.png` を出力します。
+`artifacts/` はGit管理対象外で、失敗時のtraceも `artifacts/test-results/` に保存します。
+撮影結果は毎回上書きするため、成功した実行のものを使ってください。
+画面の構成と読みやすさは人がレビューします。PRには対象commitで再実行した画像、検証コマンドと結果、未確認事項を添付してください。
+
+GitHub Actionsの`checks` jobも同じセットアップと `bun run check` を使います。
 PRのhead commitを検証します。jobの上限は`checks`が9分、`verify`が1分です（runner待ち時間を除く）。
 同じPRの古い実行をキャンセルし、変更パスによる検証省略は行いません。
 PRのコードを実行するjobにはAppの鍵や書き込みtokenを渡しません。

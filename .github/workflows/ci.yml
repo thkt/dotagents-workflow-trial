@@ -26,6 +26,7 @@ jobs:
         with:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bun run setup:e2e
       - run: bun run check
 
   verify:
