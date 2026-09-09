@@ -15,7 +15,7 @@
 
 初期整備は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で進めています。
 
-CIとmainの保護設定を適用済みです。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。検索は未実装です。
+CIとmainの保護設定を適用済みです。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。[Issue #10](https://github.com/thkt/dotagents-workflow-trial/issues/10) で商品名・商品コードによる検索を追加しています。
 
 ## セットアップと検証
 
@@ -29,8 +29,24 @@ bun run start
 
 `http://127.0.0.1:3000` をブラウザーで開きます。終了は Ctrl+C です。
 別のポートを使う場合は `PORT=3001 bun run start` とします。
-画面は静的な HTML/CSS、配信は Bun です。ビルドや外部サービスは不要です。
+画面は静的な HTML/CSS と検索用JavaScript、配信は Bun です。ビルドや外部サービスは不要です。
 固定データは [public/index.html](public/index.html) の `tbody` にあり、青いノート（NOTE-001）、赤いノート（NOTE-002）、黒いペン（PEN-001）、白いマグ（MUG-001）の順です。
+
+「商品名・商品コードで検索」欄に入力すると、入力のたびに商品名または商品コードの部分一致で一覧を絞り込みます。Enterは不要です。検索語の前後空白を除き、英字の大小文字は区別しません。
+
+| 入力・操作 | 表示される商品（表示順） |
+| --- | --- |
+| 初期表示、空文字、空白のみ | 全4件 |
+| `ノート` | 青いノート、赤いノート |
+| `青い` | 青いノート |
+| `note` | 青いノート、赤いノート |
+| `  pEn-001  ` | 黒いペン |
+| `存在しない商品` | 商品0件と「該当する商品はありません」 |
+| 該当なしの後に入力を全削除 | 全4件に復帰し、該当なしの表示は消える |
+
+キーボードだけでも操作できます。Tabで検索欄に移動して入力し、検索欄でCtrl+A（macOSはCommand+A）→Backspaceで全削除します。
+[public/search.js](public/search.js) は行の表示・非表示だけを切り替えるため、元の固定商品データと表示順を保持し、全削除後も再検索できます。
+全角・半角変換、かな変換、複数語検索、曖昧検索、通信、保存済み検索、認証、本番配布は対象外です。
 
 検証は次の共通コマンドで実行します。
 
@@ -48,7 +64,8 @@ Biomeの他のlintルール・formatter・assistは有効にしません。
 JavaScriptを使用しており、TypeScriptの型検証はありません。
 
 E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。このポートは空けてください。
-[tests/product-list.spec.js](tests/product-list.spec.js) はIssueの固定期待値を使い、Chromiumのデスクトップ（1280×800）とモバイル（375×812）で全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、検索入力がないことを検証します。
+[tests/product-list.spec.js](tests/product-list.spec.js) はIssueの固定期待値を使い、Chromiumのデスクトップ（1280×800）とモバイル（375×812）で全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、ラベルで特定できる検索欄の表示を検証します。
+[tests/product-search.spec.js](tests/product-search.spec.js) は同じ2画面幅で上記の入力・結果・順序、キーボードだけの移動と入力ごとの更新、全削除による復帰と再検索を検証します。
 実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
 Firefox・WebKit・実機・支援技術の動作はこのE2Eの検出範囲外です。
 
@@ -58,7 +75,14 @@ Firefox・WebKit・実機・支援技術の動作はこのE2Eの検出範囲外�
 bun run test:e2e
 ```
 
-成功時に `artifacts/product-list-desktop.png` と `artifacts/product-list-mobile.png` を出力します。
+成功時に次の画像を出力します。
+
+| 状態 | デスクトップ | モバイル |
+| --- | --- | --- |
+| 初期表示（全4件） | `artifacts/product-list-desktop.png` | `artifacts/product-list-mobile.png` |
+| `ノート` で絞り込み（2件） | `artifacts/product-search-filtered-desktop.png` | `artifacts/product-search-filtered-mobile.png` |
+| 該当なし（0件） | `artifacts/product-search-no-results-desktop.png` | `artifacts/product-search-no-results-mobile.png` |
+
 `artifacts/` はGit管理対象外で、失敗時のtraceも `artifacts/test-results/` に保存します。
 撮影結果は毎回上書きするため、成功した実行のものを使ってください。
 画面の構成と読みやすさは人がレビューします。PRには対象commitで再実行した画像、検証コマンドと結果、未確認事項を添付してください。

@@ -27,6 +27,21 @@ h1 { margin: 0; font-size: 32px; }
 
 .description { margin: 12px 0 28px; color: #4b6070; }
 
+label { display: block; font-weight: 600; }
+
+input {
+  width: 100%;
+  margin: 8px 0 24px;
+  padding: 10px 12px;
+  border: 1px solid #cbd6de;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+input:focus-visible { outline: 2px solid #365d73; outline-offset: 2px; }
+
 table {
   width: 100%;
   border-collapse: collapse;
