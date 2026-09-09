@@ -36,7 +36,7 @@ Biomeの他のlintルール・formatter・assistは有効にしません。
 実装を追加するPRで、要求に対応したテストや型検証を共通の`check`へ組み込みます。
 
 GitHub Actionsの`checks` jobも同じコマンドを使います。
-PRのhead commitを検証し、1実行の上限は10分です。
+PRのhead commitを検証します。jobの上限は`checks`が9分、`verify`が1分です（runner待ち時間を除く）。
 同じPRの古い実行をキャンセルし、変更パスによる検証省略は行いません。
 PRのコードを実行するjobにはAppの鍵や書き込みtokenを渡しません。
 
