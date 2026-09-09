@@ -21,13 +21,10 @@ export interface Config {
 }
 interface CommandResult {
   code: number | null;
-  signal?: NodeJS.Signals | null;
-  error?: string;
   stdout: string;
   stderr: string;
   timedOut: boolean;
   ms: number;
-  stop?: never;
 }
 interface Event {
   role: ActorRole | 'check';
@@ -50,7 +47,7 @@ interface State {
   result?: StopReason | null;
 }
 type Persist = () => Promise<void>;
-type ModelResult = CommandResult | { stop: StopReason };
+type ModelResult = { stdout: string } | { stop: StopReason };
 const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const positive = (value: number) => Number.isFinite(value) && value > 0;
 
@@ -72,16 +69,19 @@ async function command(argv: string[], cwd: string, input: string, timeoutMs: nu
     timedOut = true;
     try { if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL'); } catch { /* Already exited. */ }
   }, timeoutMs);
-  const result = await new Promise<Pick<CommandResult, 'code' | 'signal' | 'error'>>(resolveResult => {
-    child.on('error', error => resolveResult({ code: null, error: error.message }));
-    child.on('close', (code, signal) => resolveResult({ code, signal }));
+  const code = await new Promise<number | null>(resolveCode => {
+    child.on('error', error => {
+      stderr += `${error.message}\n`;
+      resolveCode(null);
+    });
+    child.on('close', resolveCode);
   });
   clearTimeout(timer);
   if (files) {
     await writeFile(`${files}.stdout`, stdout);
     await writeFile(`${files}.stderr`, stderr);
   }
-  return { ...result, stdout, stderr, timedOut, ms: performance.now() - start };
+  return { code, stdout, stderr, timedOut, ms: performance.now() - start };
 }
 
 async function snapshot(cwd: string) {
@@ -120,11 +120,20 @@ async function readIssue(config: Config) {
   return result.stdout;
 }
 
-function parseReview(stdout: string): { status: 'accepted' | 'needs_changes'; findings: string } {
-  const result = JSON.parse(stdout);
-  if (!['accepted', 'needs_changes'].includes(result.status) || typeof result.findings !== 'string') throw Error('Invalid review result');
-  if (result.status === 'needs_changes' && !result.findings.trim()) throw Error('Missing review findings');
-  return result;
+function parseReply(stdout: string): { status: string; findings: string } | null {
+  let value: unknown;
+  try { value = JSON.parse(stdout); } catch { return null; }
+  if (typeof value !== 'object' || value === null) return null;
+  if (!('status' in value) || typeof value.status !== 'string') return null;
+  if (!('findings' in value) || typeof value.findings !== 'string') return null;
+  return { status: value.status, findings: value.findings };
+}
+
+function parseReview(stdout: string) {
+  const reply = parseReply(stdout);
+  if (!reply || !['accepted', 'needs_changes'].includes(reply.status)) return null;
+  if (reply.status === 'needs_changes' && !reply.findings.trim()) return null;
+  return reply;
 }
 
 async function runModel(config: Config, state: State, role: ActorRole, prompt: string, persist: Persist): Promise<ModelResult> {
@@ -160,24 +169,37 @@ async function cycle(config: Config, state: State, issue: string, persist: Persi
   if (checked.timedOut || checked.code === null) return 'check_unavailable';
   let findings = `check failed. Read ${prefix}.stdout and ${prefix}.stderr.\n${checked.stdout}\n${checked.stderr}`;
   if (checked.code === 0) {
-    const reviewed = await runModel(config, state, 'review', `Independently inspect requirements, code, meaningful tests and required documentation. Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims. Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary"}.\nRequirements:\n${issue}`, persist);
-    if (reviewed.stop) return reviewed.stop;
+    const prompt = [
+      'Independently inspect requirements, code, meaningful tests and required documentation.',
+      'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
+      'Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary"}.',
+      `Requirements:\n${issue}`,
+    ].join('\n');
+    const reviewed = await runModel(config, state, 'review', prompt, persist);
+    if ('stop' in reviewed) return reviewed.stop;
     const changed = await targetChange(config, state);
     if (changed) return changed;
-    let review;
-    try { review = parseReview(reviewed.stdout); } catch { return 'invalid_review'; }
+    const review = parseReview(reviewed.stdout);
+    if (!review) return 'invalid_review';
     if (review.status === 'accepted') return 'ready_for_human_review';
     findings = review.findings;
   }
-  const repaired = await runModel(config, state, 'repair', `Repair only within these agreed requirements. Read the current files and fix the root cause. Do not weaken tests or acceptance criteria. Do not commit, push or publish. The host will run check and an independent review after your changes. Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision. If requirements, permissions or execution limits must change, report needs_human without changing them.\nRequirements:\n${issue}\nFailure evidence:\n${findings}`, persist);
-  if (repaired.stop) return repaired.stop;
+  const prompt = [
+    'Repair only within these agreed requirements. Read the current files and fix the root cause.',
+    'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
+    'The host will run check and an independent review after your changes.',
+    'Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision.',
+    'If requirements, permissions or execution limits must change, report needs_human without changing them.',
+    `Requirements:\n${issue}\nFailure evidence:\n${findings}`,
+  ].join('\n');
+  const repaired = await runModel(config, state, 'repair', prompt, persist);
+  if ('stop' in repaired) return repaired.stop;
   return repairOutcome(repaired.stdout);
 }
 
 function repairOutcome(stdout: string): StopReason | null {
-  let value;
-  try { value = JSON.parse(stdout); } catch { return 'invalid_repair'; }
-  if (!['repaired', 'needs_human'].includes(value.status) || typeof value.findings !== 'string') return 'invalid_repair';
+  const value = parseReply(stdout);
+  if (!value || !['repaired', 'needs_human'].includes(value.status)) return 'invalid_repair';
   return value.status === 'needs_human' ? 'human_decision_required' : null;
 }
 
@@ -187,7 +209,7 @@ async function targetChange(config: Config, state: State): Promise<StopReason | 
   return null;
 }
 
-export async function run(config: Config) {
+async function run(config: Config) {
   validate(config);
   await mkdir(config.runDir, { recursive: true });
   const lock = resolve(config.runDir, 'lock');
