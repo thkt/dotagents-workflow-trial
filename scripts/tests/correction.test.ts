@@ -3,9 +3,10 @@ import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import type { Config } from '../correction.ts';
 
-const controller = resolve(import.meta.dir, '../../scripts/correction.js');
-async function trial(mode, overrides = {}) {
+const controller = resolve(import.meta.dir, '../../scripts/correction.ts');
+async function trial(mode: string, overrides: Partial<Config> = {}) {
   const root = await mkdtemp(join(tmpdir(), 'correction-test-'));
   const cwd = join(root, 'work');
   spawnSync('git', ['init', '-q', cwd]);
@@ -35,7 +36,7 @@ if(role==='review') {
  else console.log(JSON.stringify({status:'accepted',findings:'checked'}));
 }
 `);
-  const config = { cwd, runDir: join(root, 'evidence'), issue: [process.execPath, helper, 'issue'],
+  const config: Config = { cwd, runDir: join(root, 'evidence'), issue: [process.execPath, helper, 'issue'],
     check: [process.execPath, helper, 'check'], repair: [process.execPath, helper, 'repair'], review: [process.execPath, helper, 'review'],
     repairLimit: 2, reviewLimit: 2, modelTimeMs: 15000, checkTimeMs: 1000, ...overrides };
   const configFile = join(root, 'config.json');
@@ -53,7 +54,7 @@ for (const [mode, result, repairs, reviews] of [
   ['malformed', 'invalid_review', 1, 1],
   ['changed', 'source_changed', 1, 1],
   ['exhaust', 'execution_limit', 2, 0],
-]) {
+] as const) {
   test(mode, async () => {
     const t = await trial(mode);
     try {

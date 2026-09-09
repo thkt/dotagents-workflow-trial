@@ -3,7 +3,7 @@
 Issue #13のための小さな実行入口です。常駐サービスやSDKは追加しません。
 
 ```text
-bun scripts/correction.js /absolute/path/config.json
+bun scripts/correction.ts /absolute/path/config.json
 ```
 
 設定は信頼する公開・実行担当が用意し、作業コピーと証拠ディレクトリを分けます。
@@ -14,8 +14,8 @@ bun scripts/correction.js /absolute/path/config.json
   "runDir": "/absolute/path/evidence",
   "issue": ["gh", "issue", "view", "13", "--repo", "thkt/dotagents-workflow-trial", "--json", "title,body,updatedAt"],
   "check": ["bun", "run", "check"],
-  "repair": ["bun", "/absolute/path/controller/scripts/codex-actor.js", "repair", "/absolute/path/evidence"],
-  "review": ["bun", "/absolute/path/controller/scripts/codex-actor.js", "review", "/absolute/path/evidence"],
+  "repair": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "repair", "/absolute/path/evidence"],
+  "review": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "review", "/absolute/path/evidence"],
   "repairLimit": 2,
   "reviewLimit": 2,
   "modelTimeMs": 1200000,
@@ -47,3 +47,5 @@ bun scripts/correction.js /absolute/path/config.json
 `bun run test:control`は一時Git作業コピーを用意し、本番と同じCLI入口へ制御可能なコマンドを渡します。モデル呼び出しを行わず、成功・失敗・文書不足・対象変更・応答不正・人の判断要求・上限・再実行を確認します。
 
 共通`bun run check`にはこのテストを追加します。既存のlint・複雑度条件・18件のPlaywright E2Eは維持し、検出できなくなるケースはありません。模擬コマンドの成功は、実モデルの判断品質の証拠には数えません。
+
+制御コードとそのテストはTypeScriptです。`bun run typecheck`で`strict`の型検査（`tsc --noEmit`）を行い、共通checkにも含めます。Bunによる実行だけでは型検査を行いません。商品アプリのJSは型検査の対象外です。設定・LLM応答の既存の実行時検証は維持し、保存状態のJSONは制御側が書いた内部記録として扱います。型検査が外部データの正しさを保証するわけではありません。
