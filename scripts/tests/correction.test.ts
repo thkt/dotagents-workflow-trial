@@ -100,28 +100,6 @@ test('changed limits cannot reset an existing trial', async () => {
   expect((await t.state()).repair).toBe(2);
 });
 
-test('interrupted reservation blocks restart instead of calling another actor', async () => {
-  const t = await trial('normal');
-  t.execute();
-  const state = await t.state();
-  state.active = { role: 'review' };
-  await writeFile(join(t.config.runDir, 'state.json'), JSON.stringify(state));
-  const result = t.execute();
-  expect(result.status).toBe(1);
-  expect(result.stderr).toContain('Interrupted execution');
-  expect((await t.state()).review).toBe(1);
-});
-
-test('terminal success is not reused for changed documentation', async () => {
-  const t = await trial('normal');
-  t.execute();
-  await writeFile(join(t.config.cwd, 'README.md'), 'new documentation');
-  const result = t.execute();
-  expect(result.status).toBe(1);
-  expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
-  expect((await t.state()).review).toBe(1);
-});
-
 test('review limit prevents a third-party evaluator from being called again', async () => {
   const t = await trial('docs', { reviewLimit: 1 });
   t.execute();
@@ -172,21 +150,23 @@ for (const role of ['check', 'repair', 'review'] as const) {
       await writeFile(worker, `
 import {spawn} from 'node:child_process';
 import {writeFileSync} from 'node:fs';
-const child = spawn(process.execPath, ['-e', ${JSON.stringify(`
-const {writeFileSync} = require('node:fs');
-setInterval(() => writeFileSync(${JSON.stringify(heartbeat)}, String(Date.now())), 20);
-`)}], {stdio:'inherit'});
-writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
-await new Promise(resolve => child.on('close', resolve));
+const [heartbeat, pidFile] = process.argv.slice(2);
+if (pidFile) {
+  spawn(process.execPath, [process.argv[1], heartbeat], {stdio:'inherit'});
+  writeFileSync(pidFile, String(process.pid));
+} else {
+  setInterval(() => writeFileSync(heartbeat, String(Date.now())), 20);
+}
 `);
-      await writeFile(t.configFile, JSON.stringify({ ...t.config, [role]: [process.execPath, worker] }));
+      await writeFile(t.configFile, JSON.stringify({ ...t.config, [role]: [process.execPath, worker, heartbeat, pidFile] }));
       const child = spawn(process.execPath, [controller, t.configFile], { stdio: 'ignore' });
+      const stateFile = join(t.config.runDir, 'state.json');
       const closed = new Promise<number | null>(resolve => child.on('close', resolve));
       let group: number | undefined;
       try {
         group = Number(await waitForFile(pidFile));
         await waitForFile(heartbeat);
-        const before = await readFile(join(t.config.runDir, 'state.json'), 'utf8');
+        const before = await readFile(stateFile, 'utf8');
         const state = JSON.parse(before);
         expect(state.active.role).toBe(role);
         expect(state[role === 'check' ? 'checks' : role]).toBe(1);
@@ -199,11 +179,11 @@ await new Promise(resolve => child.on('close', resolve));
           await Bun.sleep(150);
           expect(await readFile(heartbeat, 'utf8')).toBe(stopped);
         }
-        expect(await readFile(join(t.config.runDir, 'state.json'), 'utf8')).toBe(before);
+        expect(await readFile(stateFile, 'utf8')).toBe(before);
         const retry = t.execute();
         expect(retry.status).toBe(1);
         expect(retry.stderr).toContain(signal === 'SIGKILL' ? 'EEXIST' : 'Interrupted execution');
-        expect(await readFile(join(t.config.runDir, 'state.json'), 'utf8')).toBe(before);
+        expect(await readFile(stateFile, 'utf8')).toBe(before);
       } finally {
         child.kill('SIGKILL');
         if (group !== undefined) {
@@ -215,13 +195,18 @@ await new Promise(resolve => child.on('close', resolve));
   }
 }
 
-test('terminal success is not reused for a changed Issue', async () => {
-  const t = await trial('normal');
-  expect(t.execute().status).toBe(0);
-  const before = await t.state();
-  await writeFile(join(t.root, 'helper.js'), "console.log('Updated requirements');");
-  const result = t.execute();
-  expect(result.status).toBe(1);
-  expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
-  expect(await t.state()).toEqual(before);
-});
+for (const [target, path, content] of [
+  ['documentation', 'work/README.md', 'new documentation'],
+  ['Issue', 'helper.js', "console.log('Updated requirements');"],
+] as const) {
+  test(`terminal success is not reused for changed ${target}`, async () => {
+    const t = await trial('normal');
+    expect(t.execute().status).toBe(0);
+    const before = await t.state();
+    await writeFile(join(t.root, path), content);
+    const result = t.execute();
+    expect(result.status).toBe(1);
+    expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
+    expect(await t.state()).toEqual(before);
+  });
+}

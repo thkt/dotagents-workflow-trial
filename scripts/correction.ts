@@ -56,6 +56,7 @@ async function save(path: string, value: State) {
   await rename(`${path}.tmp`, path);
 }
 
+const interruptionMessage = 'Interrupted execution: reconcile existing process and evidence before continuing';
 let interrupted = false;
 let activeGroup: number | undefined;
 
@@ -72,7 +73,7 @@ function interrupt() {
 }
 
 function assertRunning() {
-  if (interrupted) throw Error('Interrupted execution: reconcile existing process and evidence before continuing');
+  if (interrupted) throw Error(interruptionMessage);
 }
 
 // A process group includes tools launched by the actor, not just its CLI parent.
@@ -251,7 +252,7 @@ async function execute(config: Config): Promise<State> {
   try { state = JSON.parse(await readFile(path, 'utf8')); } catch (error) { if (!isMissing(error)) throw error; }
   const configHash = digest(JSON.stringify(config));
   if (state && state.configHash !== configHash) throw Error('Run configuration changed; do not reset the existing limits');
-  if (state?.active) throw Error('Interrupted execution: reconcile existing process and evidence before continuing');
+  if (state?.active) throw Error(interruptionMessage);
   const issue = await readIssue(config);
   state ??= { configHash, issueHash: digest(issue), repair: 0, review: 0, checks: 0, modelMs: 0, active: null, events: [] };
   const persist = () => save(path, state);
