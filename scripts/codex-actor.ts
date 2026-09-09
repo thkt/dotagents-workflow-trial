@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 // Logs stay outside the actor's worktree. The parent owns limits and process termination.
 const [role, evidenceDir] = process.argv.slice(2);
-if (!['repair', 'review'].includes(role) || !evidenceDir) {
+if ((role !== 'repair' && role !== 'review') || !evidenceDir) {
   throw Error('Usage: bun scripts/codex-actor.ts repair|review EVIDENCE_DIR');
 }
 const dir = await mkdtemp(join(evidenceDir, `${role}-codex-`));

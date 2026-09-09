@@ -3,7 +3,18 @@ import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import type { Config } from '../correction.ts';
+import type { Config } from '../input.ts';
+import assert from 'node:assert/strict';
+import { isRecord, isArray } from '../input.ts';
+
+function object(value: unknown) {
+  assert(isRecord(value));
+  return value;
+}
+function events(value: unknown) {
+  assert(isArray(value));
+  return value;
+}
 
 const controller = resolve(import.meta.dir, '../correction.ts');
 const roots: string[] = [];
@@ -71,7 +82,8 @@ if(role==='review') {
     config,
     configFile,
     execute,
-    state: async () => JSON.parse(await readFile(join(config.runDir, 'state.json'), 'utf8')),
+    state: async () =>
+      object(JSON.parse(await readFile(join(config.runDir, 'state.json'), 'utf8'))),
   };
 }
 
@@ -107,7 +119,7 @@ test('time limit terminates actor and keeps consumed reservation', async () => {
   expect(state.result).toBe('execution_limit');
   expect(state.repair).toBe(1);
   expect(state.active).toBeNull();
-  expect(state.events.at(-1).timedOut).toBe(true);
+  expect(object(events(state.events).at(-1)).timedOut).toBe(true);
   t.execute();
   expect((await t.state()).repair).toBe(1);
 });
@@ -136,8 +148,8 @@ test('check timeout is unavailable evidence and does not start a model', async (
   t.execute();
   const state = await t.state();
   expect(state.result).toBe('check_unavailable');
-  expect(state.repair + state.review).toBe(0);
-  expect(state.events[0].timedOut).toBe(true);
+  expect([state.repair, state.review]).toEqual([0, 0]);
+  expect(object(events(state.events)[0]).timedOut).toBe(true);
 });
 
 test('check startup failure retains the error without starting a model', async () => {
@@ -145,7 +157,7 @@ test('check startup failure retains the error without starting a model', async (
   expect(t.execute().status).toBe(1);
   const state = await t.state();
   expect(state.result).toBe('check_unavailable');
-  expect(state.repair + state.review).toBe(0);
+  expect([state.repair, state.review]).toEqual([0, 0]);
   const error = await readFile(join(t.config.runDir, 'check-1.stderr'), 'utf8');
   expect(error).toContain('ENOENT');
 });
@@ -201,8 +213,8 @@ if (pidFile) {
         group = Number(await waitForFile(pidFile));
         await waitForFile(heartbeat);
         const before = await readFile(stateFile, 'utf8');
-        const state = JSON.parse(before);
-        expect(state.active.role).toBe(role);
+        const state = object(JSON.parse(before));
+        expect(object(state.active).role).toBe(role);
         expect(state[role === 'check' ? 'checks' : role]).toBe(1);
         // A second controller must not enter the same run while the first is alive.
         expect(t.execute().status).toBe(1);
@@ -244,7 +256,45 @@ for (const [target, path, content] of [
     await writeFile(join(t.root, path), content);
     const result = t.execute();
     expect(result.status).toBe(1);
-    expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
+    expect(object(JSON.parse(result.stdout)).result).toBe('target_changed_after_stop');
     expect(await t.state()).toEqual(before);
   });
 }
+
+for (const [name, change] of [
+  ['missing cwd', { cwd: undefined }],
+  ['empty command', { repair: [] }],
+  ['invalid limit', { reviewLimit: -1 }],
+] as const) {
+  test(`invalid config: ${name}`, async () => {
+    const t = await trial('normal');
+    await writeFile(t.configFile, JSON.stringify({ ...t.config, ...change }));
+    const result = t.execute();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Invalid');
+    expect(await readFile(join(t.config.cwd, 'source.txt'), 'utf8')).toBe('broken');
+  });
+}
+for (const change of [
+  { repair: -1 },
+  { active: { role: 'repair' } },
+  { events: [{}] },
+  { result: 'unrecognized_success' },
+]) {
+  test(`invalid saved state is retained and rejected: ${JSON.stringify(change)}`, async () => {
+    const t = await trial('normal');
+    expect(t.execute().status).toBe(0);
+    const stateFile = join(t.config.runDir, 'state.json');
+    const invalid = JSON.stringify({ ...(await t.state()), ...change });
+    await writeFile(stateFile, invalid);
+    const result = t.execute();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Invalid');
+    expect(await readFile(stateFile, 'utf8')).toBe(invalid);
+  });
+}
+test('missing CLI configuration argument fails with usage', () => {
+  const result = spawnSync(process.execPath, [controller], { encoding: 'utf8' });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('Usage:');
+});
