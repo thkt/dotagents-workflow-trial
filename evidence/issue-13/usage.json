@@ -1,0 +1,18 @@
+[
+  {
+    "role": "repair",
+    "input_tokens": 129115,
+    "cached_input_tokens": 88448,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1965,
+    "reasoning_output_tokens": 108
+  },
+  {
+    "role": "review",
+    "input_tokens": 96694,
+    "cached_input_tokens": 64000,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 719,
+    "reasoning_output_tokens": 75
+  }
+]

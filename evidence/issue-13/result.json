@@ -1,0 +1,43 @@
+{
+  "configHash": "9396090584192c7b6355b341af76e96fcccb62695eb292304d7b04acb828215a",
+  "issueHash": "03838c8beb2ad8a4ff51b6270f762a9e8acd7ebc3f5567b9e3abaa10fa749120",
+  "repair": 1,
+  "review": 1,
+  "checks": 2,
+  "modelMs": 106395.53899999999,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "c9aa036fa92b26844b63a4955939e7a6c77fe16198716cd57d222f0c85da7c98",
+      "code": 1,
+      "timedOut": false,
+      "prefix": "check-1"
+    },
+    {
+      "role": "repair",
+      "source": "c9aa036fa92b26844b63a4955939e7a6c77fe16198716cd57d222f0c85da7c98",
+      "code": 0,
+      "timedOut": false,
+      "ms": 73096.782333,
+      "prefix": "repair-1"
+    },
+    {
+      "role": "check",
+      "source": "068ab9309d9422dcf1b344cdf607de18ff0ad6af378c7c2b02fb2788ea9ccf0a",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "check-2"
+    },
+    {
+      "role": "review",
+      "source": "068ab9309d9422dcf1b344cdf607de18ff0ad6af378c7c2b02fb2788ea9ccf0a",
+      "code": 0,
+      "timedOut": false,
+      "ms": 33298.756666999994,
+      "prefix": "review-1"
+    }
+  ],
+  "source": "068ab9309d9422dcf1b344cdf607de18ff0ad6af378c7c2b02fb2788ea9ccf0a",
+  "result": "ready_for_human_review"
+}
