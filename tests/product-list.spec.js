@@ -29,8 +29,7 @@ test("全商品の名前とコードを見出し付きの一覧で記載順に�
     await expect(productCode).toBeInViewport();
   }
 
-  await expect(page.getByRole("searchbox")).toHaveCount(0);
-  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await expect(page.getByLabel("商品名・商品コードで検索", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: `artifacts/product-list-${testInfo.project.name}.png`, fullPage: true });
 });

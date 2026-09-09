@@ -1,6 +1,7 @@
 const pages = new Map([
   ["/", Bun.file(new URL("./public/index.html", import.meta.url))],
   ["/styles.css", Bun.file(new URL("./public/styles.css", import.meta.url))],
+  ["/search.js", Bun.file(new URL("./public/search.js", import.meta.url))],
 ]);
 
 const server = Bun.serve({

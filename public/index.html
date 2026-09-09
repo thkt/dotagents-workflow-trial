@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>商品一覧 | ワークフロー試行</title>
     <link rel="stylesheet" href="/styles.css">
+    <script src="/search.js" defer></script>
   </head>
   <body>
     <main>
       <p class="eyebrow">ワークフロー試行</p>
       <h1 id="product-list-heading">商品一覧</h1>
       <p class="description">表示確認用の架空の商品です。</p>
+      <label for="product-search">商品名・商品コードで検索</label>
+      <input id="product-search" type="search">
       <table aria-labelledby="product-list-heading">
         <thead>
           <tr><th scope="col">商品名</th><th scope="col">商品コード</th></tr>
@@ -22,6 +25,7 @@
           <tr><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
         </tbody>
       </table>
+      <p id="no-results" role="status" hidden>該当する商品はありません</p>
     </main>
   </body>
 </html>
