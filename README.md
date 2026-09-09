@@ -44,6 +44,7 @@ mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の
 新しい差分では古い承認を取り消し、baseの更新時は最新mainとの整合を求めます。
 直接push、force push、削除を制限し、bypass対象は設けていません。
 人は差分と検証結果を確認してApproveします。エージェントは人の承認を代行しません。
+承認後に差分が更新された場合は、最新commitの差分とCI結果を確認して再度Approveしてください。
 
 設定と実際のPRによる確認結果は[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)で追跡します。
 このCIだけで検証の改変・jobの削除やスキップを防げるとは扱いません。
