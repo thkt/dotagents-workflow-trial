@@ -85,3 +85,24 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ�
 ## Issue #17で追加する検証
 
 実際の制御CLIをcheck・repair・reviewの途中で中断し、SIGINT/SIGTERMでの子孫の書き込み停止、並行起動と再実行の拒否、予約回数の保持を検証します。SIGKILLでは再実行拒否だけを確認し、子の自動停止を保証しません。完了後のIssue変更も古い成功を無効にすることを確認します。既存の検証条件は減らさず、模擬コマンドを使った回帰テストを追加します。モデルの判断品質は今回の評価対象外です。
+
+## TypeScriptの書き方（Issue #19）
+
+`scripts/**/*.ts`の書式はOxfmt 0.66.0に統一します。`bun run format`で整形し、`bun run format:check`で書き換えずに確認します。共通`bun run check`にも書式確認を含めるため、CIでも同じ条件を適用します。2スペース・single quote・セミコロン・行幅100を基本とし、importの並べ替えは有効にしません。商品アプリのJSや過去のevidenceは今回の整形対象外です。
+
+Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorにします。
+
+| ルール | 揃える書き方 |
+| --- | --- |
+| `typescript/consistent-type-imports` | 型だけに使うものは`import type` |
+| `typescript/no-explicit-any` | 明示的な`any`を使わず、必要なら`unknown`から絞り込む |
+| `typescript/no-non-null-assertion` | `!`で省略せず、存在条件を確認する |
+| `prefer-const` / `no-var` | 再代入しなければ`const`、再代入には`let` |
+| `eqeqeq` | `===` / `!==`で比較する |
+| `curly` | 制御構文の本体を波括弧で囲む |
+
+既存のstrict型検査はtsc、認知的複雑度の上限15はBiomeの`noExcessiveCognitiveComplexity`だけで検査します。OxfmtとOxlintに型の整合性や要求達成まで保証させるものではありません。ルールの追加・緩和は検証定義の変更として、目的と検出力への影響をPRで説明します。
+
+既存の検出条件を削らず、7ルールと書式検査を追加しました。違反を含む一時TSで7ルールの拒否と書式検査の失敗、整形後の書式検査成功を確認しています。一時ファイルは削除し、型検査・制御26件・E2E18件を維持します。
+
+設定の詳細は[Oxlint configuration](https://oxc.rs/docs/guide/usage/linter/config.html)と[Oxfmt configuration](https://oxc.rs/docs/guide/usage/formatter/config.html)を参照してください。

@@ -54,3 +54,5 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 共通`bun run check`にはこのテストを追加します。既存のlint・複雑度条件・18件のPlaywright E2Eは維持し、検出できなくなるケースはありません。模擬コマンドの成功は、実モデルの判断品質の証拠には数えません。
 
 制御コードとそのテストはTypeScriptです。`bun run typecheck`で`strict`の型検査（`tsc --noEmit`）を行い、共通checkにも含めます。Bunによる実行だけでは型検査を行いません。商品アプリのJSは型検査の対象外です。設定・LLM応答の既存の実行時検証は維持し、保存状態のJSONは制御側が書いた内部記録として扱います。型検査が外部データの正しさを保証するわけではありません。
+
+TSを編集したら`bun run format`で書式を揃え、`bun run check`で書式・lint・型・動作をまとめて確認します。書式はOxfmt、型専用importなどの書き方はOxlintで制限します。[適用範囲とルール](../DEVELOPMENT.md#typescriptの書き方issue-19)を参照してください。

@@ -8,15 +8,18 @@
     "setup:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 playwright install --with-deps chromium",
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 playwright test",
     "test:control": "bun test scripts/tests",
-    "check": "bun run lint && bun run complexity && bun run typecheck && bun run test:control && bun run test:e2e",
+    "check": "bun run lint && bun run format:check && bun run complexity && bun run typecheck && bun run test:control && bun run test:e2e",
     "lint": "oxlint --deny-warnings --no-error-on-unmatched-pattern .",
     "complexity": "biome lint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "oxfmt --write \"scripts/**/*.ts\"",
+    "format:check": "oxfmt --check \"scripts/**/*.ts\""
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
     "@playwright/test": "1.63.0",
     "@types/bun": "1.4.1",
+    "oxfmt": "0.66.0",
     "oxlint": "1.80.0",
     "typescript": "7.0.2"
   }

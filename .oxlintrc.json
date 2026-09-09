@@ -3,5 +3,23 @@
   "categories": {
     "correctness": "error"
   },
-  "ignorePatterns": ["node_modules/**"]
+  "ignorePatterns": [
+    "node_modules/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "scripts/**/*.ts"
+      ],
+      "rules": {
+        "typescript/consistent-type-imports": "error",
+        "typescript/no-explicit-any": "error",
+        "typescript/no-non-null-assertion": "error",
+        "prefer-const": "error",
+        "no-var": "error",
+        "eqeqeq": "error",
+        "curly": "error"
+      }
+    }
+  ]
 }
