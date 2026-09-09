@@ -52,7 +52,4 @@ mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の
 承認後に差分が更新された場合は、最新commitの差分とCI結果を確認して再度Approveしてください。
 
 設定と実際のPRによる確認結果は[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)で追跡します。
-この判定は検証定義自体が適切であることを前提とします。
-`verify`自体のスキップ、検証コマンドの置き換え、step単位の検証省略まで防ぐ仕組みではありません。
-workflow・`package.json`・lint設定の変更は、人が検証対象と実行条件を確認します。
-PRから変更できない強制判定が必要な範囲は、Issue #1で別途設計します。
+検証定義の変更に対する人のレビュー、PRの説明方法、確認済み範囲と制約は、[検証とレビューの方針](DEVELOPMENT.md)を参照してください。
