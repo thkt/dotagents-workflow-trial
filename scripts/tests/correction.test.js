@@ -15,12 +15,15 @@ async function trial(mode, overrides = {}) {
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 const role=process.argv[2], mode=${JSON.stringify(mode)};
 if(role==='issue') console.log(mode==='issue_changed'&&existsSync(${JSON.stringify(join(root, "issue-changed"))})?'Changed requirement':'Agreed requirement: correct source and docs');
-if(role==='check') process.exit(readFileSync('source.txt','utf8')==='broken'?1:0);
+if(role==='check') {
+ if(mode==='check_timeout') await new Promise(r=>setTimeout(r,10000));
+ process.exit(readFileSync('source.txt','utf8')==='broken'?1:0);
+}
 if(role==='repair') {
  if(mode==='timeout') await new Promise(r=>setTimeout(r,10000));
  if(mode==='human') {console.log(JSON.stringify({status:'needs_human',findings:'Need changed requirements'}));process.exit(0);}
  if(mode!=='exhaust') writeFileSync('source.txt','correct');
- if(existsSync('reviewed')) writeFileSync('README.md','current');
+ if(existsSync(${JSON.stringify(join(root, 'reviewed'))})) writeFileSync('README.md','current');
  console.log(JSON.stringify({status:'repaired',findings:'fixed'}));
 }
 if(role==='review') {
@@ -32,10 +35,6 @@ if(role==='review') {
  else console.log(JSON.stringify({status:'accepted',findings:'checked'}));
 }
 `);
-  // Repair reads this external marker without contaminating the source snapshot.
-  let helperText = await readFile(helper, 'utf8');
-  helperText = helperText.replace("existsSync('reviewed')", `existsSync(${JSON.stringify(join(root, 'reviewed'))})`);
-  await writeFile(helper, helperText);
   const config = { cwd, runDir: join(root, 'evidence'), issue: [process.execPath, helper, 'issue'],
     check: [process.execPath, helper, 'check'], repair: [process.execPath, helper, 'repair'], review: [process.execPath, helper, 'review'],
     repairLimit: 2, reviewLimit: 2, modelTimeMs: 15000, checkTimeMs: 1000, ...overrides };
@@ -119,5 +118,27 @@ test('terminal success is not reused for changed documentation', async () => {
     expect(result.status).toBe(1);
     expect(JSON.parse(result.stdout).result).toBe('target_changed_after_stop');
     expect((await t.state()).review).toBe(1);
+  } finally { await rm(t.root, { recursive: true, force: true }); }
+});
+
+test('review limit prevents a third-party evaluator from being called again', async () => {
+  const t = await trial('docs', { reviewLimit: 1 });
+  try {
+    t.execute();
+    const state = await t.state();
+    expect(state.result).toBe('execution_limit');
+    expect(state.review).toBe(1);
+    expect(state.repair).toBe(2);
+  } finally { await rm(t.root, { recursive: true, force: true }); }
+});
+
+test('check timeout is unavailable evidence and does not start a model', async () => {
+  const t = await trial('check_timeout', { checkTimeMs: 100 });
+  try {
+    t.execute();
+    const state = await t.state();
+    expect(state.result).toBe('check_unavailable');
+    expect(state.repair + state.review).toBe(0);
+    expect(state.events[0].timedOut).toBe(true);
   } finally { await rm(t.root, { recursive: true, force: true }); }
 });
