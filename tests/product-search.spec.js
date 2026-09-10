@@ -130,3 +130,118 @@ for (const operation of ["pointer", "Enter", "Space"]) {
     expect(navigations).toBe(0);
   });
 }
+
+const reversedProducts = [allProducts[3], allProducts[2], allProducts[1], allProducts[0]];
+
+test("並び順の切り替え、検索、0件・1件からの復帰と再読み込み", async ({ page }, testInfo) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  let navigations = 0;
+  page.on("framenavigated", () => { navigations += 1; });
+  await expect(order).toHaveValue("original");
+  await expectProducts(page, allProducts);
+  await order.selectOption("descending");
+  await expectProducts(page, reversedProducts);
+  await page.screenshot({ path: `artifacts/product-order-${testInfo.project.name}.png`, fullPage: true });
+  await search.fill("ノート");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await order.selectOption("ascending");
+  await expectProducts(page, notes);
+  await order.selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  for (const { query, products } of [
+    { query: "青い", products: [allProducts[0]] },
+    { query: "見つからない", products: [] },
+    { query: "あおいのーと", products: [] },
+    { query: "", products: reversedProducts },
+  ]) {
+    await search.fill(query);
+    await expect(order).toHaveValue("descending");
+    await expectProducts(page, products);
+  }
+  await order.selectOption("original");
+  await expectProducts(page, allProducts);
+  await search.fill("見つからない");
+  await order.selectOption("ascending");
+  await expectProducts(page, []);
+  await search.fill("PEN-001");
+  await order.selectOption("descending");
+  await expectProducts(page, [allProducts[2]]);
+  await search.fill("");
+  expect(navigations).toBe(0);
+  await page.reload();
+  await expect(order).toHaveValue("original");
+  await expectProducts(page, allProducts);
+});
+
+test.describe("モバイルの標準選択UI", () => {
+  test.use({ isMobile: true, hasTouch: true });
+
+  test("キーボードで並び順を選び、フォーカスを保って操作を続けられる", async ({ page }) => {
+    await page.goto("/");
+    const order = page.getByLabel("並び順", { exact: true });
+    await order.focus();
+    await expect(order).toBeFocused();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(order).toHaveValue("descending");
+    await expectProducts(page, reversedProducts);
+    await expect(order).toBeFocused();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("Enter");
+    await expectProducts(page, allProducts);
+    await expect(order).toBeFocused();
+  });
+
+});
+
+test("同じ読みの商品は昇順・降順とも元の相対順を保つ", async ({ page }) => {
+  // 配信する商品データだけを変更し、実際の画面と並べ替え処理を通す。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace("あかいのーと", "あおいのーと") });
+  });
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("descending");
+  await expectProducts(page, [allProducts[3], allProducts[2], allProducts[0], allProducts[1]]);
+  await order.selectOption("ascending");
+  await expectProducts(page, allProducts);
+  await order.selectOption("descending");
+  await order.selectOption("original");
+  await expectProducts(page, allProducts);
+});
+
+test.describe("タッチ操作", () => {
+  test.use({ isMobile: true, hasTouch: true });
+  test("並び順をタップして選択できる", async ({ page }) => {
+    await page.goto("/");
+    const order = page.getByLabel("並び順", { exact: true });
+    await order.tap();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(order).toHaveValue("descending");
+    await expectProducts(page, reversedProducts);
+  });
+});
+
+test("検索クリア後も選択した並び順を保持する", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+  await order.selectOption("descending");
+  await search.fill("ノート");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(clear).toBeFocused();
+  await expect(order).toHaveValue("descending");
+  await expectProducts(page, reversedProducts);
+});

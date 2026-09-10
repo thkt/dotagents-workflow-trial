@@ -15,16 +15,22 @@
       <label for="product-search">商品名・商品コードで検索</label>
       <input id="product-search" type="search">
       <button id="clear-search" type="button">検索をクリア</button>
+      <label for="product-order">並び順</label>
+      <select id="product-order">
+        <option value="original">元の順序</option>
+        <option value="ascending">商品名：昇順</option>
+        <option value="descending">商品名：降順</option>
+      </select>
       <p id="result-count"></p>
       <table aria-labelledby="product-list-heading">
         <thead>
           <tr><th scope="col">商品名</th><th scope="col">商品コード</th></tr>
         </thead>
         <tbody>
-          <tr><th scope="row">青いノート</th><td><code>NOTE-001</code></td></tr>
-          <tr><th scope="row">赤いノート</th><td><code>NOTE-002</code></td></tr>
-          <tr><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
-          <tr><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
+          <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-001</code></td></tr>
+          <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>NOTE-002</code></td></tr>
+          <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
+          <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
         </tbody>
       </table>
       <p id="no-results" role="status" hidden>該当する商品はありません</p>

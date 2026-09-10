@@ -1,0 +1,28 @@
+{
+  "configHash": "0952652a8f9e1a276b9aab5d7f1f6b573e447a0fc2124deb8095c330eafab34b",
+  "issueHash": "049adde06e7a4c935208a53082012ca63d3597c799e8a0135938a6df4e898988",
+  "repair": 0,
+  "review": 1,
+  "checks": 1,
+  "modelMs": 65865.40400000001,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "546da6560aa6b05fa2c908d5ee7868741daed66df4bcc0c0cfe86375438fc74f",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/order-62-review/run/check-1"
+    },
+    {
+      "role": "review",
+      "source": "546da6560aa6b05fa2c908d5ee7868741daed66df4bcc0c0cfe86375438fc74f",
+      "code": 0,
+      "timedOut": false,
+      "ms": 65865.40400000001,
+      "prefix": "/private/tmp/order-62-review/run/review-1"
+    }
+  ],
+  "source": "546da6560aa6b05fa2c908d5ee7868741daed66df4bcc0c0cfe86375438fc74f",
+  "result": "ready_for_human_review"
+}
