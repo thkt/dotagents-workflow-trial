@@ -81,3 +81,52 @@ test("キーボードだけで検索欄へ移動し、入力ごとの更新と�
   await expectProducts(page, [["白いマグ", "MUG-001"]]);
   await expect(search).toBeFocused();
 });
+
+for (const operation of ["pointer", "Enter", "Space"]) {
+  test(`${operation}で検索をクリアし、全件復帰と再検索ができる`, async ({ page, hasTouch }, testInfo) => {
+    await page.goto("/");
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+    // 同じ文書上で操作を完了し、再読み込みで初期状態に戻していないことを確認する。
+    let navigations = 0;
+    page.on("framenavigated", () => { navigations += 1; });
+    for (const { query, products } of [
+      { query: "ノート", products: notes },
+      { query: "存在しない商品", products: [] },
+      { query: "   ", products: allProducts },
+      { query: "", products: allProducts },
+    ]) {
+      await search.fill(query);
+      await expectProducts(page, products);
+      await expect(clear).toBeVisible();
+      await expect(clear).toBeEnabled();
+      await expect(clear).toBeInViewport();
+      if (operation === "pointer") {
+        if (hasTouch) await clear.tap();
+        else await clear.click();
+      } else {
+        await page.keyboard.press("Tab");
+        await expect(clear).toBeFocused();
+        await page.keyboard.press(operation);
+        await expect(clear).toBeFocused();
+      }
+      await expect(search).toHaveValue("");
+      await expectProducts(page, allProducts);
+      if (operation !== "pointer") {
+        await page.keyboard.press(operation);
+        await expect(clear).toBeFocused();
+        await expectProducts(page, allProducts);
+        if (query === "ノート" && operation === "Enter") {
+          await page.screenshot({ path: `artifacts/product-clear-${testInfo.project.name}.png`, fullPage: true });
+        }
+        await page.keyboard.press("Shift+Tab");
+        await expect(search).toBeFocused();
+        await page.keyboard.type("mug");
+      } else {
+        await search.fill("mug");
+      }
+      await expectProducts(page, [["白いマグ", "MUG-001"]]);
+    }
+    expect(navigations).toBe(0);
+  });
+}
