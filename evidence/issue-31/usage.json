@@ -1,0 +1,32 @@
+[
+  {
+    "actor": "repair-codex-QREN4y",
+    "usage": {
+      "input_tokens": 286562,
+      "cached_input_tokens": 228096,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 6962,
+      "reasoning_output_tokens": 591
+    }
+  },
+  {
+    "actor": "review-codex-EyhA3t",
+    "usage": {
+      "input_tokens": 298024,
+      "cached_input_tokens": 239360,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1744,
+      "reasoning_output_tokens": 91
+    }
+  },
+  {
+    "actor": "review-codex-LzSMtv",
+    "usage": {
+      "input_tokens": 136962,
+      "cached_input_tokens": 91520,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1065,
+      "reasoning_output_tokens": 31
+    }
+  }
+]

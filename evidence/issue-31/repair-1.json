@@ -1,0 +1,1 @@
+{"status":"repaired","findings":"文書4ファイルを整理しました。READMEにcheckの実行順序とJS／TSの検証範囲、通常開発と制御CLIへの導線を明記。レビュー方針はDEVELOPMENT.md、CLI固有手順はscripts/README.mdへ集約しました。過去の記録はDEVELOPMENT-HISTORY.mdへ原文のまま移し、Issue #10・#13の証拠と未検証範囲へのリンクを追加。人の承認、画面証拠、実行上限、中断制約を保持しています。ローカルリンク・アンカー62件、履歴の原文保持、git diff --checkを確認済み。コード・テスト・依存関係・CI・検証設定は未変更。full checkと独立評価はホストに委ね、commit・push・公開は行っていません。"}
