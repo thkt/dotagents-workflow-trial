@@ -8,7 +8,7 @@ import { parseArgs } from 'node:util';
 import { isRecord, isArray } from './input.ts';
 
 const repo = 'thkt/dotagents-workflow-trial';
-function command(argv: string[], token?: string): string {
+function command(argv: string[], token?: string) {
   const [executable, ...args] = argv;
   assert(executable);
   const env = { ...process.env };
@@ -21,7 +21,7 @@ function command(argv: string[], token?: string): string {
   return result.stdout;
 }
 
-export function keyJwt(pem: string): string {
+export function keyJwt(pem: string) {
   const key = createPrivateKey(pem);
   const publicKey = createPublicKey(key).export({ type: 'spki', format: 'der' });
   const fingerprint = createHash('sha256').update(publicKey).digest('base64');
@@ -34,7 +34,7 @@ export function keyJwt(pem: string): string {
   const payload = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({ iat: now - 60, exp: now + 300, iss: 'Iv23liEl9AuQXWekODVl' })}`;
   return `${payload}.${sign('RSA-SHA256', Buffer.from(payload), key).toString('base64url')}`;
 }
-function authenticate(): string {
+function authenticate() {
   const stored = command([
     '/usr/bin/security',
     'find-generic-password',
@@ -63,7 +63,7 @@ async function api(path: string, token: string, method = 'GET', body?: object): 
 }
 const runtime = { command, authenticate, api };
 
-export async function publish(args: string[], io = runtime): Promise<string> {
+export async function publish(args: string[], io = runtime) {
   const { values } = parseArgs({
     args,
     options: {
@@ -73,14 +73,12 @@ export async function publish(args: string[], io = runtime): Promise<string> {
     },
     strict: true,
   });
+  const { head, title, 'body-file': bodyPath } = values;
   assert(
-    values.head?.trim() && values.head !== 'main' && values.title?.trim() && values['body-file'],
+    head && head.trim() && head !== 'main' && title && title.trim() && bodyPath,
     'Required: --head BRANCH --title TITLE --body-file PATH',
   );
-  const head = values.head;
-  const title = values.title;
-  assert(head && title);
-  const bodyFile = resolve(values['body-file']);
+  const bodyFile = resolve(bodyPath);
   assert((await readFile(bodyFile, 'utf8')).trim(), 'PR body must not be empty');
   const jwt = io.authenticate();
   const app = await io.api('/app', jwt);
