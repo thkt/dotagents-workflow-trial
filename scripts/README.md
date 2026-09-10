@@ -84,3 +84,17 @@ bun /absolute/path/trusted-checkout/scripts/publish.ts --head codex/example --ti
 公開スクリプトはレビュー済みの信頼するcheckoutから実行し、actorが編集する作業コピーからは実行しません。強制終了・通信断による失効失敗時は、tokenの状態を別途確認します。
 
 公開処理のテストは模擬した外部呼び出しを使い、共通check内のtest:controlで実行します。秘密鍵はメモリ内で署名に使用し、ファイルへ保存しません。
+
+### PRへの画像・動画の添付
+
+App で PR を作成した後、公開担当の既存の gh 認証で`gh pr edit --attach`を実行します。対象 commit で取得した画像・動画を指定します。本文を指定しなければ、既存の本文を保って添付が追加されます。
+
+```sh
+gh pr edit PR_NUMBER --repo thkt/dotagents-workflow-trial \
+  --attach '/absolute/path/screenshot.png#検索結果の表示' \
+  --attach /absolute/path/demo.mp4
+```
+
+添付後は`gh pr view PR_NUMBER --repo thkt/dotagents-workflow-trial --json body --jq .body`で本文を取得し、アップロード先の URL を確認します。配置を整える場合は、この最新の本文をファイルに保存して編集し、`gh pr edit PR_NUMBER --repo thkt/dotagents-workflow-trial --body-file /absolute/path/pr.md`で反映します。既存の説明と添付 URL を維持し、画像は必要に応じて table に並べます。動画の添付 URL は単独の行に置き、PR 内で再生できるようにします。
+
+PR 画面で画像の表示と動画の再生を確認して、添付を完了とします。一部のアップロードが失敗すると、成功した添付を反映したうえでコマンドが失敗終了するため、本文を確認し、未添付のファイルだけを再実行します。
