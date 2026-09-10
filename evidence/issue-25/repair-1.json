@@ -1,0 +1,1 @@
+{"status":"repaired","findings":"文書4ファイルを修正。READMEにcheck全6段階と商品アプリJS・制御TSの検証範囲、読む順序を明記しました。現行方針を用途別に集約し、過去の記録をevidence/development-history.mdへ保持。Issue #10・#13のJS版実測へのリンクと、承認・画面証拠・実行上限・中断制約を維持しました。コード・設定は未変更。ローカルリンク51件と差分検査は成功。checkは静的検証・制御54件が成功しましたが、E2Eはポート4173のEADDRINUSEで起動失敗し、host側の確認が残ります。commit・push・公開は行っていません。"}

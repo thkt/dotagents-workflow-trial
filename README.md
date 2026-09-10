@@ -4,16 +4,17 @@
 
 公開可能な試行コードと架空データだけを扱います。
 
-## 開発の前提
+## 読む順序
 
-- 小さな変更もIssueに紐づけます。
-- 自動化によるPRは専用GitHub Appが作成し、人がレビュー・承認します。
-- 変更内容、検証結果、未確認事項をPRに記録します。
-- 秘密鍵やtokenをコード・文書・ログに残しません。
+- 通常の商品アプリ開発は、このREADMEの[セットアップと検証](#セットアップと検証)で起動・共通check・画像取得を確認し、[DEVELOPMENT.md](DEVELOPMENT.md)で変更とレビューの方針を確認します。制御CLIや実モデルの起動は不要です。
+- 修正・独立評価の接続を試す実行担当は、上記に続いて[scripts/README.md](scripts/README.md)の設定・実行上限・中断手順を読みます。通常開発とは別に、隔離した作業コピーで実行します。
+- 過去の結果を調べる場合は、[検証記録](#検証記録)から当時の証拠と未検証範囲へ進みます。
+
+文書の正本は、セットアップ・共通checkの順序と検証範囲がこのREADME、レビュー・開発方針がDEVELOPMENT.md、制御CLIの操作と実行制約がscripts/README.mdです。実際のコマンドと対象は[package.json](package.json)と各設定・実行入口で定義します。
 
 ## 現在の状態
 
-初期整備は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で進めています。
+初期整備の経緯は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で追跡しています。
 
 CIとmainの保護設定を適用済みです。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。[Issue #10](https://github.com/thkt/dotagents-workflow-trial/issues/10) で商品名・商品コードによる検索を追加しています。
 
@@ -54,20 +55,29 @@ bun run start
 bun run check
 ```
 
-`check` はOxlintのcorrectnessルールと、Biomeの
-`noExcessiveCognitiveComplexity`（上限15）、Playwrightによる実ブラウザーE2Eを順に実行します。
-Biomeの他のlintルール・formatter・assistは有効にしません。
-違反や検証コマンドの失敗は終了コードに反映します。
+[package.json](package.json)の`check`は、次の順に実行し、いずれかが失敗したらそこで停止します。違反やコマンドの失敗は終了コードに反映します。
 
-`setup:e2e` はPlaywrightに対応するChromiumを `node_modules` 内へインストールします。
+| 順序・コマンド | 現在の検証範囲 |
+| --- | --- |
+| 1. `lint` | Oxlintのcorrectness検査。`scripts/**/*.ts`には型情報を使う検査と書き方のルールも適用（[設定](.oxlintrc.json)）。 |
+| 2. `format:check` | Oxfmtによる`scripts/**/*.ts`だけの書式確認。書き換えは行いません（[設定](.oxfmtrc.json)）。 |
+| 3. `complexity` | Biomeの`noExcessiveCognitiveComplexity`、上限15。[設定](biome.json)で他のlintルール・formatter・assistは無効です。 |
+| 4. `typecheck` | `tsc --noEmit`。対象は制御コード・制御テストを含む`scripts/**/*.ts`で、`strict`と`noUncheckedIndexedAccess`が有効（[tsconfig.json](tsconfig.json)）。 |
+| 5. `test:control` | Bunで`scripts/tests`を実行。実際の制御CLI入口と一時Git作業コピーで、模擬コマンドによる修正・評価の遷移、対象変更、不正入力、上限、中断・再実行拒否を確認します。テストrunnerの実行完了判定も検証します。実モデルは呼びません。 |
+| 6. `test:e2e` | Playwrightで商品アプリの表示・検索をChromiumの2画面幅で検証し、画像を保存します。詳細は以下のとおりです。 |
+
+商品アプリの[server.js](server.js)・[public/search.js](public/search.js)はJavaScriptです。lint・複雑度検査と商品画面のE2Eで確認し、TSの書式確認・型検査の対象には含めません。BunでTSを実行するだけでは型検査になりません。模擬コマンドの制御テスト成功は実モデルの判断品質や要求達成の保証ではありません。
+
+両テストコマンドは[scripts/test.ts](scripts/test.ts)を経由し、`only`、テスト0件、未実行件数が0以外、必要な集計の欠落を失敗にします。[実行完了の判定と制約](DEVELOPMENT.md#テストの実行完了)も確認してください。TSの整形・ルールは[TypeScriptの書き方](DEVELOPMENT.md#typescriptの書き方)にまとめています。
+
+`setup:e2e`はPlaywrightに対応するChromiumを`node_modules`内へインストールします。
 初回はネットワーク接続が必要で、LinuxではOS依存ライブラリのインストール権限も必要です。
-JavaScriptを使用しており、TypeScriptの型検証はありません。
 
 E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。このポートは空けてください。
 [tests/product-list.spec.js](tests/product-list.spec.js) はIssueの固定期待値を使い、Chromiumのデスクトップ（1280×800）とモバイル（375×812）で全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、ラベルで特定できる検索欄の表示を検証します。
 [tests/product-search.spec.js](tests/product-search.spec.js) は同じ2画面幅で上記の入力・結果・順序、キーボードだけの移動と入力ごとの更新、全削除による復帰と再検索を検証します。
 実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
-Firefox・WebKit・実機・支援技術の動作はこのE2Eの検出範囲外です。
+Firefox・WebKit・実機・支援技術・日本語IMEの変換途中の動作はこのE2Eの検出範囲外です。
 
 スクリーンショットの再取得（E2Eも実行）:
 
@@ -85,23 +95,14 @@ bun run test:e2e
 
 `artifacts/` はGit管理対象外で、失敗時のtraceも `artifacts/test-results/` に保存します。
 撮影結果は毎回上書きするため、成功した実行のものを使ってください。
-画面の構成と読みやすさは人がレビューします。PRには対象commitで再実行した画像、検証コマンドと結果、未確認事項を添付してください。
+画面変更時の画像・動画の添付と人の確認は、[レビューを助ける説明](DEVELOPMENT.md#レビューを助ける説明)に従います。
 
-GitHub Actionsの`checks` jobも同じセットアップと `bun run check` を使います。
-PRのhead commitを検証します。jobの上限は`checks`が9分、`verify`が1分です（runner待ち時間を除く）。
-同じPRの古い実行をキャンセルし、変更パスによる検証省略は行いません。
-PRのコードを実行するjobにはAppの鍵や書き込みtokenを渡しません。
+CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保護)に実行条件・時間上限・承認条件と限界をまとめています。
 
-必須の`verify` jobは`checks`の結果が`success`の場合だけ成功します。
-`checks`の失敗・スキップ・キャンセルを成功扱いしません。
-判定jobはcheckoutせず、追加のtoken権限も持ちません。
-workflow全体のキャンセルやrunner障害では判定job自体が完了しないことがあります。
+## 検証記録
 
-mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の解消を要求します。
-新しい差分では古い承認を取り消し、baseの更新時は最新mainとの整合を求めます。
-直接push、force push、削除を制限し、bypass対象は設けていません。
-人は差分と検証結果を確認してApproveします。エージェントは人の承認を代行しません。
-承認後に差分が更新された場合は、最新commitの差分とCI結果を確認して再度Approveしてください。
+- [開発手順・検証追加の履歴](evidence/development-history.md)：初期整備のPR別実測とIssue #9〜#23の追加記録。現在の規則とは分けて保存しています。
+- [Issue #10のフロー試行](evidence/issue-10/evaluation.md)：当時のJS版で、親タスクが進行した検索・文書修正の試行。実行量、介入、未検証範囲を含みます。
+- [Issue #13のCLI試行](evidence/issue-13/evaluation.md)：当時のJS版CLIによる実モデルの修正・再評価1経路と、その限界。
 
-設定と実際のPRによる確認結果は[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)で追跡します。
-検証定義の変更に対する人のレビュー、PRの説明方法、確認済み範囲と制約は、[検証とレビューの方針](DEVELOPMENT.md)を参照してください。
+これらの過去の成功を、現行TS版での実モデル再実測として扱いません。今回の文書整理の試行結果は、対象・check・独立評価・人の承認を区別して記録します。

@@ -1,0 +1,51 @@
+{
+  "configHash": "247160b06641de634978e25fdcad151633cc38d3ccf716fdfe98e31f3bee03c7",
+  "issueHash": "7fcfa880bb51074b31b693e59b3284ddbb31da38ccc1355ff62e22602bca731d",
+  "repair": 1,
+  "review": 2,
+  "checks": 2,
+  "modelMs": 360458.542624,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/dotagents-documentation-trial-25/evidence/check-1"
+    },
+    {
+      "role": "review",
+      "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+      "code": 0,
+      "timedOut": false,
+      "ms": 65457.816958,
+      "prefix": "/private/tmp/dotagents-documentation-trial-25/evidence/review-1"
+    },
+    {
+      "role": "repair",
+      "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+      "code": 0,
+      "timedOut": false,
+      "ms": 217664.53166600002,
+      "prefix": "/private/tmp/dotagents-documentation-trial-25/evidence/repair-1"
+    },
+    {
+      "role": "check",
+      "source": "7f277d0971261dc84110d8c7cf5d2c48e7ae809cab927a175a4f48a9e0e91e8f",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/dotagents-documentation-trial-25/evidence/check-2"
+    },
+    {
+      "role": "review",
+      "source": "7f277d0971261dc84110d8c7cf5d2c48e7ae809cab927a175a4f48a9e0e91e8f",
+      "code": 0,
+      "timedOut": false,
+      "ms": 77336.19399999996,
+      "prefix": "/private/tmp/dotagents-documentation-trial-25/evidence/review-2"
+    }
+  ],
+  "source": "7f277d0971261dc84110d8c7cf5d2c48e7ae809cab927a175a4f48a9e0e91e8f",
+  "result": "ready_for_human_review"
+}
