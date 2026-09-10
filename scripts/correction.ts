@@ -244,9 +244,12 @@ async function cycle(
   let findings = `check failed. Read ${prefix}.stdout and ${prefix}.stderr.`;
   if (checked.code === 0) {
     const prompt = [
-      'Independently inspect requirements, code, meaningful tests and required documentation.',
+      'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
       'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
-      'Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary"}.',
+      'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
+      'The publisher owns PR creation, attachment upload and rendered-media checks; humans own review and approval. Their pending actions alone are not implementation defects.',
+      'If the deliverables are ready, return accepted and identify the remaining publisher/human actions in findings. Do not claim those actions are completed or waive them.',
+      'Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary and remaining handoff actions"}.',
       `Requirements:\n${issue}`,
     ].join('\n');
     const reviewed = await runModel(config, state, 'review', prompt, persist);
