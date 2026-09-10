@@ -21,3 +21,13 @@ function updateSearch() {
 
 search.addEventListener("input", updateSearch);
 updateSearch();
+
+const order = document.getElementById("product-order");
+const collator = new Intl.Collator("ja");
+order.addEventListener("change", () => {
+  const direction = order.value === "descending" ? -1 : 1;
+  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
+    direction * collator.compare(a.dataset.reading, b.dataset.reading),
+  );
+  document.querySelector("tbody").append(...ordered);
+});
