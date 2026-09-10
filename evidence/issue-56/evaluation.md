@@ -17,7 +17,7 @@ PC 1280×800・モバイル375×812の画像で、検索欄・クリアボタン
 
 [PC動画](clear-desktop.mp4) / [モバイル動画](clear-mobile.mp4)
 
-Playwrightで、初期表示→noteを1文字350msで入力→クリア→mugで再検索→mugxで0件→クリアを録画した。各状態で表示件数をassertした。PCはTab・Enter・Shift+Tab・Space、モバイルはhasTouch環境のtapを使用し、文字入力はキーボードイベント。FFmpegでH.264/yuv420pに変換し、モバイル幅は右端を1px補った。音声なし。実機やOSキーボードの検証ではない。
+Playwrightで、初期表示→noteを1文字350msで入力→クリア→mugで再検索→mugxで0件→クリアを録画した。各状態で表示件数をassertした。PCはTab・Enter・Shift+Tab・Space、モバイルはhasTouch環境のtapを使用し、文字入力はキーボードイベント。FFmpegでH.264/yuv420pに変換し、モバイルの操作viewportは375×812で、動画ファイルの実寸は374×812。音声なし。実機やOSキーボードの検証ではない。
 
 ## フローの観測
 
