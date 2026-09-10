@@ -1,0 +1,70 @@
+{
+  "issue": 42,
+  "repair": 1,
+  "review": 2,
+  "checks": 2,
+  "modelMs": 409192.67920899997,
+  "executionSeconds": 466.74900007247925,
+  "result": "ready_for_human_review",
+  "usage": {
+    "input_tokens": 775477,
+    "cached_input_tokens": 613504,
+    "output_tokens": 11296
+  },
+  "primaryDocumentExperimentSections": 0,
+  "section": null,
+  "parentRelayInterventions": 0,
+  "repairFullChecks": 0,
+  "requiredPublicationCorrections": 0,
+  "state": {
+    "configHash": "a873aad25102256c2c64fcd7cfd1ed4052c59c109bff0c097440cce6cfa8a4a6",
+    "issueHash": "cad0ffd4d10303af5d5c81b882b5acfff223e5fdb0475cdcf46b4400ca465e75",
+    "repair": 1,
+    "review": 2,
+    "checks": 2,
+    "modelMs": 409192.67920899997,
+    "active": null,
+    "events": [
+      {
+        "role": "check",
+        "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+        "code": 0,
+        "timedOut": false,
+        "prefix": "/private/tmp/dotagents-requirements-trial/evidence/check-1"
+      },
+      {
+        "role": "review",
+        "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+        "code": 0,
+        "timedOut": false,
+        "ms": 49123.773666999994,
+        "prefix": "/private/tmp/dotagents-requirements-trial/evidence/review-1"
+      },
+      {
+        "role": "repair",
+        "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+        "code": 0,
+        "timedOut": false,
+        "ms": 282859.699334,
+        "prefix": "/private/tmp/dotagents-requirements-trial/evidence/repair-1"
+      },
+      {
+        "role": "check",
+        "source": "66db54bbf6493fe994215654261443314fd6efb171b81629c83b6fc9fc014633",
+        "code": 0,
+        "timedOut": false,
+        "prefix": "/private/tmp/dotagents-requirements-trial/evidence/check-2"
+      },
+      {
+        "role": "review",
+        "source": "66db54bbf6493fe994215654261443314fd6efb171b81629c83b6fc9fc014633",
+        "code": 0,
+        "timedOut": false,
+        "ms": 77209.20620799996,
+        "prefix": "/private/tmp/dotagents-requirements-trial/evidence/review-2"
+      }
+    ],
+    "source": "66db54bbf6493fe994215654261443314fd6efb171b81629c83b6fc9fc014633",
+    "result": "ready_for_human_review"
+  }
+}

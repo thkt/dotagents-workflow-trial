@@ -39,9 +39,20 @@ const role=process.argv[2], mode=${JSON.stringify(mode)};
 if(role==='issue') console.log(mode==='issue_changed'&&existsSync(${JSON.stringify(join(root, 'issue-changed'))})?'Changed requirement':'Agreed requirement: correct source and docs');
 if(role==='check') {
  if(mode==='check_timeout') await new Promise(r=>setTimeout(r,10000));
+ if(mode==='normal') {console.log('source must be correct');console.error('validation failed: source is broken');}
  process.exit(readFileSync('source.txt','utf8')==='broken'?1:0);
 }
 if(role==='repair') {
+ if(mode==='normal') {
+  const prompt=readFileSync(0,'utf8');
+  const stdout=${JSON.stringify(join(root, 'evidence/check-1.stdout'))};
+  const stderr=${JSON.stringify(join(root, 'evidence/check-1.stderr'))};
+  if(!prompt.includes(stdout)||!prompt.includes(stderr)) process.exit(3);
+  const expected=readFileSync(stdout,'utf8').trim();
+  const failure=readFileSync(stderr,'utf8').trim();
+  if(expected!=='source must be correct'||failure!=='validation failed: source is broken') process.exit(4);
+  if(prompt.includes(expected)||prompt.includes(failure)) process.exit(5);
+ }
  if(mode==='null_repair') {console.log('null');process.exit(0);}
  if(mode==='timeout') await new Promise(r=>setTimeout(r,10000));
  if(mode==='human') {console.log(JSON.stringify({status:'needs_human',findings:'Need changed requirements'}));process.exit(0);}

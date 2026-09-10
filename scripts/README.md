@@ -15,7 +15,7 @@ bun scripts/correction.ts /absolute/path/config.json
 {
   "cwd": "/absolute/path/isolated-worktree",
   "runDir": "/absolute/path/evidence",
-  "issue": ["gh", "issue", "view", "ISSUE_NUMBER", "--repo", "thkt/dotagents-workflow-trial", "--json", "title,body,updatedAt"],
+  "issue": ["gh", "issue", "view", "DELIVERABLE_ISSUE_NUMBER", "--repo", "thkt/dotagents-workflow-trial", "--json", "title,body,updatedAt"],
   "check": ["bun", "run", "check"],
   "repair": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "repair", "/absolute/path/evidence"],
   "review": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "review", "/absolute/path/evidence"],
@@ -26,7 +26,19 @@ bun scripts/correction.ts /absolute/path/config.json
 }
 ```
 
-`issue`は参照先を含む実際の作業要求を取得するコマンドです。上の例は単一Issueの取得方法であり、参照する別Issueの本文が必要な試行では取得対象に含めます。作業担当へ渡す題材と、制御側の実装要求を区別してください。GitHubの書き込みコマンドはこの入口にありません。
+`issue`は成果物の要求を取得するコマンドです。CLI は取得結果の全文を修正・独立評価の両方へ渡します。GitHub の書き込みコマンドはこの入口にありません。
+
+### 成果物の要求と実験の管理
+
+成果物の Issue には、目的・変更範囲・完了条件・適用する合意済み方針を記載します。成果物に必要な検証と説明も含めます。文書整理なら、読む順序・正本の配置・リンクの整合性などを要求にし、その実験の計測や公開作業を成果物へ書き込む指示にしません。
+
+実験を行う場合は、実験管理の Issue から成果物の Issue を参照し、比較条件・実行上限・計測項目・結果の保管と公開を管理します。通常の変更に実験管理 Issue を追加する必要はありません。実行担当はそこで合意した上限と権限を設定・実行に反映します。
+
+`config.issue`には成果物の Issue を指定します。完了条件の理解に必要な別 Issue の本文は取得対象に含めますが、実験管理の本文を一括で連結しません。要求と実験手順が混在している場合は、実行前に Issue を分けて合意し、見出し抽出で要求を省略する運用は避けます。過去の実測を再利用する場合は元の Issue・証拠を保持し、分離した要求を新しい Issue に記録します。
+
+実行前に`config.issue`の取得結果を確認し、必要な要求と参照内容が揃い、実験手順が成果物の完了条件として混ざっていないことを照合します。この分離は入力準備の責任であり、CLI が内容を自動判定するものではありません。
+
+### 修正・独立評価の担当
 
 `repair`と`review`は要求・失敗根拠を標準入力で受け取り、結果のJSONだけを標準出力へ返します。評価は`status: accepted | needs_changes`と文字列`findings`、修正は`status: repaired | needs_human`と文字列`findings`です。欠落・不正・実行失敗は停止し、成功には読み替えません。これは呼び出し間の最小の結果形式で、Issueの完了条件を置き換える契約ではありません。
 
@@ -58,3 +70,17 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 制御テストの実装は[correction.test.ts](tests/correction.test.ts)と[test-runner.test.ts](tests/test-runner.test.ts)です。SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
 
 制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象・未検証範囲は[検証記録](../evidence/README.md)を参照してください。
+
+## PRの公開
+
+公開担当が、push済みブランチとレビュー用の本文を指定します。Bun、ghと、macOS login Keychainに登録したApp鍵を使います。
+
+```sh
+bun /absolute/path/trusted-checkout/scripts/publish.ts --head codex/example --title '変更の概要' --body-file /absolute/path/pr.md
+```
+
+対象は`thkt/dotagents-workflow-trial`の`main`です。同じheadのopen PRがあればそのURLを返します。既存PRの本文更新、push、承認、マージは行いません。App認証を確認し、対象リポジトリ限定のtokenで`gh pr create`を実行した後、tokenを失効します。応答不明の場合はGitHub上のPRを照合してから再実行してください。
+
+公開スクリプトはレビュー済みの信頼するcheckoutから実行し、actorが編集する作業コピーからは実行しません。強制終了・通信断による失効失敗時は、tokenの状態を別途確認します。
+
+公開処理のテストは模擬した外部呼び出しを使い、共通check内のtest:controlで実行します。秘密鍵はメモリ内で署名に使用し、ファイルへ保存しません。

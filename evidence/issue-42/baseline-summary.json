@@ -1,0 +1,19 @@
+{
+  "issue": 31,
+  "repair": 1,
+  "review": 2,
+  "checks": 2,
+  "modelMs": 365152.519707,
+  "executionSeconds": 406.8345789909363,
+  "result": "ready_for_human_review",
+  "usage": {
+    "input_tokens": 721548,
+    "cached_input_tokens": 558976,
+    "output_tokens": 9771
+  },
+  "primaryDocumentExperimentSections": 1,
+  "section": "scripts/README.md: 試行の記録と公開",
+  "parentRelayInterventions": 0,
+  "repairFullChecks": 0,
+  "requiredPublicationCorrections": 1
+}
