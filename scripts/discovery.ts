@@ -18,6 +18,17 @@ async function save(dir: string, state: Session) {
   await writeFile(temporary, JSON.stringify(state, null, 2) + '\n', { flag: 'wx' });
   await rename(temporary, join(dir, 'state.json'));
 }
+// Repeated saves are valid only when the existing content is identical.
+async function writeOnce(path: string, content: string) {
+  try {
+    await writeFile(path, content, { flag: 'wx' });
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
+      throw error;
+    }
+    assert((await readFile(path, 'utf8')) === content, `Existing content differs: ${path}`);
+  }
+}
 async function start(file: string) {
   const config = await json(file);
   assert(isRecord(config), 'Invalid configuration');
@@ -47,19 +58,11 @@ async function start(file: string) {
   await mkdir(config.contextDir, { recursive: true });
   const contextDir = await realpath(config.contextDir);
   assert(outside(repo, contextDir), 'Context must be outside the checkout');
-  const binding = join(contextDir, 'repository.txt');
-  try {
-    await writeFile(binding, repo, { flag: 'wx' });
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
-      throw error;
-    }
-    assert((await readFile(binding, 'utf8')) === repo, 'Context belongs to another checkout');
-  }
+  await writeOnce(join(contextDir, 'repository.txt'), repo);
   const work = join(contextDir, 'work');
   await mkdir(work, { recursive: true });
   assert((await realpath(work)) === work, 'Work storage must not be a symlink');
-  const dir = join(contextDir, 'work', config.task);
+  const dir = join(work, config.task);
   await mkdir(dir);
   const state: Session = {
     repo,
@@ -81,7 +84,6 @@ async function assess(state: Session, file: string) {
   assessment(value, state.criteria);
   assert(value.revision === state.revision, 'Stale assessment; read current status');
   state.entries.push({ kind: 'assessment', text: JSON.stringify(value) });
-  state.revision++;
   state.assessment = value;
   state.question = value.question ? { id: randomUUID(), text: value.question } : null;
 }
@@ -94,7 +96,6 @@ async function answer(state: Session, file: string) {
     kind: 'answer',
     text: JSON.stringify({ question: state.question, answer: value.text }),
   });
-  state.revision++;
   state.question = null;
   state.assessment = null;
 }
@@ -102,7 +103,6 @@ async function note(state: Session, file: string) {
   const text = await readFile(file, 'utf8');
   nonempty(text);
   state.entries.push({ kind: 'note', text });
-  state.revision++;
   state.assessment = null;
 }
 async function archive(state: Session, file: string, sessionDir: string) {
@@ -115,14 +115,7 @@ async function archive(state: Session, file: string, sessionDir: string) {
   await mkdir(dir, { recursive: true });
   assert((await realpath(dir)) === dir, 'Research storage must not be a symlink');
   const path = join(dir, `${id}.md`);
-  try {
-    await writeFile(path, content, { flag: 'wx' });
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
-      throw error;
-    }
-    assert((await readFile(path, 'utf8')) === content, 'Research record differs');
-  }
+  await writeOnce(path, content);
   console.log(path);
 }
 async function load(dir: string) {
@@ -163,6 +156,7 @@ async function run(action: string, dir: string, file?: string) {
     } else {
       await note(current, file);
     }
+    current.revision++;
     await save(canonical, current);
     console.log(
       JSON.stringify({

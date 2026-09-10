@@ -41,21 +41,21 @@ export function assessment(
     Object.keys(value.checks).length === Object.keys(rules).length,
     'Evaluate exactly the session criteria',
   );
+  let missing = false;
   for (const id of Object.keys(rules)) {
     const check: unknown = value.checks[id];
     assert(isRecord(check), `Missing criterion: ${id}`);
     assert(
-      ['sufficient', 'missing', 'not_applicable'].includes(String(check.status)),
+      typeof check.status === 'string' &&
+        ['sufficient', 'missing', 'not_applicable'].includes(check.status),
       'Invalid status',
     );
     nonempty(check.reason);
+    missing ||= check.status === 'missing';
   }
   if (value.question !== undefined) {
     nonempty(value.question);
-    assert(
-      Object.values(value.checks).some((check) => isRecord(check) && check.status === 'missing'),
-      'A question requires missing context',
-    );
+    assert(missing, 'A question requires missing context');
   }
 }
 export function session(value: unknown): asserts value is Session {
@@ -66,7 +66,12 @@ export function session(value: unknown): asserts value is Session {
   assert(isArray(value.referencePaths), 'Invalid reference paths');
   value.referencePaths.forEach(nonempty);
   criteria(value.criteria);
-  assert(Number.isSafeInteger(value.revision) && Number(value.revision) >= 0, 'Invalid revision');
+  assert(
+    typeof value.revision === 'number' &&
+      Number.isSafeInteger(value.revision) &&
+      value.revision >= 0,
+    'Invalid revision',
+  );
   assert(isArray(value.entries), 'Invalid entries');
   for (const entry of value.entries) {
     assert(isRecord(entry), 'Invalid entry');
@@ -75,7 +80,7 @@ export function session(value: unknown): asserts value is Session {
   }
   if (value.assessment !== null) {
     assessment(value.assessment, value.criteria);
-    assert(value.assessment.revision === Number(value.revision) - 1, 'Stale saved assessment');
+    assert(value.assessment.revision === value.revision - 1, 'Stale saved assessment');
   }
   if (value.question !== null) {
     assert(isRecord(value.question), 'Invalid question');

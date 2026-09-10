@@ -109,9 +109,14 @@ test('question, restart, answer and reassessment retain evidence without prematu
 
 test('all criteria and current revision are required; inputs do not replace saved criteria', async () => {
   const t = await setup();
+  const originalCriteria = (await t.state()).criteria;
   await writeFile(t.config.criteriaFile, '{}');
   for (const checks of [
     {},
+    {
+      purpose: { status: 'sufficient', reason: 'known' },
+      evidence: { status: ['missing'], reason: 'Need more evidence' },
+    },
     {
       purpose: { status: 'sufficient', reason: 'known' },
       evidence: { status: 'sufficient', reason: '' },
@@ -126,7 +131,7 @@ test('all criteria and current revision are required; inputs do not replace save
   const before = await t.state();
   expect((await t.send('assess', before.assessment)).status).toBe(1);
   expect(await t.state()).toEqual(before);
-  expect(Object.keys(before.criteria)).toEqual(['purpose', 'evidence']);
+  expect(before.criteria).toEqual(originalCriteria);
 });
 
 test('missing facts block progress without requiring a human question', async () => {
