@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Issue #10 の固定期待値。実装のデータや検索処理を参照しない。
+// 表示する商品と順序の期待値。実装のデータや検索処理を参照しない。
 const allProducts = [
   ["青いノート", "NOTE-001"],
   ["赤いノート", "NOTE-002"],
@@ -18,6 +18,9 @@ async function expectProducts(page, products) {
     await expect(table.getByRole("rowheader", { name, exact: true })).toBeInViewport();
     await expect(table.getByRole("cell", { name: code, exact: true })).toBeInViewport();
   }
+  const resultCount = page.getByText(`全4件中${products.length}件を表示`, { exact: true });
+  await expect(resultCount).toBeVisible();
+  await expect(resultCount).toBeInViewport();
   const emptyMessage = page.getByText("該当する商品はありません", { exact: true });
   if (products.length === 0) {
     await expect(emptyMessage).toBeVisible();
@@ -45,6 +48,7 @@ for (const { query, products, screenshot } of [
     await expectProducts(page, [["青いノート", "NOTE-001"]]);
     await search.fill(query);
     await expectProducts(page, products);
+    await expect(search).toBeFocused();
     if (screenshot) {
       await page.screenshot({ path: `artifacts/product-search-${screenshot}-${testInfo.project.name}.png`, fullPage: true });
     }
@@ -52,6 +56,7 @@ for (const { query, products, screenshot } of [
     await page.keyboard.press("Backspace");
     await expect(search).toHaveValue("");
     await expectProducts(page, allProducts);
+    await expect(search).toBeFocused();
   });
 }
 
@@ -74,4 +79,5 @@ test("キーボードだけで検索欄へ移動し、入力ごとの更新と�
   await expectProducts(page, allProducts);
   await page.keyboard.type("mug");
   await expectProducts(page, [["白いマグ", "MUG-001"]]);
+  await expect(search).toBeFocused();
 });
