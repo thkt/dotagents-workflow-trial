@@ -1,0 +1,42 @@
+[
+  {
+    "actor": "repair-codex-Zbhepu",
+    "usage": {
+      "input_tokens": 291457,
+      "cached_input_tokens": 233984,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 6551,
+      "reasoning_output_tokens": 701
+    }
+  },
+  {
+    "actor": "review-codex-iH328m",
+    "usage": {
+      "input_tokens": 365544,
+      "cached_input_tokens": 302848,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1943,
+      "reasoning_output_tokens": 201
+    }
+  },
+  {
+    "actor": "review-codex-9C3VFC",
+    "usage": {
+      "input_tokens": 140154,
+      "cached_input_tokens": 93824,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1313,
+      "reasoning_output_tokens": 67
+    }
+  },
+  {
+    "actor": "review-codex-tlYisG",
+    "usage": {
+      "input_tokens": 227056,
+      "cached_input_tokens": 179840,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1794,
+      "reasoning_output_tokens": 133
+    }
+  }
+]
