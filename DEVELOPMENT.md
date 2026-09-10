@@ -117,14 +117,16 @@ Oxlintの`typeAware`を有効にし、固定版`oxlint-tsgolint` 7.0.2001を追�
 
 Oxfmt、Biomeの認知的複雑度15、既存の静的検証とE2Eは維持し、既存の検出条件を削りません。型付きlintの仕組みは[公式ドキュメント](https://oxc.rs/docs/guide/usage/linter/type-aware)を参照してください。
 
-## テストの選択・除外（Issue #23）
+## テストの実行完了（Issue #23）
 
-合意済みテストを部分実行・未実行のままCI成功にしないため、`scripts/tests/**`と`tests/**`でOxlintの`no-restricted-properties`を適用します。`only`・`skip`・`todo`・`skipIf`・`runIf`・`fixme`のプロパティ使用をerrorにします。別名importやメソッド連鎖、固定文字列でのブラケットアクセスにも適用されます。用途によらず同名プロパティを禁止するため、テスト内の通常データにも該当する場合は設計・例外の妥当性をレビューします。
+`bun run test:control`と`bun run test:e2e`は、`scripts/test.ts`から既存runnerを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件になります。
 
-`fit`・`fdescribe`・`xit`・`xtest`・`xdescribe`は、Bun/Playwrightからのnamed importとグローバル呼び出しを禁止します。Playwrightの既存のCI `forbidOnly`も維持します。ローカルで対象を絞って調査するときはrunnerのファイル指定や名前フィルターを使い、提出前に引数なしの`bun run check`を実行します。
+runnerが成功終了した後、BunのJUnitルート集計とPlaywrightのJSON statsを確認します。テスト0件・未実行件数が0以外・必要な集計の欠落は失敗です。skip/todo/条件付きskip/fixmeの指定方法をソースから列挙せず、実行結果で判断します。毎回`artifacts`内に新しい保存先を作り、過去のレポートを再利用しません。runnerの失敗時にはレポート判定へ進みません。
 
-Oxlint 1.80.0のJest用`no-focused-tests` / `no-disabled-tests`は、`bun:test`・`@playwright/test`のimportでは違反を検出しませんでした。そのため、効かない専用ルールを追加せず、上記の汎用ルールで強制します。追加依存関係や独自解析器はありません。
+Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解析は行いません。Playwright 1.63.0は標準JSON出力を使います。runnerの更新時は形式と判定の回帰テストを確認します。追加依存関係はありません。
 
-意図的にテストを除外する必要がある場合は、対象・理由・失う検出条件・代替証拠・復帰条件をIssue/PRで説明し、検証定義の変更として人の承認を得ます。lint抑制を通常の修正手段にはしません。現在は除外を追加していません。
+通常のテスト実行・only・skip・todo/fixme・条件付きskip・失敗・0件を実runnerで回帰検証します。現在の制御34件とE2E18件を維持し、実行完了の判定を検証する20件を追加しました。テストと無関係な同名プロパティやimportを禁止するOxlintルールは使いません。
 
-静的に分からないプロパティ名、独自ラッパー、任意の条件分岐、テスト削除、CIの実行対象変更までこのルールだけで防ぐものではありません。検証対象と検証定義のレビューを継続します。45件の一時コードによる構文の拒否・許可判定を確認し、一時ファイルは削除しました。通常の制御34件・E2E18件を維持します。
+ローカルの調査で対象を絞る場合は`bun test`やPlaywright CLIを直接使い、提出前には引数なしの`bun run check`を実行します。意図的な除外は対象・理由・失う検出条件・代替証拠・復帰条件をIssue/PRで示し、検証定義の変更として人が承認します。現在は除外を追加していません。
+
+任意の条件分岐によるテスト未登録、テスト削除、CIの実行対象変更まで保証するものではありません。検証対象と検証定義のレビューを継続します。

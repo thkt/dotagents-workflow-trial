@@ -1,0 +1,72 @@
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { isRecord } from './input.ts';
+
+export function checkReport(runner: 'bun' | 'playwright', text: string) {
+  let total: unknown, skipped: unknown;
+  if (runner === 'bun') {
+    // Read only the root summary emitted by pinned Bun, not testcase text or logs.
+    const summary = /^<\?xml[^>]*>\s*<testsuites\s+([^>]*)>/.exec(text)?.[1];
+    assert(
+      summary && text.trimEnd().endsWith('</testsuites>'),
+      'Missing or incomplete Bun JUnit summary',
+    );
+    const testsAttribute = /\btests="(\d+)"/.exec(summary)?.[1];
+    const skippedAttribute = /\bskipped="(\d+)"/.exec(summary)?.[1];
+    total = testsAttribute === undefined ? undefined : Number(testsAttribute);
+    skipped = skippedAttribute === undefined ? undefined : Number(skippedAttribute);
+  } else {
+    const report: unknown = JSON.parse(text);
+    assert(isRecord(report) && isRecord(report.stats), 'Missing Playwright stats');
+    total = report.stats.expected;
+    skipped = report.stats.skipped;
+  }
+  assert(typeof total === 'number' && Number.isInteger(total) && total > 0, 'No completed tests');
+  assert(skipped === 0, `Unexecuted tests or invalid skipped count: ${String(skipped)}`);
+}
+
+if (import.meta.main) {
+  try {
+    const runner = process.argv[2];
+    assert(
+      runner === 'bun' || runner === 'playwright',
+      'Usage: bun scripts/test.ts bun|playwright',
+    );
+    await mkdir('artifacts', { recursive: true });
+    const dir = await mkdtemp(resolve('artifacts', `${runner}-report-`));
+    const report = resolve(dir, runner === 'bun' ? 'results.xml' : 'results.json');
+    const argv =
+      runner === 'bun'
+        ? [
+            process.execPath,
+            'test',
+            'scripts/tests',
+            '--reporter=junit',
+            '--reporter-outfile',
+            report,
+          ]
+        : [
+            resolve('node_modules/.bin/playwright'),
+            'test',
+            '--forbid-only',
+            '--reporter=list,json',
+          ];
+    const [executable, ...args] = argv;
+    assert(executable);
+    const result = spawnSync(executable, args, {
+      stdio: 'inherit',
+      env: { ...process.env, CI: 'true', PLAYWRIGHT_JSON_OUTPUT_FILE: report },
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    assert(result.status === 0, `${runner} did not succeed (${result.signal ?? result.status})`);
+    checkReport(runner, await readFile(report, 'utf8'));
+    console.log(`All tests executed. Report: ${report}`);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
+}
