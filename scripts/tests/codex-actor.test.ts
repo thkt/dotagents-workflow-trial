@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, writeFile, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -8,17 +8,6 @@ for (const mode of ['normal', 'nonzero', 'missing', 'write_error'] as const) {
   test(`Codex actor logs: ${mode}`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'actor-stream-'));
     try {
-      const preload = join(root, 'preload.ts');
-      await writeFile(
-        preload,
-        `import { mock } from 'bun:test';
-import { createWriteStream, mkdirSync } from 'node:fs';
-const original = createWriteStream;
-mock.module('node:fs', () => ({ createWriteStream(path) {
-  mkdirSync(path);
-  return original(path);
-} }));`,
-      );
       if (mode !== 'missing') {
         await writeFile(
           join(root, 'codex'),
@@ -33,10 +22,14 @@ process.exitCode = ${mode === 'nonzero' ? 7 : 0};
           { mode: 0o755 },
         );
       }
+      // Limit only the child process; ignore SIGXFSZ so writes report EFBIG.
       const result = spawnSync(
-        process.execPath,
+        '/bin/sh',
         [
-          ...(mode === 'write_error' ? ['--preload', preload] : []),
+          '-c',
+          mode === 'write_error' ? 'ulimit -f 1; trap "" XFSZ; exec "$@"' : 'exec "$@"',
+          'actor-test',
+          process.execPath,
           resolve('scripts/codex-actor.ts'),
           'review',
           root,
@@ -66,8 +59,11 @@ process.exitCode = ${mode === 'nonzero' ? 7 : 0};
           'y'.repeat(2 * 1024 * 1024) + 'stderr-end',
         );
       }
-      if (mode === 'write_error') {
-        expect(result.stderr).toContain('EISDIR');
+      if (dir && mode === 'write_error') {
+        expect(result.stderr).toContain('EFBIG');
+        const { size } = await stat(join(root, dir, 'events.jsonl'));
+        expect(size).toBeGreaterThan(0);
+        expect(size).toBeLessThan(2 * 1024 * 1024);
       }
     } finally {
       await rm(root, { recursive: true, force: true });
