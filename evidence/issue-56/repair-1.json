@@ -1,0 +1,1 @@
+{"status":"needs_human","findings":"evidence/issue-56/evaluation.mdに画像4枚・host側checkの対象commit ec15ad1e874dfc5a5ed2d9410fd99b020270fab0と確認根拠を追記しました。動画は撮影commitを特定できず、再撮影用サーバーもEADDRINUSEで起動できませんでした。host側で撮影時のソースを確認するか、対象commitで両動画を再撮影してください。PR添付・人による操作確認は未確認です。テスト・要求・権限は変更せず、full check・commit・push・公開は実行していません。"}
