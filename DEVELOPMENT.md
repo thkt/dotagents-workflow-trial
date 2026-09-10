@@ -21,7 +21,11 @@ workflowだけでなく、検証コマンド、対象の選択、lint設定、�
 
 検証定義もPRから変更できるため、人がその無効化を見落として承認した場合まで防げるとは扱いません。
 `verify`自体のスキップ、検証コマンドの置き換え、step単位の省略を、現在の判定jobだけで防ぐことはできません。
-PRから独立した強制判定は初期整備の対象外とし、無人運用・レビュー省略などで必要になった時点で設計・評価します。
+PRから独立した強制判定は対象外です。
+
+## ドキュメントの更新
+
+基本ドキュメントには、現在有効な要求・方針・手順と判断に必要な理由を記載します。変更時は現在の説明として書き直し、変遷・過去との比較は移行や互換性の判断に必要な場合に限ります。経緯・個別の実行条件・結果はIssue・PR・[検証記録](evidence/README.md)へ残し、必要な箇所から参照します。
 
 ## レビューを助ける説明
 
@@ -61,13 +65,11 @@ mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の
 人は差分と検証結果を確認してApproveします。エージェントは人の承認を代行しません。
 承認後に差分が更新された場合は、最新commitの差分とCI結果を確認して再度Approveしてください。
 
-設定と実際のPRによる初期確認は[履歴](evidence/development-history.md#初期整備で確認した範囲)から辿れます。
-
 ## TypeScriptの書き方
 
-`scripts/**/*.ts`の書式はOxfmt 0.66.0に統一します。`bun run format`で整形し、`bun run format:check`で書き換えずに確認します。共通`bun run check`にも書式確認を含めるため、CIでも同じ条件を適用します。2スペース・single quote・セミコロン・行幅100を基本とし、importの並べ替えは有効にしません。商品アプリのJSや過去のevidenceは整形対象外です。
+`scripts/**/*.ts`の書式はOxfmt 0.66.0に統一します。`bun run format`で整形し、`bun run format:check`で書き換えずに確認します。共通`bun run check`にも書式確認を含めるため、CIでも同じ条件を適用します。2スペース・single quote・セミコロン・行幅100を基本とし、importの並べ替えは有効にしません。
 
-Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorにします。
+Oxlintはcorrectness検査に加え、同じTS範囲で次をerrorにします。
 
 | ルール | 揃える書き方 |
 | --- | --- |
@@ -78,7 +80,7 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに�
 | `eqeqeq` | `===` / `!==`で比較する |
 | `curly` | 制御構文の本体を波括弧で囲む |
 
-既存のstrict型検査はtsc、認知的複雑度の上限15はBiomeの`noExcessiveCognitiveComplexity`だけで検査します。OxfmtとOxlintに型の整合性や要求達成まで保証させるものではありません。ルールの追加・緩和は検証定義の変更として、目的と検出力への影響をPRで説明します。
+strict型検査はtsc、認知的複雑度の上限15はBiomeの`noExcessiveCognitiveComplexity`だけで検査します。OxfmtとOxlintに型の整合性や要求達成まで保証させるものではありません。ルールの追加・緩和は検証定義の変更として、目的と検出力への影響をPRで説明します。
 
 Oxlintの`typeAware`を有効にし、TSには`no-floating-promises`（`ignoreVoid: false`）、`no-misused-promises`、`await-thenable`、`no-unsafe-assignment` / `call` / `member-access` / `argument` / `return`をerrorで適用します。correctnessの型情報を必要とするルールも有効です。設定は[.oxlintrc.json](.oxlintrc.json)、型検査の対象・条件は[tsconfig.json](tsconfig.json)で確認できます。
 
@@ -86,17 +88,12 @@ Oxlintの`typeAware`を有効にし、TSには`no-floating-promises`（`ignoreVo
 
 ## テストの実行完了
 
-`bun run test:control`と`bun run test:e2e`は、`scripts/test.ts`から既存runnerを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件になります。
+`bun run test:control`と`bun run test:e2e`は、`scripts/test.ts`からBunとPlaywrightを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件になります。
 
 runnerが成功終了した後、BunのJUnitルート集計とPlaywrightのJSON statsを確認します。テスト0件・未実行件数が0以外・必要な集計の欠落は失敗です。skip/todo/条件付きskip/fixmeの指定方法をソースから列挙せず、実行結果で判断します。毎回`artifacts`内に新しい保存先を作り、過去のレポートを再利用しません。runnerの失敗時にはレポート判定へ進みません。
 
-Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解析は行いません。Playwright 1.63.0は標準JSON出力を使います。runnerの更新時は形式と判定の回帰テストを確認します。追加依存関係はありません。
+Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解析は行いません。Playwright 1.63.0は標準JSON出力を使います。runnerの更新時は形式と判定の回帰テストを確認します。
 
-ローカルの調査で対象を絞る場合は`bun test`やPlaywright CLIを直接使い、提出前には引数なしの`bun run check`を実行します。意図的な除外は対象・理由・失う検出条件・代替証拠・復帰条件をIssue/PRで示し、検証定義の変更として人が承認します。現在は除外を追加していません。
+ローカルの調査で対象を絞る場合は`bun test`やPlaywright CLIを直接使い、提出前には引数なしの`bun run check`を実行します。意図的な除外は対象・理由・失う検出条件・代替証拠・復帰条件をIssue/PRで示し、検証定義の変更として人が承認します。
 
 任意の条件分岐によるテスト未登録、テスト削除、CIの実行対象変更まで保証するものではありません。検証対象と検証定義のレビューを継続します。
-
-## 過去の記録
-
-[開発手順・検証追加の履歴](evidence/development-history.md)に初期整備の実測とIssue #9〜#23の追加記録を保存しています。履歴の当時の予定・件数・成功を現行版の保証に読み替えません。
-実モデル試行の実行量・介入・未検証範囲は、[Issue #10](evidence/issue-10/evaluation.md)と[Issue #13](evidence/issue-13/evaluation.md)を参照してください。いずれも当時のJS版の証拠であり、現行TS版の再実測ではありません。

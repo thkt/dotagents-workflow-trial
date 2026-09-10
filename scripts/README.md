@@ -15,7 +15,7 @@ bun scripts/correction.ts /absolute/path/config.json
 {
   "cwd": "/absolute/path/isolated-worktree",
   "runDir": "/absolute/path/evidence",
-  "issue": ["gh", "issue", "view", "13", "--repo", "thkt/dotagents-workflow-trial", "--json", "title,body,updatedAt"],
+  "issue": ["gh", "issue", "view", "ISSUE_NUMBER", "--repo", "thkt/dotagents-workflow-trial", "--json", "title,body,updatedAt"],
   "check": ["bun", "run", "check"],
   "repair": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "repair", "/absolute/path/evidence"],
   "review": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "review", "/absolute/path/evidence"],
@@ -50,15 +50,9 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 
 準備時の分離や記録は、同一ユーザーによる悪意ある改変へのセキュリティ境界ではありません。検証定義の弱体化は独立評価と人のレビューでも確認します。
 
-## 検証と過去の証拠
+## 検証
 
 現在の共通checkの順序、制御TSと商品アプリJSの検証範囲は[README](../README.md#セットアップと検証)、書式・型情報を使うlint・テスト実行完了の方針は[DEVELOPMENT.md](../DEVELOPMENT.md#typescriptの書き方)を参照してください。
 制御テストの実装は[correction.test.ts](tests/correction.test.ts)と[test-runner.test.ts](tests/test-runner.test.ts)です。SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
 
-- [Issue #10の評価](../evidence/issue-10/evaluation.md)：当時のJS版で親タスクが進行した試行。文書漏れの差し戻し、介入と未検証範囲を記録しています。
-- [Issue #13の評価](../evidence/issue-13/evaluation.md)：当時のJS版CLIによる実モデルの修正・再評価。対象commit、回数・時間、実測した1経路と未検証範囲を記録しています。
-- [検証追加の履歴](../evidence/development-history.md)：TS移行、信号による中断、静的検証、runnerの完了判定を追加した時点の記録です。
-
-過去のJS版の成功を現行TS版の実測として扱いません。制御テストの成功も実モデルの判断品質の証拠には数えません。
-
-[Issue #25の文書整理試行](../evidence/issue-25/evaluation.md)に、今回の実行条件・結果と簡素化の候補を記録しています。
+制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象・未検証範囲は[検証記録](../evidence/README.md)を参照してください。

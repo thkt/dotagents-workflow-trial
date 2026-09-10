@@ -8,15 +8,13 @@
 
 - 通常の商品アプリ開発は、このREADMEの[セットアップと検証](#セットアップと検証)で起動・共通check・画像取得を確認し、[DEVELOPMENT.md](DEVELOPMENT.md)で変更とレビューの方針を確認します。制御CLIや実モデルの起動は不要です。
 - 修正・独立評価の接続を試す実行担当は、上記に続いて[scripts/README.md](scripts/README.md)の設定・実行上限・中断手順を読みます。通常開発とは別に、隔離した作業コピーで実行します。
-- 過去の結果を調べる場合は、[検証記録](#検証記録)から当時の証拠と未検証範囲へ進みます。
+- 検証結果は[検証記録](evidence/README.md)を参照してください。
 
 文書の正本は、セットアップ・共通checkの順序と検証範囲がこのREADME、レビュー・開発方針がDEVELOPMENT.md、制御CLIの操作と実行制約がscripts/README.mdです。実際のコマンドと対象は[package.json](package.json)と各設定・実行入口で定義します。
 
-## 現在の状態
+## 提供する機能
 
-初期整備の経緯は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で追跡しています。
-
-CIとmainの保護設定を適用済みです。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。[Issue #10](https://github.com/thkt/dotagents-workflow-trial/issues/10) で商品名・商品コードによる検索を追加しています。
+架空の4商品を一覧表示し、商品名・商品コードで検索できます。CIとmainの保護設定を適用しています。
 
 ## セットアップと検証
 
@@ -98,11 +96,3 @@ bun run test:e2e
 画面変更時の画像・動画の添付と人の確認は、[レビューを助ける説明](DEVELOPMENT.md#レビューを助ける説明)に従います。
 
 CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保護)に実行条件・時間上限・承認条件と限界をまとめています。
-
-## 検証記録
-
-- [開発手順・検証追加の履歴](evidence/development-history.md)：初期整備のPR別実測とIssue #9〜#23の追加記録。現在の規則とは分けて保存しています。
-- [Issue #10のフロー試行](evidence/issue-10/evaluation.md)：当時のJS版で、親タスクが進行した検索・文書修正の試行。実行量、介入、未検証範囲を含みます。
-- [Issue #13のCLI試行](evidence/issue-13/evaluation.md)：当時のJS版CLIによる実モデルの修正・再評価1経路と、その限界。
-
-これらの過去の成功を、現行TS版での実モデル再実測として扱いません。今回の文書整理の試行結果は、対象・check・独立評価・人の承認を区別して記録します。
