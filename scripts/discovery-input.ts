@@ -6,7 +6,6 @@ export interface Assessment {
   decision: string;
   checks: Record<string, { status: 'sufficient' | 'missing' | 'not_applicable'; reason: string }>;
   next: string;
-  question?: string;
 }
 export interface Session {
   repo: string;
@@ -16,7 +15,6 @@ export interface Session {
   criteria: Record<string, string>;
   revision: number;
   assessment: Assessment | null;
-  question: { id: string; text: string } | null;
   entries: { kind: string; text: string }[];
 }
 export function nonempty(value: unknown): asserts value is string {
@@ -41,7 +39,6 @@ export function assessment(
     Object.keys(value.checks).length === Object.keys(rules).length,
     'Evaluate exactly the session criteria',
   );
-  let missing = false;
   for (const id of Object.keys(rules)) {
     const check: unknown = value.checks[id];
     assert(isRecord(check), `Missing criterion: ${id}`);
@@ -51,12 +48,8 @@ export function assessment(
       'Invalid status',
     );
     nonempty(check.reason);
-    missing ||= check.status === 'missing';
   }
-  if (value.question !== undefined) {
-    nonempty(value.question);
-    assert(missing, 'A question requires missing context');
-  }
+  assert(!('question' in value), 'Ask questions in chat, not in assessments');
 }
 export function session(value: unknown): asserts value is Session {
   assert(isRecord(value), 'Invalid session');
@@ -82,22 +75,14 @@ export function session(value: unknown): asserts value is Session {
     assessment(value.assessment, value.criteria);
     assert(value.assessment.revision === value.revision - 1, 'Stale saved assessment');
   }
-  if (value.question !== null) {
-    assert(isRecord(value.question), 'Invalid question');
-    nonempty(value.question.id);
-    nonempty(value.question.text);
-    if (value.assessment !== null) {
-      assert(
-        value.assessment.question === value.question.text,
-        'Question does not match assessment',
-      );
-    }
-  }
+  assert(
+    !('question' in value),
+    'Unsupported question-tracking session; preserve it and reassess selected context in a new session',
+  );
 }
 export function ready(state: Session) {
   return (
     state.assessment !== null &&
-    state.question === null &&
     Object.values(state.assessment.checks).every((check) => check.status !== 'missing')
   );
 }
