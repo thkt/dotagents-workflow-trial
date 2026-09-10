@@ -11,3 +11,4 @@
 | [共通checkの担当整理の実測](issue-31/evaluation.md) | 重複実行・修正品質・所要時間の比較 |
 | [要求分離後の文書整理の実測](issue-42/evaluation.md) | 成果物Issueと実験管理Issueを分離した入力での生成文書・修正負荷・実行量の比較 |
 | [検索件数表示の実装](issue-63/evaluation.md) | 精緻化した要求Issueを使った実装、E2E、画像・動画と未検証範囲 |
+| [公開前評価の担当分離](issue-67/evaluation.md) | 実装不足の差し戻しと、公開・人の確認を残した引き継ぎをAstraで確認 |

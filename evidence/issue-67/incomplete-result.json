@@ -1,0 +1,36 @@
+{
+  "configHash": "96933ad709d4e90ca84e6e0d896139e83477358c877cac55cee871802f6371e5",
+  "issueHash": "b739621e212168c28896c3bf0df4f8e856fe9b5e47ef9bba08a57ecb04af7be3",
+  "repair": 1,
+  "review": 1,
+  "checks": 1,
+  "modelMs": 36536.412584000005,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "fd88198cfa5b5ed2fa1e616440017fe40f3e43dea8bf2aa91c9bdd82809ca461",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/review-stage-67-evidence/incomplete/check-1"
+    },
+    {
+      "role": "review",
+      "source": "fd88198cfa5b5ed2fa1e616440017fe40f3e43dea8bf2aa91c9bdd82809ca461",
+      "code": 0,
+      "timedOut": false,
+      "ms": 36522.9875,
+      "prefix": "/private/tmp/review-stage-67-evidence/incomplete/review-1"
+    },
+    {
+      "role": "repair",
+      "source": "fd88198cfa5b5ed2fa1e616440017fe40f3e43dea8bf2aa91c9bdd82809ca461",
+      "code": 0,
+      "timedOut": false,
+      "ms": 13.425084000002244,
+      "prefix": "/private/tmp/review-stage-67-evidence/incomplete/repair-1"
+    }
+  ],
+  "source": "fd88198cfa5b5ed2fa1e616440017fe40f3e43dea8bf2aa91c9bdd82809ca461",
+  "result": "human_decision_required"
+}

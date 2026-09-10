@@ -1,0 +1,28 @@
+{
+  "configHash": "9e070478630f54bfa76e9f015482fcaeae1b357517c972ac40d0229598eff6b6",
+  "issueHash": "b739621e212168c28896c3bf0df4f8e856fe9b5e47ef9bba08a57ecb04af7be3",
+  "repair": 0,
+  "review": 1,
+  "checks": 1,
+  "modelMs": 99865.48033300001,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "4d57b0eccf74bbc802ae897015e62208013ba7552c8ba9859436410cd345bdda",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/review-stage-67-evidence/complete/check-1"
+    },
+    {
+      "role": "review",
+      "source": "4d57b0eccf74bbc802ae897015e62208013ba7552c8ba9859436410cd345bdda",
+      "code": 0,
+      "timedOut": false,
+      "ms": 99865.48033300001,
+      "prefix": "/private/tmp/review-stage-67-evidence/complete/review-1"
+    }
+  ],
+  "source": "4d57b0eccf74bbc802ae897015e62208013ba7552c8ba9859436410cd345bdda",
+  "result": "ready_for_human_review"
+}
