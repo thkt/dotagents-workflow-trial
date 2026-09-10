@@ -1,8 +1,9 @@
 const search = document.getElementById("product-search");
 const rows = Array.from(document.querySelectorAll("tbody tr"));
+const resultCount = document.getElementById("result-count");
 const noResults = document.getElementById("no-results");
 
-search.addEventListener("input", () => {
+function updateSearch() {
   const query = search.value.trim().toLowerCase();
   let matches = 0;
 
@@ -14,5 +15,9 @@ search.addEventListener("input", () => {
     if (matchesQuery) matches += 1;
   }
 
+  resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
   noResults.hidden = matches > 0;
-});
+}
+
+search.addEventListener("input", updateSearch);
+updateSearch();
