@@ -3,7 +3,7 @@ import type { Config, State, ActorRole, StopReason } from './input.ts';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename, lstat, readlink, rm } from 'node:fs/promises';
-import { resolve, relative } from 'node:path';
+import { resolve, relative, isAbsolute, sep } from 'node:path';
 
 interface CommandResult {
   code: number | null;
@@ -75,10 +75,10 @@ async function command(
   activeGroup = child.pid;
   child.stdin.on('error', () => {});
   child.stdin.end(input);
-  child.stdout.on('data', (data) => {
+  child.stdout.setEncoding('utf8').on('data', (data) => {
     stdout += data;
   });
-  child.stderr.on('data', (data) => {
+  child.stderr.setEncoding('utf8').on('data', (data) => {
     stderr += data;
   });
   const timer = setTimeout(() => {
@@ -131,7 +131,7 @@ async function snapshot(cwd: string) {
 
 function validate(config: Config) {
   const relation = relative(resolve(config.cwd), resolve(config.runDir));
-  if (!relation.startsWith('..') && !relation.startsWith('/')) {
+  if (relation !== '..' && !relation.startsWith(`..${sep}`) && !isAbsolute(relation)) {
     throw Error('Evidence must be outside the worktree');
   }
 }
