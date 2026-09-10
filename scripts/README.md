@@ -61,12 +61,14 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 
 ## PRの公開
 
-公開担当が、push済みブランチとレビュー用の本文を指定します。Python 3、gh、OpenSSLと、macOS login Keychainに登録したApp鍵を使います。
+公開担当が、push済みブランチとレビュー用の本文を指定します。Bun、ghと、macOS login Keychainに登録したApp鍵を使います。
 
 ```sh
-python3 /absolute/path/trusted-checkout/scripts/publish.py --head codex/example --title '変更の概要' --body-file /absolute/path/pr.md
+bun /absolute/path/trusted-checkout/scripts/publish.ts --head codex/example --title '変更の概要' --body-file /absolute/path/pr.md
 ```
 
 対象は`thkt/dotagents-workflow-trial`の`main`です。同じheadのopen PRがあればそのURLを返します。既存PRの本文更新、push、承認、マージは行いません。App認証を確認し、対象リポジトリ限定のtokenで`gh pr create`を実行した後、tokenを失効します。応答不明の場合はGitHub上のPRを照合してから再実行してください。
 
 公開スクリプトはレビュー済みの信頼するcheckoutから実行し、actorが編集する作業コピーからは実行しません。強制終了・通信断による失効失敗時は、tokenの状態を別途確認します。
+
+公開処理のテストは模擬した外部呼び出しを使い、共通check内のtest:controlで実行します。秘密鍵はメモリ内で署名に使用し、ファイルへ保存しません。
