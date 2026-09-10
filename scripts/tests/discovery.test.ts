@@ -1,0 +1,221 @@
+import { test, expect, afterEach } from 'bun:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, readdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { session } from '../discovery-input.ts';
+
+const entry = resolve(import.meta.dir, '../discovery.ts');
+const roots: string[] = [];
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+function cli(...args: string[]) {
+  return spawnSync(process.execPath, [entry, ...args], { encoding: 'utf8', timeout: 10000 });
+}
+async function setup() {
+  const root = await mkdtemp(join(tmpdir(), 'discovery-test-'));
+  roots.push(root);
+  const repo = join(root, 'repo');
+  await mkdir(repo);
+  const criteriaFile = join(root, 'criteria.json');
+  const rules = {
+    purpose: 'Is the purpose known?',
+    evidence: 'Can evidence support the next decision?',
+  };
+  await writeFile(criteriaFile, JSON.stringify(rules));
+  const config = {
+    repo,
+    contextDir: join(root, 'context'),
+    task: 'trial',
+    referencePaths: ['README.md'],
+    criteriaFile,
+    request: 'Make reset understandable',
+  };
+  const configFile = join(root, 'config.json');
+  await writeFile(configFile, JSON.stringify(config));
+  const started = cli('start', configFile);
+  expect(started.status).toBe(0);
+  const dir = started.stdout.trim();
+  const file = join(root, 'input.json');
+  const state = async () => {
+    const value: unknown = JSON.parse(await readFile(join(dir, 'state.json'), 'utf8'));
+    session(value);
+    return value;
+  };
+  const send = async (action: string, value: unknown) => {
+    await writeFile(file, JSON.stringify(value));
+    return cli(action, dir, file);
+  };
+  const evaluate = async (missing = false, question?: string) =>
+    send('assess', {
+      revision: (await state()).revision,
+      decision: 'Choose reset behavior',
+      checks: {
+        purpose: { status: 'sufficient', reason: 'Request identifies the intended user result' },
+        evidence: {
+          status: missing ? 'missing' : 'sufficient',
+          reason: missing
+            ? 'Need user preference for scope'
+            : 'Existing behavior and proposed scope checked',
+        },
+      },
+      next: missing
+        ? 'Stop UI implementation; obtain scope then reassess'
+        : 'Prepare the scoped proposal',
+      ...(question ? { question } : {}),
+    });
+  return { root, repo, config, configFile, dir, file, state, send, evaluate };
+}
+
+test('question, restart, answer and reassessment retain evidence without premature progress', async () => {
+  const t = await setup();
+  expect(cli('gate', t.dir).status).toBe(1);
+  const report = join(t.root, 'notes.md');
+  await writeFile(report, 'Existing reset behavior verified against source revision abc.');
+  expect(cli('note', t.dir, report).status).toBe(0);
+  expect((await t.evaluate(true, 'Should reset retain focus?')).status).toBe(0);
+  const question = (await t.state()).question;
+  expect(cli('note', t.dir, report).status).toBe(0);
+  expect((await t.state()).question).toEqual(question);
+  const waiting = await t.state();
+  expect(cli('status', t.dir).status).toBe(0);
+  expect(cli('gate', t.dir).status).toBe(1);
+  expect((await t.evaluate()).status).toBe(1);
+  expect((await t.send('answer', { questionId: 0, text: 'Yes' })).status).toBe(1);
+  expect(await t.state()).toEqual(waiting);
+  expect(
+    (
+      await t.send('answer', {
+        questionId: waiting.question?.id,
+        text: 'Retain focus on the search field',
+      })
+    ).status,
+  ).toBe(0);
+  expect(cli('gate', t.dir).status).toBe(1);
+  expect(
+    (await t.send('answer', { questionId: waiting.question?.id, text: 'Duplicate' })).status,
+  ).toBe(1);
+  expect((await t.evaluate()).status).toBe(0);
+  expect(cli('gate', t.dir).status).toBe(0);
+  const completed = await t.state();
+  expect(completed.entries.some((item) => item.text.includes('source revision abc'))).toBe(true);
+  expect(
+    completed.entries.some((item) => item.text.includes('Retain focus on the search field')),
+  ).toBe(true);
+  expect(cli('note', t.dir, report).status).toBe(0);
+  expect(cli('gate', t.dir).status).toBe(1);
+});
+
+test('all criteria and current revision are required; inputs do not replace saved criteria', async () => {
+  const t = await setup();
+  await writeFile(t.config.criteriaFile, '{}');
+  for (const checks of [
+    {},
+    {
+      purpose: { status: 'sufficient', reason: 'known' },
+      evidence: { status: 'sufficient', reason: '' },
+    },
+  ]) {
+    expect(
+      (await t.send('assess', { revision: 0, decision: 'Choose', checks, next: 'Continue' }))
+        .status,
+    ).toBe(1);
+  }
+  expect((await t.evaluate()).status).toBe(0);
+  const before = await t.state();
+  expect((await t.send('assess', before.assessment)).status).toBe(1);
+  expect(await t.state()).toEqual(before);
+  expect(Object.keys(before.criteria)).toEqual(['purpose', 'evidence']);
+});
+
+test('missing facts block progress without requiring a human question', async () => {
+  const t = await setup();
+  expect((await t.evaluate(true)).status).toBe(0);
+  expect((await t.state()).question).toBeNull();
+  expect(cli('gate', t.dir).status).toBe(1);
+  expect((await t.evaluate()).status).toBe(0);
+  expect(cli('gate', t.dir).status).toBe(0);
+});
+
+test('research archiving requires sufficient context and preserves existing records', async () => {
+  const t = await setup();
+  const report = join(t.root, 'report.md');
+  await writeFile(report, 'Question, current sources, conclusion and unresolved scope.');
+  expect(cli('archive', t.dir, report).status).toBe(1);
+  expect((await t.evaluate()).status).toBe(0);
+  const saved = cli('archive', t.dir, report);
+  expect(saved.status).toBe(0);
+  expect(cli('archive', t.dir, report).stdout).toBe(saved.stdout);
+  expect(await readFile(saved.stdout.trim(), 'utf8')).toContain('current sources');
+  expect(await readdir(join(t.config.contextDir, 'research'))).toHaveLength(1);
+});
+
+test('existing tasks, mismatched repositories and context inside checkout are rejected', async () => {
+  const t = await setup();
+  const before = await t.state();
+  expect(cli('start', t.configFile).status).toBe(1);
+  const other = join(t.root, 'other');
+  await mkdir(other);
+  for (const override of [
+    { repo: other },
+    { contextDir: join(t.repo, 'private') },
+    { referencePaths: ['../outside.md'] },
+    { task: '../escape' },
+  ]) {
+    await writeFile(t.configFile, JSON.stringify({ ...t.config, ...override }));
+    expect(cli('start', t.configFile).status).toBe(1);
+  }
+  const link = join(t.root, 'linked');
+  await symlink(t.repo, link);
+  await writeFile(t.configFile, JSON.stringify({ ...t.config, contextDir: link }));
+  expect(cli('start', t.configFile).status).toBe(1);
+  expect(await t.state()).toEqual(before);
+});
+
+test('lock and unfinished save block even a previously sufficient evaluation', async () => {
+  const t = await setup();
+  expect((await t.evaluate()).status).toBe(0);
+  const before = await t.state();
+  await mkdir(join(t.dir, 'lock'));
+  expect(cli('gate', t.dir).status).toBe(1);
+  expect((await t.evaluate()).status).toBe(1);
+  await rm(join(t.dir, 'lock'), { recursive: true });
+  await mkdir(join(t.dir, 'state.json.tmp'));
+  expect((await t.evaluate()).status).toBe(1);
+  expect(await t.state()).toEqual(before);
+  expect(cli('gate', t.dir).status).toBe(1);
+});
+
+test('corrupt saved state does not pass the gate', async () => {
+  const t = await setup();
+  await writeFile(join(t.dir, 'state.json'), '{"assessment":"accepted"}');
+  expect(cli('gate', t.dir).status).toBe(1);
+  expect(await readFile(join(t.dir, 'state.json'), 'utf8')).toBe('{"assessment":"accepted"}');
+});
+
+test('an answer for another session cannot release a pending question', async () => {
+  const first = await setup();
+  const second = await setup();
+  expect((await first.evaluate(true, 'Choose scope')).status).toBe(0);
+  expect((await second.evaluate(true, 'Choose scope')).status).toBe(0);
+  expect(
+    (await second.send('answer', { questionId: (await first.state()).question?.id, text: 'Yes' }))
+      .status,
+  ).toBe(1);
+  expect(cli('gate', second.dir).status).toBe(1);
+});
+
+test('symlinked work and research storage cannot redirect writes', async () => {
+  const t = await setup();
+  const archive = join(t.config.contextDir, 'research');
+  await symlink(t.repo, archive);
+  await writeFile(t.file, 'Report');
+  expect((await t.evaluate()).status).toBe(0);
+  expect(cli('archive', t.dir, t.file).status).toBe(1);
+  const work = join(t.config.contextDir, 'work');
+  await rm(work, { recursive: true });
+  await symlink(t.repo, work);
+  expect(cli('start', t.configFile).status).toBe(1);
+  expect(await readdir(t.repo)).toHaveLength(0);
+});

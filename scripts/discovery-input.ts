@@ -1,0 +1,98 @@
+import assert from 'node:assert/strict';
+import { isRecord, isArray } from './input.ts';
+
+export interface Assessment {
+  revision: number;
+  decision: string;
+  checks: Record<string, { status: 'sufficient' | 'missing' | 'not_applicable'; reason: string }>;
+  next: string;
+  question?: string;
+}
+export interface Session {
+  repo: string;
+  contextDir: string;
+  referencePaths: string[];
+  request: string;
+  criteria: Record<string, string>;
+  revision: number;
+  assessment: Assessment | null;
+  question: { id: string; text: string } | null;
+  entries: { kind: string; text: string }[];
+}
+export function nonempty(value: unknown): asserts value is string {
+  assert(typeof value === 'string' && value.trim(), 'Expected non-empty text');
+}
+export function criteria(value: unknown): asserts value is Record<string, string> {
+  assert(isRecord(value) && Object.keys(value).length > 0, 'Criteria must not be empty');
+  for (const [id, question] of Object.entries(value)) {
+    assert(/^[a-z][a-z0-9_-]*$/.test(id), 'Invalid criterion ID');
+    nonempty(question);
+  }
+}
+export function assessment(
+  value: unknown,
+  rules: Record<string, string>,
+): asserts value is Assessment {
+  assert(isRecord(value) && Number.isSafeInteger(value.revision), 'Invalid assessment revision');
+  nonempty(value.decision);
+  nonempty(value.next);
+  assert(isRecord(value.checks), 'Missing checks');
+  assert(
+    Object.keys(value.checks).length === Object.keys(rules).length,
+    'Evaluate exactly the session criteria',
+  );
+  for (const id of Object.keys(rules)) {
+    const check: unknown = value.checks[id];
+    assert(isRecord(check), `Missing criterion: ${id}`);
+    assert(
+      ['sufficient', 'missing', 'not_applicable'].includes(String(check.status)),
+      'Invalid status',
+    );
+    nonempty(check.reason);
+  }
+  if (value.question !== undefined) {
+    nonempty(value.question);
+    assert(
+      Object.values(value.checks).some((check) => isRecord(check) && check.status === 'missing'),
+      'A question requires missing context',
+    );
+  }
+}
+export function session(value: unknown): asserts value is Session {
+  assert(isRecord(value), 'Invalid session');
+  nonempty(value.repo);
+  nonempty(value.contextDir);
+  nonempty(value.request);
+  assert(isArray(value.referencePaths), 'Invalid reference paths');
+  value.referencePaths.forEach(nonempty);
+  criteria(value.criteria);
+  assert(Number.isSafeInteger(value.revision) && Number(value.revision) >= 0, 'Invalid revision');
+  assert(isArray(value.entries), 'Invalid entries');
+  for (const entry of value.entries) {
+    assert(isRecord(entry), 'Invalid entry');
+    nonempty(entry.kind);
+    nonempty(entry.text);
+  }
+  if (value.assessment !== null) {
+    assessment(value.assessment, value.criteria);
+    assert(value.assessment.revision === Number(value.revision) - 1, 'Stale saved assessment');
+  }
+  if (value.question !== null) {
+    assert(isRecord(value.question), 'Invalid question');
+    nonempty(value.question.id);
+    nonempty(value.question.text);
+    if (value.assessment !== null) {
+      assert(
+        value.assessment.question === value.question.text,
+        'Question does not match assessment',
+      );
+    }
+  }
+}
+export function ready(state: Session) {
+  return (
+    state.assessment !== null &&
+    state.question === null &&
+    Object.values(state.assessment.checks).every((check) => check.status !== 'missing')
+  );
+}
