@@ -241,7 +241,7 @@ async function cycle(
   if (checked.timedOut || checked.code === null) {
     return 'check_unavailable';
   }
-  let findings = `check failed. Read ${prefix}.stdout and ${prefix}.stderr.\n${checked.stdout}\n${checked.stderr}`;
+  let findings = `check failed. Read ${prefix}.stdout and ${prefix}.stderr.`;
   if (checked.code === 0) {
     const prompt = [
       'Independently inspect requirements, code, meaningful tests and required documentation.',
