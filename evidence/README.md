@@ -8,3 +8,4 @@
 | [検索・文書修正の試行](issue-10/evaluation.md) | JS版で親タスクが進行した試行、介入と未検証範囲 |
 | [修正・再評価CLIの試行](issue-13/evaluation.md) | JS版CLIによる実モデルの修正・再評価 |
 | [文書整理の試行](issue-25/evaluation.md) | TS版CLIの差し戻し・修正・再評価、公開前の手直しと簡素化候補 |
+| [共通checkの担当整理の実測](issue-31/evaluation.md) | 重複実行・修正品質・所要時間の比較 |

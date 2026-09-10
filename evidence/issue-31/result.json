@@ -1,0 +1,51 @@
+{
+  "configHash": "4c41da7aa92d95fb71d3d702548d944639f57210918117ab902392c5dfd30093",
+  "issueHash": "46cd101c84f9fa980194e3f701917554ae7582ec83727ca00459e28eb47e7133",
+  "repair": 1,
+  "review": 2,
+  "checks": 2,
+  "modelMs": 365152.519707,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/dotagents-check-ownership-trial/evidence/check-1"
+    },
+    {
+      "role": "review",
+      "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+      "code": 0,
+      "timedOut": false,
+      "ms": 46720.759958,
+      "prefix": "/private/tmp/dotagents-check-ownership-trial/evidence/review-1"
+    },
+    {
+      "role": "repair",
+      "source": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+      "code": 0,
+      "timedOut": false,
+      "ms": 244271.156583,
+      "prefix": "/private/tmp/dotagents-check-ownership-trial/evidence/repair-1"
+    },
+    {
+      "role": "check",
+      "source": "9ef72201187da6398df8e7877755092eadb47b76525e43888c6edbfac892ab86",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/dotagents-check-ownership-trial/evidence/check-2"
+    },
+    {
+      "role": "review",
+      "source": "9ef72201187da6398df8e7877755092eadb47b76525e43888c6edbfac892ab86",
+      "code": 0,
+      "timedOut": false,
+      "ms": 74160.60316599999,
+      "prefix": "/private/tmp/dotagents-check-ownership-trial/evidence/review-2"
+    }
+  ],
+  "source": "9ef72201187da6398df8e7877755092eadb47b76525e43888c6edbfac892ab86",
+  "result": "ready_for_human_review"
+}

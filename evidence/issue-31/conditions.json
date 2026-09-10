@@ -1,0 +1,12 @@
+{
+  "worktreeCommit": "2256dcf0c5619553b792963c64bd40b2a1d1be2c",
+  "controllerCommit": "50cc2f52e5880ef6ca2218c2260824626ac1b1eb",
+  "initialSourceHash": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+  "issueTitleEqual": true,
+  "issueBodyEqual": true,
+  "previousCodexVersion": "0.153.4",
+  "currentCodexVersion": "0.154.0",
+  "model": "gpt-6-astra",
+  "reasoning": "high",
+  "dependencies": "same existing node_modules"
+}
