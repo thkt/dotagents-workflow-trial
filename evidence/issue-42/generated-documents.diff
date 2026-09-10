@@ -1,0 +1,362 @@
+diff --git a/DEVELOPMENT.md b/DEVELOPMENT.md
+index 294fe22..7f55cad 100644
+--- a/DEVELOPMENT.md
++++ b/DEVELOPMENT.md
+@@ -3,2 +3 @@
+-この試行では、機械的な検証と説明を揃えた上で、人が変更をレビュー・承認します。
+-人のレビューを省略する運用は導入しません。
++本書を現在の共通検証・レビュー方針の正本とします。通常開発のセットアップと商品操作は[README](README.md#セットアップと検証)、制御CLI固有の設定・実行上限・中断対応は[scripts/README](scripts/README.md)が正本です。過去の変更理由・実測結果は[履歴](evidence/development-history.md)へ分けています。
+@@ -6 +5 @@
+-## 変更に応じた確認
++この試行では、機械的な検証と説明を揃えた上で、人が変更をレビュー・承認します。人のレビューを省略する運用は導入しません。
+@@ -8 +7 @@
+-通常の変更では、合意済みの検証を再利用します。人は要求の達成、検証の適用条件、今回残る観点を確認します。
++## 開発の前提
+@@ -10,3 +9,4 @@
+-検証自体を変える場合は、守る条件、変更理由、検出できなくなるケースとその対応をPRで説明します。
+-workflowだけでなく、検証コマンド、対象の選択、lint設定、テスト、依存関係など、結果の意味に影響する変更を含みます。
+-人はこの説明と差分・証拠を確認し、CI成功だけを根拠に承認しません。
++- 小さな変更もIssueに紐づけます。
++- 自動化によるPRは専用GitHub Appが作成し、人がレビュー・承認します。
++- 変更内容、検証結果、未確認事項をPRに記録します。
++- 秘密鍵やtokenをコード・文書・ログに残しません。
+@@ -14,2 +14 @@ workflowだけでなく、検証コマンド、対象の選択、lint設定、
+-機械は合意済みの検証定義に従い、実行結果・必須チェック・最新の承認を確認します。
+-具体的な実行コマンドとmain保護の設定は[README](README.md#セットアップと検証)を参照してください。
++## 共通checkと適用範囲
+@@ -17,3 +16 @@ workflowだけでなく、検証コマンド、対象の選択、lint設定、
+-検証定義もPRから変更できるため、人がその無効化を見落として承認した場合まで防げるとは扱いません。
+-`verify`自体のスキップ、検証コマンドの置き換え、step単位の省略を、現在の判定jobだけで防ぐことはできません。
+-PRから独立した強制判定は初期整備の対象外とし、無人運用・レビュー省略などで必要になった時点で設計・評価します。
++[package.json](package.json)の`bun run check`をローカル・CIで共用します。次の順で実行し、失敗した段階で停止します。違反・コマンド失敗は終了コードに反映します。
+@@ -21 +18,8 @@ PRから独立した強制判定は初期整備の対象外とし、無人運用
+-## レビューを助ける説明
++| 順序・コマンド | 対象と検出範囲 | 定義 |
++| --- | --- | --- |
++| 1. `lint` | OxlintのcorrectnessをJS・TSへ適用。型情報を使うlintを有効にし、制御TSには下記の追加ルールをerrorで適用。警告も失敗扱い。 | [.oxlintrc.json](.oxlintrc.json) |
++| 2. `format:check` | Oxfmtで`scripts/**/*.ts`の書式を変更せずに確認。商品アプリJSや過去のevidenceは整形対象外。 | [.oxfmtrc.json](.oxfmtrc.json) |
++| 3. `complexity` | Biomeの`noExcessiveCognitiveComplexity`、上限15。他のlintルール・formatter・assistは無効。 | [biome.json](biome.json) |
++| 4. `typecheck` | `tsc --noEmit`で`scripts/**/*.ts`のみを`strict`・`noUncheckedIndexedAccess`付きで型検査。商品アプリJSは対象外。 | [tsconfig.json](tsconfig.json) |
++| 5. `test:control` | 一時Git作業コピーと模擬コマンドで制御CLIを検証し、テストrunnerの実行完了判定も検証。実モデルは呼び出さない。 | [制御テスト](scripts/tests/correction.test.ts)、[runnerテスト](scripts/tests/test-runner.test.ts) |
++| 6. `test:e2e` | 商品アプリをChromiumで検証。画面幅・検証項目は下記。 | [playwright.config.js](playwright.config.js) |
+@@ -23,2 +27 @@ PRから独立した強制判定は初期整備の対象外とし、無人運用
+-PRの概要では、何が変わり、なぜ必要で、どのように確かめたか、何が未確認かを伝えます。
+-人が構造・意図・影響を把握し、重点的に読むコードを絞れるようにします。
++BunによるTSの実行だけでは型検査を行いません。商品アプリJSはlint・複雑度・E2E、制御TSはlint・書式・複雑度・型検査・制御テストで確認します。型検査やlintの成功は要求達成・外部データの正しさを保証しません。
+@@ -26,8 +29 @@ PRの概要では、何が変わり、なぜ必要で、どのように確かめ
+-必要に応じて、アーキテクチャ・依存関係の図、変更前後の比較、フロー図・シーケンス図、具体的な入力と結果・境界条件を使います。
+-画像は比較する観点に応じてtable等で並べ、変更前後・状態・画面幅の対応を読み取りやすくします。縮小して判読しづらくなる場合は分けて掲載し、原寸画像へ辿れるようにします。
+-画面の操作や遷移を変更する場合は、主要な利用手順の動画を撮影し、対象commitと確認する操作・状態を対応づけます。必要なら音声解説・字幕を添えます。
+-E2E検証と定型デモ撮影はPlaywrightを標準とします。入力途中の挙動を示す場合は、キーボードイベントで1文字ずつ入力し、変化を見取れる間隔を設けます。
+-解説音声はmacOS標準音声のKyokoを使い、FFmpegで映像と合成します。操作・結果と解説のタイミングを合わせ、合成音声であることを明記し、動画はPR内で直接再生できる添付を優先します。
+-agent-browserは、LLMによる探索的な画面確認で必要な場合に使う任意の補助手段とし、通常の検証・撮影の必須依存にはしません。
+-図や動画を全PRの必須項目にはしません。
+-図はMermaidを基本とし、そのPRで理解してほしい変更箇所・責任範囲・データの流れに絞ります。複雑な図は分割し、それでも読みづらい場合や配置が重要な場合はSVG・PNGなどの別形式と編集元を使います。図の要点は文章でも説明します。
++ローカルの調査で対象を絞る場合は`bun test`やPlaywright CLIを直接使い、提出前には引数なしの`bun run check`を実行します。修正担当とホストを分ける試行では、合意した分担に従いホストが共通checkを実行します。意図的な除外は対象・理由・失う検出条件・代替証拠・復帰条件をIssue/PRで示し、検証定義の変更として人が承認します。現在は除外を追加していません。
+@@ -35,2 +31 @@ agent-browserは、LLMによる探索的な画面確認で必要な場合に使
+-説明は対象commitの実装と整合させ、関連コード・検証結果へ辿れるようにします。
+-図や成功例の動画でコードレビュー・動作検証を代替したとは扱いません。
++### 制御TSの書式とlint
+@@ -38 +33 @@ agent-browserは、LLMによる探索的な画面確認で必要な場合に使
+-## 初期整備で確認した範囲
++TSを編集したら`bun run format`で書式を揃えます。Oxfmtは2スペース・single quote・セミコロン・行幅100を基本とし、importの並べ替えは有効にしません。ツールと固定バージョンは[package.json](package.json)を参照してください。
+@@ -40 +35 @@ agent-browserは、LLMによる探索的な画面確認で必要な場合に使
+-[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)の試行結果です。各PRには対象commitとCIへのリンクがあります。
++Oxlintの`typeAware`を有効にし、`oxlint-tsgolint`を使います。既存correctnessの型情報を必要とするルールに加え、`scripts/**/*.ts`には次をerrorで適用します。
+@@ -42 +37 @@ agent-browserは、LLMによる探索的な画面確認で必要な場合に使
+-| 観点 | 証拠と結果 |
++| ルール | 確認する書き方 |
+@@ -44,26 +39,9 @@ agent-browserは、LLMによる探索的な画面確認で必要な場合に使
+-| 同じ検証の実行 | [PR #2](https://github.com/thkt/dotagents-workflow-trial/pull/2)でローカル・Actionsが成功。別checkoutと新しいnode_modulesでもfrozen lockfileによるセットアップと検証が成功。 |
+-| Appと人の主体分離 | [PR #3](https://github.com/thkt/dotagents-workflow-trial/pull/3)をAppが作成し、thkt本人がApproveした。 |
+-| 未承認・古い承認 | PR #3でCI成功・未承認はBLOCKED、承認後はCLEAN、差分更新で旧承認がDISMISSED、再承認後はCLEANとなった。 |
+-| CI失敗 | [PR #4](https://github.com/thkt/dotagents-workflow-trial/pull/4)は人が試行として承認してもBLOCKED。 |
+-| 必須チェック欠落 | [PR #5](https://github.com/thkt/dotagents-workflow-trial/pull/5)は別名チェックが成功し、人が試行として承認してもBLOCKED。 |
+-| スキップの不足と修正 | [PR #6](https://github.com/thkt/dotagents-workflow-trial/pull/6)ではverify自体がSKIPPEDでも承認後CLEANとなった。[PR #7](https://github.com/thkt/dotagents-workflow-trial/pull/7)で判定を分離し、checks SKIPPEDからverify FAILUREとなること、通常時に両方成功することを実測した。 |
+-
+-検証用PR #4〜#6はマージせず閉じました。マージAPIを試して阻止させた実験ではなく、GitHubのマージ可否状態を読み取った結果です。
+-
+-workflow全体のキャンセル、runner障害、あらゆる検証定義の改変を網羅的に実測したわけではありません。
+-Issue #9で商品一覧と実ブラウザーE2Eを追加しています。初期整備時点の上記証拠は、商品一覧の動作品質、テストの十分性、LLMの監査品質、費用対効果を評価したものではありません。
+-初期整備の完了は、これらを含む開発フロー全体の完成を意味しません。
+-
+-## Issue #9で追加する検証
+-
+-商品一覧の固定データと表示順を実際の画面で確認するため、既存の `check` のlint・複雑度検証の後にPlaywright E2Eを追加します。追加する開発依存関係は `@playwright/test` とその依存パッケージです。ブラウザーの準備はローカル・CIとも `bun run setup:e2e` を使います。
+-
+-既存のOxlintルール、Biomeの複雑度上限15、検証対象の指定を変更しません。CIのhead commit検証、権限、時間上限、キャンセル方針、`verify` の成功条件も維持します。E2Eやブラウザー準備の失敗も `checks` の失敗になり、既存の `verify` に伝わります。既存検証から検出できなくなるケースはありません。
+-
+-E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコードの誤りや対応違い・順序違い、見出しや表構造の欠落、検証した画面幅での非表示・横はみ出し、検索入力の追加です。画面の読みやすさ全般、他ブラウザーや実機での表示、支援技術による読み上げは保証しません。スクリーンショットと差分による人の確認が必要です。再現手順と画像の保存先はREADMEに記録します。
+-
+-今回の追加は人がレビューする初期資産の準備です。検索実装、ハーネス実装、障害注入や比較実験の成績には含めません。対象commitでの検証・画像の取得、独立評価、PRへの証拠添付と人の承認は、それぞれ実施結果を区別して記録してください。
+-
+-## Issue #10で変更する検証
+-
+-基準commit `f97b76d0129ec33ee26544fe408ed9e62ec26b8f` の一覧HTML/CSS、固定4商品、Bun配信、Playwright設定と一覧E2E、共通検証コマンド・依存関係・CIを再利用します。検索欄と行の表示切り替え、検索用JavaScriptの配信を追加します。
++| `typescript/consistent-type-imports` | 型だけに使うものは`import type` |
++| `typescript/no-explicit-any` | 明示的な`any`を使わず、必要なら`unknown`から絞り込む |
++| `typescript/no-non-null-assertion` | `!`で省略せず、存在条件を確認する |
++| `prefer-const` / `no-var` | 再代入しなければ`const`、再代入には`let` |
++| `eqeqeq` | `===` / `!==`で比較する |
++| `curly` | 制御構文の本体を波括弧で囲む |
++| `typescript/no-floating-promises`（`ignoreVoid: false`） | Promiseの処理漏れ。`void`による無視も許容しない |
++| `typescript/no-misused-promises` / `typescript/await-thenable` | Promiseの不適切な使用と、thenableでない値のawait |
++| `typescript/no-unsafe-assignment` / `typescript/no-unsafe-call` / `typescript/no-unsafe-member-access` / `typescript/no-unsafe-argument` / `typescript/no-unsafe-return` | `any`由来の安全でない操作 |
+@@ -71 +49 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-一覧E2Eの「検索入力がないこと」だけを、Issue #10に合わせて「ラベルで特定できる検索欄が見えること」に変更します。検索入力の追加は検出すべき不具合ではなくなります。それ以外の全4商品の名前・コード・対応・順序、見出し・表構造、可視性・画面内表示、横はみ出しの検証を維持します。
++型アサーション・明示的any・disableで診断を回避しません。設定・保存状態は[input.ts](scripts/input.ts)でJSONを`unknown`として読み、必要な形・値を確認してから使います。LLM応答も実行時に検証し、不正な保存状態を初期化して続行しません。テスト側でもJSONをunknownのレコードとして扱い、期待値を独立に検証します。これは記録の改ざん防止や履歴全体の意味的一貫性の保証ではありません。
+@@ -73 +51 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-検索E2Eは合意した各入力と期待結果、キーボード操作、該当なしと全削除からの復帰・再検索を実ブラウザーで確認します。元の4商品が復帰することを画面から確認し、実装の内部データや検索関数を期待値として使いません。同じ条件の単体テストは追加しません。共通の `bun run check`、lint・複雑度上限、2画面幅、再試行なし、CIの条件は変更しません。
++### テストの実行完了
+@@ -75 +53 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-人には、検索ラベルとフォーカスの見やすさ、絞り込み前後・該当なしの読みやすさ、検証変更がIssueの要求を満たすかを差分と画像で確認してほしいです。画像の再現手順はREADMEに記録します。Firefox・WebKit・実機・支援技術・日本語IMEの変換途中の動作は未検証です。ローカル検証の成功と、最新commitでのCI・独立評価・人の承認・フロー評価の結果は分けて記録してください。
++`test:control`と`test:e2e`は[scripts/test.ts](scripts/test.ts)から既存runnerを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件です。
+@@ -77 +55 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-## Issue #13で追加する検証
++runnerの成功終了後にBunのJUnitルート集計とPlaywrightのJSON statsを確認します。テスト0件、未実行件数が0以外、必要な集計の欠落・不正・不完全なレポートは失敗です。skip/todo/条件付きskip/fixmeの指定方法をソースから列挙せず、実行結果で判断します。毎回`artifacts/`内に新しい保存先を作り、過去のレポートは再利用しません。runnerの失敗時はレポート判定へ進みません。
+@@ -79 +57 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-失敗から修正・再評価へ接続するCLIの制御テストを、共通checkへ追加します。既存の静的検証・18件のE2E・CI判定を維持し、検出できなくなるケースはありません。テストは実際のCLI入口と一時Git作業コピーを使います。実モデルによる修正・評価の成績とは区別します。[実行方法・結果・制約](scripts/README.md)を参照してください。
++固定BunのJUnit集計形式だけを読み取り、汎用XML解析は行いません。Playwrightは標準JSON出力を使います。runner更新時は形式と判定の回帰テストを確認します。テストと無関係な同名プロパティやimportを禁止するOxlintルールは使いません。任意の条件分岐によるテスト未登録、テスト削除、CIの実行対象変更まで検出する保証はなく、検証対象と定義のレビューを継続します。
+@@ -81 +59 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-## Issue #15で追加する検証
++### 商品アプリのE2E
+@@ -83 +61 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-制御コードと制御テストをTypeScriptへ移し、共通checkへ`tsc --noEmit`によるstrictな型検査を追加します。商品アプリ・bun test・Playwright・既存の検証条件は維持します。追加する開発依存関係は固定版のTypeScriptとBun型定義です。既存の検出条件を減らさず、実行状態・結果・設定の型の不整合を検査できるようにします。Issue #13の実モデル記録は当時のJS版の証拠として残し、TS版で再実測したとは扱いません。
++Chromiumのデスクトップ（1280×800）とモバイル（375×812）で実行します。専用サーバーと画像の再取得手順は[README](README.md#セットアップと検証)を参照してください。
+@@ -85 +63,4 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-## Issue #17で追加する検証
++[tests/product-list.spec.js](tests/product-list.spec.js) はIssueの固定期待値を使い、全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、ラベルで特定できる検索欄の表示を検証します。
++[tests/product-search.spec.js](tests/product-search.spec.js) は同じ2画面幅で[READMEの入力例](README.md#セットアップと検証)に対する結果・順序、キーボードだけの移動と入力ごとの更新、全削除による復帰と再検索を検証します。
++実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
++Firefox・WebKit・実機・支援技術・日本語IMEの変換途中の動作はこのE2Eの検出範囲外です。
+@@ -87 +68 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-実際の制御CLIをcheck・repair・reviewの途中で中断し、SIGINT/SIGTERMでの子孫の書き込み停止、並行起動と再実行の拒否、予約回数の保持を検証します。SIGKILLでは再実行拒否だけを確認し、子の自動停止を保証しません。完了後のIssue変更も古い成功を無効にすることを確認します。既存の検証条件は減らさず、模擬コマンドを使った回帰テストを追加します。モデルの判断品質は今回の評価対象外です。
++### 制御CLIのテスト
+@@ -89 +70 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-## TypeScriptの書き方（Issue #19）
++[制御テスト](scripts/tests/correction.test.ts)は一時Git作業コピーを用意し、実際のCLI入口へ制御可能なコマンドを渡します。モデル呼び出しを行わず、成功・失敗・文書不足・対象変更・応答不正・人の判断要求・上限・再実行を確認します。check・repair・reviewそれぞれの実行中にSIGINT/SIGTERM/SIGKILLを送信し、同時起動の拒否・予約の保持・再実行の拒否を確認します。SIGINT/SIGTERMでは孫プロセスの継続書き込みが止まることも確認します。SIGKILLのテストは残存プロセスをテスト側で後片付けします。
+@@ -91 +72 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-`scripts/**/*.ts`の書式はOxfmt 0.66.0に統一します。`bun run format`で整形し、`bun run format:check`で書き換えずに確認します。共通`bun run check`にも書式確認を含めるため、CIでも同じ条件を適用します。2スペース・single quote・セミコロン・行幅100を基本とし、importの並べ替えは有効にしません。商品アプリのJSや過去のevidenceは今回の整形対象外です。
++模擬コマンドの成功は、実モデルの判断品質の証拠には数えません。実行上限と中断後の対応は[制御CLIの実行手順](scripts/README.md#結果と再実行)を参照してください。
+@@ -93 +74 @@ E2Eが検出するのは、固定4商品の欠落・余分な行・名前とコ
+-Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorにします。
++## 変更に応じた確認
+@@ -95,8 +76 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに
+-| ルール | 揃える書き方 |
+-| --- | --- |
+-| `typescript/consistent-type-imports` | 型だけに使うものは`import type` |
+-| `typescript/no-explicit-any` | 明示的な`any`を使わず、必要なら`unknown`から絞り込む |
+-| `typescript/no-non-null-assertion` | `!`で省略せず、存在条件を確認する |
+-| `prefer-const` / `no-var` | 再代入しなければ`const`、再代入には`let` |
+-| `eqeqeq` | `===` / `!==`で比較する |
+-| `curly` | 制御構文の本体を波括弧で囲む |
++通常の変更では、合意済みの検証を再利用します。人は要求の達成、検証の適用条件、今回残る観点を確認します。
+@@ -104 +78,3 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに
+-既存のstrict型検査はtsc、認知的複雑度の上限15はBiomeの`noExcessiveCognitiveComplexity`だけで検査します。OxfmtとOxlintに型の整合性や要求達成まで保証させるものではありません。ルールの追加・緩和は検証定義の変更として、目的と検出力への影響をPRで説明します。
++検証自体を変える場合は、守る条件、変更理由、検出できなくなるケースとその対応をPRで説明します。
++workflowだけでなく、検証コマンド、対象の選択、lint設定、テスト、依存関係など、結果の意味に影響する変更を含みます。
++人はこの説明と差分・証拠を確認し、CI成功だけを根拠に承認しません。
+@@ -106 +82,2 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに
+-既存の検出条件を削らず、7ルールと書式検査を追加しました。違反を含む一時TSで7ルールの拒否と書式検査の失敗、整形後の書式検査成功を確認しています。一時ファイルは削除し、型検査・制御26件・E2E18件を維持します。
++機械は合意済みの検証定義に従い、実行結果・必須チェック・最新の承認を確認します。
++セットアップは[README](README.md#セットアップと検証)、共通checkとCI・main保護の方針は本書を参照してください。
+@@ -108 +85,3 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに
+-設定の詳細は[Oxlint configuration](https://oxc.rs/docs/guide/usage/linter/config.html)と[Oxfmt configuration](https://oxc.rs/docs/guide/usage/formatter/config.html)を参照してください。
++検証定義もPRから変更できるため、人がその無効化を見落として承認した場合まで防げるとは扱いません。
++`verify`自体のスキップ、検証コマンドの置き換え、step単位の省略を、現在の判定jobだけで防ぐことはできません。
++PRから独立した強制判定は初期整備の対象外とし、無人運用・レビュー省略などで必要になった時点で設計・評価します。
+@@ -110 +89 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに
+-## 型情報を使う検証（Issue #21）
++## レビューを助ける説明
+@@ -112 +91,2 @@ Oxlintは既存のcorrectness検査に加え、同じTS範囲で次をerrorに
+-Oxlintの`typeAware`を有効にし、固定版`oxlint-tsgolint` 7.0.2001を追加します。TSには`no-floating-promises`（`ignoreVoid: false`）、`no-misused-promises`、`await-thenable`、`no-unsafe-assignment` / `call` / `member-access` / `argument` / `return`をerrorで適用します。既存correctnessの型情報を必要とするルールも有効になります。tscは維持し、`noUncheckedIndexedAccess`を追加します。
++PRの概要では、何が変わり、なぜ必要で、どのように確かめたか、何が未確認かを伝えます。
++人が構造・意図・影響を把握し、重点的に読むコードを絞れるようにします。
+@@ -114 +94,9 @@ Oxlintの`typeAware`を有効にし、固定版`oxlint-tsgolint` 7.0.2001を追
+-現在の診断ではJSON由来のanyと未確認のCLI引数が中心でした。Promiseの待ち忘れが多数見つかったという結果ではありません。設定と保存状態は`input.ts`で必要な形・値を確認してから使います。テスト側はJSONをunknownのレコードとして扱い、期待値を独立に検証します。型アサーション・明示的any・disableで回避しません。
++必要に応じて、アーキテクチャ・依存関係の図、変更前後の比較、フロー図・シーケンス図、具体的な入力と結果・境界条件を使います。
++画像は比較する観点に応じてtable等で並べ、変更前後・状態・画面幅の対応を読み取りやすくします。縮小して判読しづらくなる場合は分けて掲載し、原寸画像へ辿れるようにします。
++画面の構成と読みやすさは人がレビューします。PRには対象commitで再実行した画像、検証コマンドと結果、未確認事項を添付してください。
++画面の操作や遷移を変更する場合は、主要な利用手順の動画を撮影し、対象commitと確認する操作・状態を対応づけます。必要なら音声解説・字幕を添えます。
++E2E検証と定型デモ撮影はPlaywrightを標準とします。入力途中の挙動を示す場合は、キーボードイベントで1文字ずつ入力し、変化を見取れる間隔を設けます。
++解説音声はmacOS標準音声のKyokoを使い、FFmpegで映像と合成します。操作・結果と解説のタイミングを合わせ、合成音声であることを明記し、動画はPR内で直接再生できる添付を優先します。
++agent-browserは、LLMによる探索的な画面確認で必要な場合に使う任意の補助手段とし、通常の検証・撮影の必須依存にはしません。
++図や動画を全PRの必須項目にはしません。
++図はMermaidを基本とし、そのPRで理解してほしい変更箇所・責任範囲・データの流れに絞ります。複雑な図は分割し、それでも読みづらい場合や配置が重要な場合はSVG・PNGなどの別形式と編集元を使います。図の要点は文章でも説明します。
+@@ -116 +104,2 @@ Oxlintの`typeAware`を有効にし、固定版`oxlint-tsgolint` 7.0.2001を追
+-不正な設定、予約・消費量・イベント・結果の記録、CLI引数不足の回帰テストを追加しました。正常時の進行・上限・状態ファイル形式と既存テストは維持します。不正入力の拒否は強まりますが、保存履歴の真正性や完全な意味的一貫性まで保証しません。違反を含む一時TSで8ルールと配列アクセスの検出を確認し、一時ファイルを削除しました。
++説明は対象commitの実装と整合させ、関連コード・検証結果へ辿れるようにします。
++図や成功例の動画でコードレビュー・動作検証を代替したとは扱いません。
+@@ -118 +107 @@ Oxlintの`typeAware`を有効にし、固定版`oxlint-tsgolint` 7.0.2001を追
+-Oxfmt、Biomeの認知的複雑度15、既存の静的検証とE2Eは維持し、既存の検出条件を削りません。型付きlintの仕組みは[公式ドキュメント](https://oxc.rs/docs/guide/usage/linter/type-aware)を参照してください。
++## CIとmain保護
+@@ -120 +109 @@ Oxfmt、Biomeの認知的複雑度15、既存の静的検証とE2Eは維持し
+-## テストの実行完了（Issue #23）
++[CI定義](.github/workflows/ci.yml)とmain保護の運用方針です。リモート設定の過去の確認結果は[初期整備の記録](evidence/development-history.md#初期整備で確認した範囲)を参照してください。
+@@ -122 +111,4 @@ Oxfmt、Biomeの認知的複雑度15、既存の静的検証とE2Eは維持し
+-`bun run test:control`と`bun run test:e2e`は、`scripts/test.ts`から既存runnerを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件になります。
++GitHub Actionsの`checks` jobも同じセットアップと `bun run check` を使います。
++PRのhead commitを検証します。jobの上限は`checks`が9分、`verify`が1分です（runner待ち時間を除く）。
++同じPRの古い実行をキャンセルし、変更パスによる検証省略は行いません。
++PRのコードを実行するjobにはAppの鍵や書き込みtokenを渡しません。
+@@ -124 +116,4 @@ Oxfmt、Biomeの認知的複雑度15、既存の静的検証とE2Eは維持し
+-runnerが成功終了した後、BunのJUnitルート集計とPlaywrightのJSON statsを確認します。テスト0件・未実行件数が0以外・必要な集計の欠落は失敗です。skip/todo/条件付きskip/fixmeの指定方法をソースから列挙せず、実行結果で判断します。毎回`artifacts`内に新しい保存先を作り、過去のレポートを再利用しません。runnerの失敗時にはレポート判定へ進みません。
++必須の`verify` jobは`checks`の結果が`success`の場合だけ成功します。
++`checks`の失敗・スキップ・キャンセルを成功扱いしません。
++判定jobはcheckoutせず、追加のtoken権限も持ちません。
++workflow全体のキャンセルやrunner障害では判定job自体が完了しないことがあります。
+@@ -126 +121,5 @@ runnerが成功終了した後、BunのJUnitルート集計とPlaywrightのJSON
+-Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解析は行いません。Playwright 1.63.0は標準JSON出力を使います。runnerの更新時は形式と判定の回帰テストを確認します。追加依存関係はありません。
++mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の解消を要求します。
++新しい差分では古い承認を取り消し、baseの更新時は最新mainとの整合を求めます。
++直接push、force push、削除を制限し、bypass対象は設けていません。
++人は差分と検証結果を確認してApproveします。エージェントは人の承認を代行しません。
++承認後に差分が更新された場合は、最新commitの差分とCI結果を確認して再度Approveしてください。
+@@ -128 +127 @@ Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解
+-通常のテスト実行・only・skip・todo/fixme・条件付きskip・失敗・0件を実runnerで回帰検証します。現在の制御34件とE2E18件を維持し、実行完了の判定を検証する20件を追加しました。テストと無関係な同名プロパティやimportを禁止するOxlintルールは使いません。
++## 過去の実測結果
+@@ -130 +129,4 @@ Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解
+-ローカルの調査で対象を絞る場合は`bun test`やPlaywright CLIを直接使い、提出前には引数なしの`bun run check`を実行します。意図的な除外は対象・理由・失う検出条件・代替証拠・復帰条件をIssue/PRで示し、検証定義の変更として人が承認します。現在は除外を追加していません。
++- [変更理由と初期整備の履歴](evidence/development-history.md): Issueごとの検証変更と当時の確認範囲。
++- [Issue #10の評価](evidence/issue-10/evaluation.md): 基準commit・候補hash、動作不具合と文書漏れの注入、実行量、未検証範囲。
++- [Issue #10の操作動画](evidence/issue-10/video.md): 撮影対象commit、操作と動画の限界。
++- [Issue #13の評価](evidence/issue-13/evaluation.md): 当時のJS版CLIと対象アプリのcommit、実モデルの修正・再評価、消費量と未評価範囲。
+@@ -132 +134 @@ Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解
+-任意の条件分岐によるテスト未登録、テスト削除、CIの実行対象変更まで保証するものではありません。検証対象と検証定義のレビューを継続します。
++これらは記録当時の証拠です。現在のTS版・最新commitで再実測した結果として扱いません。
+diff --git a/README.md b/README.md
+index 7873a97..1743e7b 100644
+--- a/README.md
++++ b/README.md
+@@ -7 +7 @@
+-## 開発の前提
++## 読む順序
+@@ -9,4 +9,3 @@
+-- 小さな変更もIssueに紐づけます。
+-- 自動化によるPRは専用GitHub Appが作成し、人がレビュー・承認します。
+-- 変更内容、検証結果、未確認事項をPRに記録します。
+-- 秘密鍵やtokenをコード・文書・ログに残しません。
++1. 通常の商品アプリ開発は、本書の[セットアップと検証](#セットアップと検証)から始めます。制御CLIやCodexの実行は不要です。
++2. [DEVELOPMENT.md](DEVELOPMENT.md)で、現在の検証範囲、検証変更の説明、画面の証拠、人のレビュー・承認方針を確認します。
++3. 失敗から修正・独立評価へ戻す制御CLIを試す場合だけ、[scripts/README.md](scripts/README.md)へ進みます。隔離した作業コピー、設定、モデル実行の上限、中断時の対応を確認してから実行します。
+@@ -16,3 +15 @@
+-初期整備は [Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1) で進めています。
+-
+-CIとmainの保護設定を適用済みです。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。[Issue #10](https://github.com/thkt/dotagents-workflow-trial/issues/10) で商品名・商品コードによる検索を追加しています。
++初期整備でのCIとmain保護の確認結果は[履歴](evidence/development-history.md#初期整備で確認した範囲)に残しています。[Issue #9](https://github.com/thkt/dotagents-workflow-trial/issues/9) の初期資産として、架空の4商品を表示する商品一覧を用意しています。[Issue #10](https://github.com/thkt/dotagents-workflow-trial/issues/10) で商品名・商品コードによる検索を追加しています。
+@@ -57,4 +54 @@ bun run check
+-`check` はOxlintのcorrectnessルールと、Biomeの
+-`noExcessiveCognitiveComplexity`（上限15）、Playwrightによる実ブラウザーE2Eを順に実行します。
+-Biomeの他のlintルール・formatter・assistは有効にしません。
+-違反や検証コマンドの失敗は終了コードに反映します。
++共通checkの実行順と検証範囲は[DEVELOPMENT.md](DEVELOPMENT.md#共通checkと適用範囲)を正本とします。商品アプリJSはlint・複雑度・実ブラウザーE2Eで確認し、TypeScriptの型検査対象外です。制御コードとテストの`scripts/**/*.ts`には、Oxfmtの書式確認、型情報を使うOxlint、strict型検査、モデルを呼ばない制御テストがあります。テストrunnerは実行結果から0件・未実行・不正な集計も失敗として検出します。詳しいルールと検出の限界も同文書で確認できます。
+@@ -64 +57,0 @@ Biomeの他のlintルール・formatter・assistは有効にしません。
+-JavaScriptを使用しており、TypeScriptの型検証はありません。
+@@ -67,4 +60 @@ E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。こ
+-[tests/product-list.spec.js](tests/product-list.spec.js) はIssueの固定期待値を使い、Chromiumのデスクトップ（1280×800）とモバイル（375×812）で全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、ラベルで特定できる検索欄の表示を検証します。
+-[tests/product-search.spec.js](tests/product-search.spec.js) は同じ2画面幅で上記の入力・結果・順序、キーボードだけの移動と入力ごとの更新、全削除による復帰と再検索を検証します。
+-実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
+-Firefox・WebKit・実機・支援技術の動作はこのE2Eの検出範囲外です。
++[商品アプリのE2E範囲](DEVELOPMENT.md#商品アプリのe2e)に、2画面幅での一覧・検索・キーボード操作の検証内容と未検証環境を記載しています。
+@@ -88,20 +78,7 @@ bun run test:e2e
+-画面の構成と読みやすさは人がレビューします。PRには対象commitで再実行した画像、検証コマンドと結果、未確認事項を添付してください。
+-
+-GitHub Actionsの`checks` jobも同じセットアップと `bun run check` を使います。
+-PRのhead commitを検証します。jobの上限は`checks`が9分、`verify`が1分です（runner待ち時間を除く）。
+-同じPRの古い実行をキャンセルし、変更パスによる検証省略は行いません。
+-PRのコードを実行するjobにはAppの鍵や書き込みtokenを渡しません。
+-
+-必須の`verify` jobは`checks`の結果が`success`の場合だけ成功します。
+-`checks`の失敗・スキップ・キャンセルを成功扱いしません。
+-判定jobはcheckoutせず、追加のtoken権限も持ちません。
+-workflow全体のキャンセルやrunner障害では判定job自体が完了しないことがあります。
+-
+-mainではPR・承認1件・GitHub Actionsの`verify`成功・未解決会話の解消を要求します。
+-新しい差分では古い承認を取り消し、baseの更新時は最新mainとの整合を求めます。
+-直接push、force push、削除を制限し、bypass対象は設けていません。
+-人は差分と検証結果を確認してApproveします。エージェントは人の承認を代行しません。
+-承認後に差分が更新された場合は、最新commitの差分とCI結果を確認して再度Approveしてください。
+-
+-設定と実際のPRによる確認結果は[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)で追跡します。
+-検証定義の変更に対する人のレビュー、PRの説明方法、確認済み範囲と制約は、[検証とレビューの方針](DEVELOPMENT.md)を参照してください。
++PRへ添付する画像・操作動画と人による確認は[レビューを助ける説明](DEVELOPMENT.md#レビューを助ける説明)に従ってください。
++
++CIの実行上限・中断、必須チェック、承認・再承認の条件は[CIとmain保護](DEVELOPMENT.md#ciとmain保護)を参照してください。
++
++## 過去の記録を読む
++
++[検証変更と初期整備の履歴](evidence/development-history.md)から当時の変更理由と確認範囲へ辿れます。[Issue #10の評価](evidence/issue-10/evaluation.md)は検索・文書監査の実測、[操作動画](evidence/issue-10/video.md)は撮影対象commitと操作、[Issue #13の評価](evidence/issue-13/evaluation.md)は当時のJS版制御CLIの実モデル試行を記録しています。それぞれの対象commit・候補hashと未検証範囲を確認し、過去の成功を現行版の実測として扱わないでください。
+diff --git a/scripts/README.md b/scripts/README.md
+index 3e411cd..89ead6c 100644
+--- a/scripts/README.md
++++ b/scripts/README.md
+@@ -3 +3 @@
+-Issue #13のための小さな実行入口です。常駐サービスやSDKは追加しません。
++失敗から修正・独立評価へ戻す制御CLIの試行用入口です。通常の商品アプリ開発には不要です。先に[READMEのセットアップ](../README.md#セットアップと検証)と[検証・レビュー方針](../DEVELOPMENT.md)を確認してください。本書はCLI固有の設定・実行上限・中断対応の正本です。常駐サービスやSDKは追加しません。
+@@ -25,0 +26,2 @@ bun scripts/correction.ts /absolute/path/config.json
++上の値は設定例であり、既定値ではありません。`repairLimit`と`reviewLimit`はそれぞれの起動回数、`modelTimeMs`は修正・評価を合算した累計20分、`checkTimeMs`はcheck 1回の上限9分です。実行前に要求・権限・上限を合意し、途中で変更が必要なら人の判断へ戻します。設定変更や新しい証拠ディレクトリで消費量を初期化して制限を回避しないでください。
++
+@@ -50,5 +52 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると
+-## 検証
+-
+-`bun run test:control`は一時Git作業コピーを用意し、本番と同じCLI入口へ制御可能なコマンドを渡します。モデル呼び出しを行わず、成功・失敗・文書不足・対象変更・応答不正・人の判断要求・上限・再実行を確認します。check・repair・reviewそれぞれの実行中にSIGINT/SIGTERM/SIGKILLを送信し、同時起動の拒否・予約の保持・再実行の拒否を確認します。SIGINT/SIGTERMでは孫プロセスの継続書き込みが止まることも確認します。SIGKILLのテストは残存プロセスをテスト側で後片付けします。
+-
+-共通`bun run check`にはこのテストを追加します。既存のlint・複雑度条件・18件のPlaywright E2Eは維持し、検出できなくなるケースはありません。模擬コマンドの成功は、実モデルの判断品質の証拠には数えません。
++## 検証と過去の実測
+@@ -56 +54 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると
+-制御コードとそのテストはTypeScriptです。`bun run typecheck`で`strict`の型検査（`tsc --noEmit`）を行い、共通checkにも含めます。Bunによる実行だけでは型検査を行いません。商品アプリのJSは型検査の対象外です。設定・LLM応答の既存の実行時検証は維持し、設定・保存状態のJSONはunknownとして読み、必要なフィールドの形と値を確認してから使用します。不正な保存状態を初期化して続行しません。これは記録の改ざん防止や履歴全体の整合性を保証するものではありません。型検査が外部データの正しさを保証するわけではありません。
++現在の[共通checkと適用範囲](../DEVELOPMENT.md#共通checkと適用範囲)、[制御CLIのテスト](../DEVELOPMENT.md#制御cliのテスト)、[制御TSの書式とlint](../DEVELOPMENT.md#制御tsの書式とlint)はDEVELOPMENT.mdを参照してください。模擬コマンドによる制御テストと実モデルの成績は区別します。
+@@ -58 +56,4 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると
+-TSを編集したら`bun run format`で書式を揃え、`bun run check`で書式・lint・型・動作をまとめて確認します。書式はOxfmt、型専用importなどの書き方はOxlintで制限します。[適用範囲とルール](../DEVELOPMENT.md#typescriptの書き方issue-19)を参照してください。
++- [Issue #13の評価](../evidence/issue-13/evaluation.md): 当時のJS版CLIと対象アプリのcommit、実モデルの修正1回・独立評価1回の結果、消費量と未評価範囲。現在のTS版の実測ではありません。
++- [Issue #10の評価](../evidence/issue-10/evaluation.md): 親タスクが進行・注入・復元を担当した検索・文書監査の試行。制御CLIが自律進行した結果とは区別します。
++- [Issue #10の操作動画](../evidence/issue-10/video.md): 撮影対象commitと商品アプリの操作。制御CLIや全E2Eケースの証拠ではありません。
++- [検証変更の履歴](../evidence/development-history.md): TS移行、型付きlint、中断・runner検証などの変更理由と当時の確認内容。
+diff --git a/evidence/development-history.md b/evidence/development-history.md
+new file mode 100644
+index 0000000..09037d6
+--- /dev/null
++++ b/evidence/development-history.md
+@@ -0,0 +1,42 @@
++# 開発・検証の変更履歴
++
++本書は当時の変更理由と確認結果の記録です。現在の手順・規則は[DEVELOPMENT.md](../DEVELOPMENT.md)、通常開発は[README](../README.md)、制御CLI試行は[scripts/README](../scripts/README.md)を参照してください。以下の件数・成功・維持範囲は各Issue当時の記述であり、現行版で再実測した結果ではありません。
++
++## 初期整備で確認した範囲
++
++[Issue #1](https://github.com/thkt/dotagents-workflow-trial/issues/1)の試行結果です。各PRには対象commitとCIへのリンクがあります。
++
++| 観点 | 証拠と結果 |
++| --- | --- |
++| 同じ検証の実行 | [PR #2](https://github.com/thkt/dotagents-workflow-trial/pull/2)でローカル・Actionsが成功。別checkoutと新しいnode_modulesでもfrozen lockfileによるセットアップと検証が成功。 |
++| Appと人の主体分離 | [PR #3](https://github.com/thkt/dotagents-workflow-trial/pull/3)をAppが作成し、thkt本人がApproveした。 |
++| 未承認・古い承認 | PR #3でCI成功・未承認はBLOCKED、承認後はCLEAN、差分更新で旧承認がDISMISSED、再承認後はCLEANとなった。 |
++| CI失敗 | [PR #4](https://github.com/thkt/dotagents-workflow-trial/pull/4)は人が試行として承認してもBLOCKED。 |
++| 必須チェック欠落 | [PR #5](https://github.com/thkt/dotagents-workflow-trial/pull/5)は別名チェックが成功し、人が試行として承認してもBLOCKED。 |
++| スキップの不足と修正 | [PR #6](https://github.com/thkt/dotagents-workflow-trial/pull/6)ではverify自体がSKIPPEDでも承認後CLEANとなった。[PR #7](https://github.com/thkt/dotagents-workflow-trial/pull/7)で判定を分離し、checks SKIPPEDからverify FAILUREとなること、通常時に両方成功することを実測した。 |
++
++検証用PR #4〜#6はマージせず閉じました。マージAPIを試して阻止させた実験ではなく、GitHubのマージ可否状態を読み取った結果です。
++
++workflow全体のキャンセル、runner障害、あらゆる検証定義の改変を網羅的に実測したわけではありません。
++Issue #9で商品一覧と実ブラウザーE2Eを追加しています。初期整備時点の上記証拠は、商品一覧の動作品質、テストの十分性、LLMの監査品質、費用対効果を評価したものではありません。
++初期整備の完了は、これらを含む開発フロー全体の完成を意味しません。
++
++## 商品アプリとフロー試行
++
++| Issue | 当時の変更理由・検証変更 | 記録と限界 |
++| --- | --- | --- |
++| [#9](https://github.com/thkt/dotagents-workflow-trial/issues/9) | 固定4商品の表示を確認するためPlaywrightとE2Eを追加。既存lint・複雑度・CI条件を維持した。 | 人がレビューする初期資産。検索・ハーネス・障害注入・比較実験の成績には含めない。[画像](issue-9/product-list-desktop.png)・[モバイル画像](issue-9/product-list-mobile.png)。画面の読みやすさ、他ブラウザー・実機・支援技術は保証しない。 |
++| [#10](https://github.com/thkt/dotagents-workflow-trial/issues/10) | 基準commit `f97b76d0129ec33ee26544fe408ed9e62ec26b8f`を再利用し検索を追加。一覧E2Eの「検索入力がない」を「ラベルで特定できる検索欄が見える」に変更し、入力追加を不具合として検出しなくなった。他の商品対応・順序・構造・表示条件を維持し、検索E2Eを追加。同条件の単体テストは追加しなかった。 | [実測結果・候補hash・実行量・未検証範囲](issue-10/evaluation.md)、[対象commit付き操作動画](issue-10/video.md)。検索ラベル・フォーカス・各状態の読みやすさと検証変更を人が確認する前提。ローカル成功、CI、独立評価、人の承認、フロー評価を区別して記録する前提だった。 |
++| [#13](https://github.com/thkt/dotagents-workflow-trial/issues/13) | check失敗から修正・再評価へ戻すCLIと、実際の入口・一時Git作業コピーを使う制御テストを共通checkへ追加。既存の静的検証・18件のE2E・CI判定を維持した。 | [JS版CLIの対象commit・実測結果・消費量・未評価範囲](issue-13/evaluation.md)。模擬コマンドのテストを実モデルの成績に数えず、TS版で再実測したとも扱わない。 |
++
++## 制御TSと検証の拡充
++
++以下は旧DEVELOPMENT.mdのIssue別追記から保持した記録です。独立した対象commit・生ログへのリンクがない確認は、その追記に記された範囲に限られます。現在の設定値・ルール一覧は[共通検証方針](../DEVELOPMENT.md#共通checkと適用範囲)を参照してください。
++
++- [Issue #15](https://github.com/thkt/dotagents-workflow-trial/issues/15): 制御コードと制御テストをTSへ移し、固定版TypeScript・Bun型定義とstrict型検査を追加。商品アプリ・bun test・Playwright・既存の検出条件を維持した。Issue #13の実モデル記録はJS版の証拠として残した。
++- [Issue #17](https://github.com/thkt/dotagents-workflow-trial/issues/17): check・repair・review中のSIGINT/SIGTERMで子孫の書き込み停止、並行起動・再実行の拒否、予約保持を模擬コマンドで検証。SIGKILLでは再実行拒否だけを確認し、子の自動停止を保証しなかった。完了後のIssue変更による古い成功の無効化も確認。既存条件を減らさず、モデル判断品質は評価対象外だった。
++- [Issue #19](https://github.com/thkt/dotagents-workflow-trial/issues/19): Oxfmt 0.66.0とTS向け7ルールを追加。違反を含む一時TSで7ルールの拒否と書式検査失敗、整形後の成功を確認し、一時ファイルを削除した。型検査・制御26件・E2E18件を維持したとの記録。商品アプリJS・過去のevidenceは整形対象外だった。
++- [Issue #21](https://github.com/thkt/dotagents-workflow-trial/issues/21): OxlintのtypeAwareと固定版oxlint-tsgolint 7.0.2001、8ルール、tscのnoUncheckedIndexedAccessを追加。診断はJSON由来のanyと未確認のCLI引数が中心で、Promiseの待ち忘れが多数見つかった結果ではなかった。不正な設定・保存状態・CLI引数不足の回帰テストを追加し、正常な進行・上限・状態ファイル形式・既存検出条件を維持。一時TSで8ルールと配列アクセスの検出を確認後に削除した。保存履歴の真正性や完全な意味的一貫性は保証していない。
++- [Issue #23](https://github.com/thkt/dotagents-workflow-trial/issues/23): 既存runnerの実行結果から未実行を検出する入口を追加。Bun 1.4.2のJUnitとPlaywright 1.63.0のJSONで、通常実行・only・skip・todo/fixme・条件付きskip・失敗・0件を実runnerで回帰検証。制御34件・E2E18件を維持し、実行完了判定20件を追加したとの記録。依存追加・意図的な除外はなし。任意の条件分岐による未登録・削除・CI対象変更まで保証するものではない。
++
++Issue #10・#13の詳細ログの一部は各評価文書に記された実行端末の一時領域にあり、長期保管は保証されません。共有済みの評価・差分・対象情報と、現在の実行結果を区別してください。

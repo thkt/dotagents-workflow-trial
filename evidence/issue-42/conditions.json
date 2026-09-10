@@ -1,0 +1,12 @@
+{
+  "worktreeCommit": "2256dcf0c5619553b792963c64bd40b2a1d1be2c",
+  "controllerCommit": "154f208185680c506d3dc97e0a06ad9be5d7825f",
+  "initialSourceHash": "0921eac86c554be4221ba72b9dd5c3d72e27fa818640c7633962da0f89eae221",
+  "model": "gpt-6-astra",
+  "reasoning": "high",
+  "codex": "0.154.0",
+  "bun": "1.4.2",
+  "deliverable": 41,
+  "experiment": 42,
+  "comparison": 31
+}
