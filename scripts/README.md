@@ -58,3 +58,15 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 制御テストの実装は[correction.test.ts](tests/correction.test.ts)と[test-runner.test.ts](tests/test-runner.test.ts)です。SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
 
 制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象・未検証範囲は[検証記録](../evidence/README.md)を参照してください。
+
+## PRの公開
+
+公開担当が、push済みブランチとレビュー用の本文を指定します。Python 3、gh、OpenSSLと、macOS login Keychainに登録したApp鍵を使います。
+
+```sh
+python3 /absolute/path/trusted-checkout/scripts/publish.py --head codex/example --title '変更の概要' --body-file /absolute/path/pr.md
+```
+
+対象は`thkt/dotagents-workflow-trial`の`main`です。同じheadのopen PRがあればそのURLを返します。既存PRの本文更新、push、承認、マージは行いません。App認証を確認し、対象リポジトリ限定のtokenで`gh pr create`を実行した後、tokenを失効します。応答不明の場合はGitHub上のPRを照合してから再実行してください。
+
+公開スクリプトはレビュー済みの信頼するcheckoutから実行し、actorが編集する作業コピーからは実行しません。強制終了・通信断による失効失敗時は、tokenの状態を別途確認します。
