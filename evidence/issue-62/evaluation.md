@@ -27,3 +27,9 @@ contextDirはcheckoutの絶対パスに結びつくため、新しい保存先�
 ローカル記録は `dotagents-workflow-trial-order-62/work/sort-handoff`、再利用元の調査IDは `9ccee9bcdde75e3998227c90384551a680ff59710264c483a12821218a74c1b7`。評価後の調査IDは `b1df3fe10f6ab24310695ebece2937f55d31360e9b7f5844aec404e7d605a435`。個別の質問・回答全文は複製していない。
 
 公開前の独立評価はこの準備済み成果物を対象とする。PRへの添付・表示確認と人のレビュー・承認は公開後に担当する。
+
+## 公開前の独立評価
+
+[試行 #69](https://github.com/thkt/dotagents-workflow-trial/issues/69)として、信頼するmainの既存CLIからAstra/highを新規起動した。対象は証拠を含む `79df1ab`。共通checkは制御80件・E2E26件成功し、独立評価は[accepted](review.json)、65.87秒。修正0回・評価1回で[ready_for_human_review](result.json)へ到達した。評価者は共通checkを重複実行せず、ホスト結果を参照した。設定上限は修正2回・評価2回・モデル合計20分・check各9分。
+
+評価は実装・固定期待値のテスト・同じ読みの境界・README・画像と動画・対象commitの対応を確認した。PR作成・添付・直接再生確認・最新CI・人のレビューと承認、未検証の実機タッチ操作を残作業として明示している。これらを自動評価済みとは扱わない。1要求・1回の結果であり、一般的な成功率の評価ではない。生ログは `/private/tmp/order-62-review` に保存した。
