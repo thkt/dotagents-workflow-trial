@@ -82,6 +82,55 @@ test("キーボードだけで検索欄へ移動し、入力ごとの更新と�
   await expect(search).toBeFocused();
 });
 
+for (const operation of ["pointer", "Enter", "Space"]) {
+  test(`${operation}で検索をクリアし、全件復帰と再検索ができる`, async ({ page, hasTouch }, testInfo) => {
+    await page.goto("/");
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+    // 同じ文書上で操作を完了し、再読み込みで初期状態に戻していないことを確認する。
+    let navigations = 0;
+    page.on("framenavigated", () => { navigations += 1; });
+    for (const { query, products } of [
+      { query: "ノート", products: notes },
+      { query: "存在しない商品", products: [] },
+      { query: "   ", products: allProducts },
+      { query: "", products: allProducts },
+    ]) {
+      await search.fill(query);
+      await expectProducts(page, products);
+      await expect(clear).toBeVisible();
+      await expect(clear).toBeEnabled();
+      await expect(clear).toBeInViewport();
+      if (operation === "pointer") {
+        if (hasTouch) await clear.tap();
+        else await clear.click();
+      } else {
+        await page.keyboard.press("Tab");
+        await expect(clear).toBeFocused();
+        await page.keyboard.press(operation);
+        await expect(clear).toBeFocused();
+      }
+      await expect(search).toHaveValue("");
+      await expectProducts(page, allProducts);
+      if (operation !== "pointer") {
+        await page.keyboard.press(operation);
+        await expect(clear).toBeFocused();
+        await expectProducts(page, allProducts);
+        if (query === "ノート" && operation === "Enter") {
+          await page.screenshot({ path: `artifacts/product-clear-${testInfo.project.name}.png`, fullPage: true });
+        }
+        await page.keyboard.press("Shift+Tab");
+        await expect(search).toBeFocused();
+        await page.keyboard.type("mug");
+      } else {
+        await search.fill("mug");
+      }
+      await expectProducts(page, [["白いマグ", "MUG-001"]]);
+    }
+    expect(navigations).toBe(0);
+  });
+}
+
 const reversedProducts = [allProducts[3], allProducts[2], allProducts[1], allProducts[0]];
 
 test("並び順の切り替え、検索、0件・1件からの復帰と再読み込み", async ({ page }, testInfo) => {
@@ -180,4 +229,19 @@ test.describe("タッチ操作", () => {
     await expect(order).toHaveValue("descending");
     await expectProducts(page, reversedProducts);
   });
+});
+
+test("検索クリア後も選択した並び順を保持する", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+  await order.selectOption("descending");
+  await search.fill("ノート");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(clear).toBeFocused();
+  await expect(order).toHaveValue("descending");
+  await expectProducts(page, reversedProducts);
 });

@@ -20,6 +20,10 @@ function updateSearch() {
 }
 
 search.addEventListener("input", updateSearch);
+document.getElementById("clear-search").addEventListener("click", () => {
+  search.value = "";
+  updateSearch();
+});
 updateSearch();
 
 const order = document.getElementById("product-order");

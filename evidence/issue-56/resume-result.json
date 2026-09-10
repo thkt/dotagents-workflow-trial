@@ -1,0 +1,36 @@
+{
+  "configHash": "d36cdc02a8fa20bec3ac543a02056e10ec060e663761848295418fca3e3cb245",
+  "issueHash": "b739621e212168c28896c3bf0df4f8e856fe9b5e47ef9bba08a57ecb04af7be3",
+  "repair": 1,
+  "review": 1,
+  "checks": 1,
+  "modelMs": 77080.022416,
+  "active": null,
+  "events": [
+    {
+      "role": "check",
+      "source": "9b05466543d85847732500f790589448fdf264383d7ede256c08fcccf7a39632",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/private/tmp/clear-56-resume/check-1"
+    },
+    {
+      "role": "review",
+      "source": "9b05466543d85847732500f790589448fdf264383d7ede256c08fcccf7a39632",
+      "code": 0,
+      "timedOut": false,
+      "ms": 47157.233458,
+      "prefix": "/private/tmp/clear-56-resume/review-1"
+    },
+    {
+      "role": "repair",
+      "source": "9b05466543d85847732500f790589448fdf264383d7ede256c08fcccf7a39632",
+      "code": 0,
+      "timedOut": false,
+      "ms": 29922.788958000005,
+      "prefix": "/private/tmp/clear-56-resume/repair-1"
+    }
+  ],
+  "source": "9b05466543d85847732500f790589448fdf264383d7ede256c08fcccf7a39632",
+  "result": "human_decision_required"
+}
