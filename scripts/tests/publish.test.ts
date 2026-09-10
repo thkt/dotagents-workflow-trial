@@ -11,7 +11,6 @@ for (const mode of [
   'create_failed',
   'list_failed',
   'empty',
-  'invalid_list',
   'revoke_failed',
   'wrong_app',
 ] as const) {
@@ -61,13 +60,29 @@ for (const mode of [
           expect(token).toBe('installation-secret');
           expect(args.join(' ')).not.toContain('secret');
           if (args[2] === 'list') {
+            expect(args).toEqual([
+              'gh',
+              'pr',
+              'list',
+              '--repo',
+              'thkt/dotagents-workflow-trial',
+              '--state',
+              'open',
+              '--head',
+              'codex/test',
+              '--base',
+              'main',
+              '--limit',
+              '1',
+              '--json',
+              'url',
+              '--jq',
+              '.[0].url // empty',
+            ]);
             if (mode === 'list_failed') {
               throw Error('list failed');
             }
-            if (mode === 'invalid_list') {
-              return '{}';
-            }
-            return mode === 'existing' ? '[{"url":"https://example/pr/1"}]' : '[]';
+            return mode === 'existing' ? 'https://example/pr/1\n' : '';
           }
           expect(args).toEqual([
             'gh',
