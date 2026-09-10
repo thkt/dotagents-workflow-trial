@@ -5,6 +5,11 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { session } from '../discovery-input.ts';
 
+function git(repo: string, ...args: string[]) {
+  const result = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf8' });
+  expect(result.status).toBe(0);
+  return result.stdout.trim();
+}
 const entry = resolve(import.meta.dir, '../discovery.ts');
 const roots: string[] = [];
 afterEach(async () => {
@@ -18,6 +23,7 @@ async function setup() {
   roots.push(root);
   const repo = join(root, 'repo');
   await mkdir(repo);
+  git(repo, 'init');
   const criteriaFile = join(root, 'criteria.json');
   const rules = {
     purpose: 'Is the purpose known?',
@@ -205,5 +211,52 @@ test('symlinked work and research storage cannot redirect writes', async () => {
   await rm(work, { recursive: true });
   await symlink(t.repo, work);
   expect(cli('start', t.configFile).status).toBe(1);
-  expect(await readdir(t.repo)).toHaveLength(0);
+  expect(await readdir(t.repo)).toEqual(['.git']);
 });
+
+for (const binding of ['git-directory', 'checkout']) {
+  test(
+    'worktrees share research and keep task assessments separate (' + binding + ')',
+    async () => {
+      const t = await setup();
+      git(
+        t.repo,
+        '-c',
+        'user.name=Trial',
+        '-c',
+        'user.email=trial@example.com',
+        'commit',
+        '--allow-empty',
+        '-m',
+        'initial',
+      );
+      const linked = join(t.root, 'linked');
+      git(t.repo, 'worktree', 'add', '--detach', linked);
+      if (binding === 'checkout') {
+        await writeFile(join(t.config.contextDir, 'repository.txt'), t.repo);
+      }
+      await writeFile(t.file, 'Reusable finding with source and scope.');
+      expect((await t.evaluate()).status).toBe(0);
+      const report = cli('archive', t.dir, t.file);
+      expect(report.status).toBe(0);
+      const archived = await readFile(report.stdout.trim(), 'utf8');
+      const before = await t.state();
+      await writeFile(t.configFile, JSON.stringify({ ...t.config, repo: linked, task: 'next' }));
+      const started = cli('start', t.configFile);
+      expect(started.status).toBe(0);
+      const next: unknown = JSON.parse(cli('status', started.stdout.trim()).stdout);
+      session(next);
+      expect(next.repo).toBe(linked);
+      expect(next.referencePaths).toEqual(['README.md']);
+      expect(next.entries).toEqual([]);
+      expect(cli('gate', started.stdout.trim()).status).toBe(1);
+      expect(await t.state()).toEqual(before);
+      expect(await readFile(report.stdout.trim(), 'utf8')).toBe(archived);
+      expect(await readdir(join(t.config.contextDir, 'research'))).toHaveLength(1);
+      const clone = join(t.root, 'clone');
+      git(t.root, 'clone', t.repo, clone);
+      await writeFile(t.configFile, JSON.stringify({ ...t.config, repo: clone, task: 'clone' }));
+      expect(cli('start', t.configFile).status).toBe(1);
+    },
+  );
+}

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile, rename, rm, realpath, readdir } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, sep, join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -29,6 +30,13 @@ async function writeOnce(path: string, content: string) {
     assert((await readFile(path, 'utf8')) === content, `Existing content differs: ${path}`);
   }
 }
+async function gitDirectory(path: string) {
+  return realpath(
+    execFileSync('git', ['-C', path, 'rev-parse', '--path-format=absolute', '--git-common-dir'], {
+      encoding: 'utf8',
+    }).trim(),
+  );
+}
 async function start(file: string) {
   const config = await json(file);
   assert(isRecord(config), 'Invalid configuration');
@@ -58,7 +66,17 @@ async function start(file: string) {
   await mkdir(config.contextDir, { recursive: true });
   const contextDir = await realpath(config.contextDir);
   assert(outside(repo, contextDir), 'Context must be outside the checkout');
-  await writeOnce(join(contextDir, 'repository.txt'), repo);
+  const repository = await gitDirectory(repo);
+  assert(outside(repository, contextDir), 'Context must be outside Git storage');
+  const binding = join(contextDir, 'repository.txt');
+  const recorded = await readFile(binding, 'utf8').catch((error: unknown) => {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return repository;
+    }
+    throw error;
+  });
+  assert((await gitDirectory(recorded)) === repository, 'Context belongs to another repository');
+  await writeOnce(binding, recorded);
   const work = join(contextDir, 'work');
   await mkdir(work, { recursive: true });
   assert((await realpath(work)) === work, 'Work storage must not be a symlink');
