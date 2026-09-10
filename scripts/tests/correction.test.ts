@@ -309,3 +309,65 @@ test('missing CLI configuration argument fails with usage', () => {
   expect(result.status).toBe(1);
   expect(result.stderr).toContain('Usage:');
 });
+
+for (const path of ['.', 'evidence', '..evidence', '../..external']) {
+  test(`evidence directory boundary: ${path}`, async () => {
+    const t = await trial('boundary');
+    const runDir = resolve(t.config.cwd, path);
+    await writeFile(t.configFile, JSON.stringify({ ...t.config, runDir }));
+    const result = t.execute();
+    if (path === '../..external') {
+      expect(result.status).toBe(0);
+    } else {
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Evidence must be outside the worktree');
+      expect(await Bun.file(join(runDir, 'state.json')).exists()).toBe(false);
+      expect(await readFile(join(t.config.cwd, 'source.txt'), 'utf8')).toBe('broken');
+    }
+  });
+}
+
+test('split UTF-8 survives requirements, actor replies and both logs', async () => {
+  const t = await trial('unicode');
+  await writeFile(
+    join(t.root, 'helper.js'),
+    `import {readFileSync,writeFileSync} from 'node:fs';
+const role=process.argv[2];
+async function split(stream,text) {
+ const bytes=Buffer.from(text);
+ const cut=bytes.findIndex(byte=>byte>127)+1;
+ stream.write(bytes.subarray(0,cut));
+ await new Promise(resolve=>setTimeout(resolve,50));
+ stream.write(bytes.subarray(cut));
+}
+if(role==='issue') await split(process.stdout,'日本語の要件');
+if(role==='check' && readFileSync('source.txt','utf8')==='broken') {
+ await split(process.stdout,'確認結果');
+ await split(process.stderr,'修正が必要');
+ process.exitCode=1;
+}
+if(role==='repair') {
+ writeFileSync('source.txt','correct');
+ await split(process.stdout,JSON.stringify({status:'repaired',findings:'修正済み'}));
+}
+if(role==='review') await split(process.stdout,JSON.stringify({status:'accepted',findings:'検証済み'}));
+`,
+  );
+  expect(t.execute().status).toBe(0);
+  for (const role of ['repair', 'review']) {
+    expect(await readFile(join(t.config.runDir, `${role}-1.prompt`), 'utf8')).toContain(
+      '日本語の要件',
+    );
+  }
+  expect(await readFile(join(t.config.runDir, 'check-1.stdout'), 'utf8')).toBe('確認結果');
+  expect(await readFile(join(t.config.runDir, 'check-1.stderr'), 'utf8')).toBe('修正が必要');
+  for (const [role, findings] of [
+    ['repair', '修正済み'],
+    ['review', '検証済み'],
+  ]) {
+    const reply = object(
+      JSON.parse(await readFile(join(t.config.runDir, `${role}-1.stdout`), 'utf8')),
+    );
+    expect(reply.findings).toBe(findings);
+  }
+});
