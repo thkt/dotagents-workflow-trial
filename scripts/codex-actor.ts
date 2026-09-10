@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 // Logs stay outside the actor's worktree. The parent owns limits and process termination.
 const [role, evidenceDir] = process.argv.slice(2);
@@ -45,19 +46,17 @@ const args = [
 const child = spawn('codex', args, { stdio: ['pipe', 'pipe', 'pipe'] });
 process.stdin.pipe(child.stdin);
 child.stdin.on('error', () => {});
-const events = createWriteStream(join(dir, 'events.jsonl'));
-const errors = createWriteStream(join(dir, 'stderr.log'));
-child.stdout.pipe(events);
-child.stderr.pipe(errors);
-const code = await new Promise<number | null>((resolve, reject) => {
-  child.on('error', reject);
-  child.on('close', resolve);
+const [code] = await Promise.all([
+  new Promise<number | null>((resolve, reject) => {
+    child.on('error', reject);
+    child.on('close', resolve);
+  }),
+  pipeline(child.stdout, createWriteStream(join(dir, 'events.jsonl'))),
+  pipeline(child.stderr, createWriteStream(join(dir, 'stderr.log'))),
+]).catch((error: unknown) => {
+  child.kill();
+  throw error;
 });
-await Promise.all(
-  [events, errors].map((stream) =>
-    stream.closed ? Promise.resolve() : new Promise<void>((resolve) => stream.on('close', resolve)),
-  ),
-);
 if (code !== 0) {
   console.error(`Codex failed; evidence: ${dir}`);
   process.exit(1);
