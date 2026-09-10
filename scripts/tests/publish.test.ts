@@ -5,6 +5,26 @@ import { join } from 'node:path';
 import { generateKeyPairSync } from 'node:crypto';
 import { publish, keyJwt } from '../publish.ts';
 
+function option(args: string[], name: string) {
+  expect(args).toContain(name);
+  return args[args.indexOf(name) + 1];
+}
+
+function assertCommand(args: string[], token: string | undefined, body: string) {
+  expect(args.slice(0, 2)).toEqual(['gh', 'pr']);
+  expect(token).toBe('installation-secret');
+  expect(args.join(' ')).not.toContain('secret');
+  expect(option(args, '--repo')).toBe('thkt/dotagents-workflow-trial');
+  expect(option(args, '--base')).toBe('main');
+  expect(option(args, '--head')).toBe('codex/test');
+  if (args[2] === 'list') {
+    expect(option(args, '--state')).toBe('open');
+  } else {
+    expect(option(args, '--title')).toBe('Title with spaces');
+    expect(option(args, '--body-file')).toBe(body);
+  }
+}
+
 for (const mode of [
   'create',
   'existing',
@@ -19,8 +39,10 @@ for (const mode of [
     try {
       const body = join(dir, 'body with spaces.md');
       await writeFile(body, mode === 'empty' ? '' : 'Reviewable body');
-      const commands: string[][] = [];
-      const requests: string[] = [];
+      const commands: { args: string[]; token: string | undefined }[] = [];
+      const requests: { path: string; token: string; method: string; input: object | undefined }[] =
+        [];
+      const failure = Error(mode);
       let authenticated = false;
       const io = {
         authenticate: () => {
@@ -33,74 +55,31 @@ for (const mode of [
           method = 'GET',
           input?: object,
         ): Promise<unknown> => {
-          requests.push(path);
+          requests.push({ path, token, method, input });
           if (path === '/installation/token') {
-            expect(method).toBe('DELETE');
-            expect(token).toBe('installation-secret');
             if (mode === 'revoke_failed') {
-              throw Error('revocation failed');
+              throw failure;
             }
             return null;
           }
-          expect(token).toBe('jwt-secret');
           if (path === '/app') {
             return { id: mode === 'wrong_app' ? 0 : 4881432 };
           }
           if (path.endsWith('access_tokens')) {
-            expect(input).toEqual({
-              repository_ids: [1362242696],
-              permissions: { pull_requests: 'write', contents: 'read', metadata: 'read' },
-            });
             return { token: 'installation-secret' };
           }
           return { account: { login: 'thkt' } };
         },
         command: (args: string[], token?: string) => {
-          commands.push(args);
-          expect(token).toBe('installation-secret');
-          expect(args.join(' ')).not.toContain('secret');
+          commands.push({ args, token });
           if (args[2] === 'list') {
-            expect(args).toEqual([
-              'gh',
-              'pr',
-              'list',
-              '--repo',
-              'thkt/dotagents-workflow-trial',
-              '--state',
-              'open',
-              '--head',
-              'codex/test',
-              '--base',
-              'main',
-              '--limit',
-              '1',
-              '--json',
-              'url',
-              '--jq',
-              '.[0].url // empty',
-            ]);
             if (mode === 'list_failed') {
-              throw Error('list failed');
+              throw failure;
             }
             return mode === 'existing' ? 'https://example/pr/1\n' : '';
           }
-          expect(args).toEqual([
-            'gh',
-            'pr',
-            'create',
-            '--repo',
-            'thkt/dotagents-workflow-trial',
-            '--base',
-            'main',
-            '--head',
-            'codex/test',
-            '--title',
-            'Title with spaces',
-            '--body-file',
-            body,
-          ]);
           if (mode === 'create_failed') {
-            throw Error('create failed');
+            throw failure;
           }
           return 'https://example/pr/2\n';
         },
@@ -112,18 +91,53 @@ for (const mode of [
       if (mode === 'create' || mode === 'existing') {
         expect(await result).toBe(`https://example/pr/${mode === 'existing' ? 1 : 2}`);
       } else {
-        expect(
-          await result.then(
-            () => false,
-            () => true,
-          ),
-        ).toBe(true);
+        const error: unknown = await result.then(
+          () => undefined,
+          (reason: unknown) => reason,
+        );
+        if (['empty', 'wrong_app'].includes(mode)) {
+          expect(error).toBeInstanceOf(Error);
+        } else {
+          expect(error).toBe(failure);
+        }
       }
       expect(authenticated).toBe(mode !== 'empty');
-      expect(requests.includes('/installation/token')).toBe(!['empty', 'wrong_app'].includes(mode));
-      expect(commands.filter((args) => args[2] === 'create').length).toBe(
-        ['create', 'create_failed', 'revoke_failed'].includes(mode) ? 1 : 0,
+      const issued = !['empty', 'wrong_app'].includes(mode);
+      expect(requests.filter(({ path }) => path.endsWith('access_tokens'))).toEqual(
+        issued
+          ? [
+              {
+                path: '/app/installations/160237952/access_tokens',
+                token: 'jwt-secret',
+                method: 'POST',
+                input: {
+                  repository_ids: [1362242696],
+                  permissions: { pull_requests: 'write', contents: 'read', metadata: 'read' },
+                },
+              },
+            ]
+          : [],
       );
+      expect(requests.filter(({ token }) => token !== 'jwt-secret')).toEqual(
+        issued
+          ? [
+              {
+                path: '/installation/token',
+                token: 'installation-secret',
+                method: 'DELETE',
+                input: undefined,
+              },
+            ]
+          : [],
+      );
+      const creates = ['create', 'create_failed', 'revoke_failed'].includes(mode);
+      expect(commands.map(({ args }) => args[2])).toEqual([
+        ...(issued ? ['list'] : []),
+        ...(creates ? ['create'] : []),
+      ]);
+      for (const { args, token } of commands) {
+        assertCommand(args, token, body);
+      }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
