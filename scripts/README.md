@@ -32,6 +32,8 @@ bun scripts/correction.ts /absolute/path/config.json
 
 付属のCodex呼び出しはAstra/highを使い、修正はworkspace-write、評価はread-onlyで新しい実行を開始します。評価者はコード・テスト・文書を読み、ホスト側checkの結果と分けて評価します。実行前にCodexへログインし、対象モデルが利用できるCLIを用意してください。GitHub Appの鍵や書き込みtokenを作業環境へ渡さないでください。
 
+修正担当は調査・修正に必要な箇所を確認し、共通checkはホストが修正後に実行します。独立評価担当は共通checkを再実行せず、要求・コード・テスト・文書の妥当性を確認します。これはCLI試行での担当分担です。
+
 ## 結果と再実行
 
 - `ready_for_human_review`で終了コード0。それ以外は未達として終了コード1です。人の承認やマージ完了を意味しません。

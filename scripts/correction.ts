@@ -269,7 +269,8 @@ async function cycle(
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
     'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
-    'The host will run check and an independent review after your changes.',
+    'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
+    'The host will run the full check and an independent review after your changes.',
     'Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision.',
     'If requirements, permissions or execution limits must change, report needs_human without changing them.',
     `Requirements:\n${issue}\nFailure evidence:\n${findings}`,
