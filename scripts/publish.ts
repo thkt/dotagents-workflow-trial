@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { isRecord, isArray } from './input.ts';
+import { isRecord } from './input.ts';
 
 const repo = 'thkt/dotagents-workflow-trial';
 function command(argv: string[], token?: string) {
@@ -100,8 +100,8 @@ export async function publish(args: string[], io = runtime) {
   );
   const token = issued.token;
   try {
-    const existing: unknown = JSON.parse(
-      io.command(
+    const existing = io
+      .command(
         [
           'gh',
           'pr',
@@ -114,17 +114,18 @@ export async function publish(args: string[], io = runtime) {
           head,
           '--base',
           'main',
+          '--limit',
+          '1',
           '--json',
           'url',
+          '--jq',
+          '.[0].url // empty',
         ],
         token,
-      ),
-    );
-    assert(isArray(existing), 'Invalid PR list');
-    if (existing.length) {
-      const first = existing[0];
-      assert(isRecord(first) && typeof first.url === 'string', 'Invalid PR URL');
-      return first.url;
+      )
+      .trim();
+    if (existing) {
+      return existing;
     }
     return io
       .command(
