@@ -47,7 +47,7 @@ async function setup() {
     await writeFile(file, JSON.stringify(value));
     return cli(action, dir, file);
   };
-  const evaluate = async (missing = false, question?: string) =>
+  const evaluate = async (missing = false) =>
     send('assess', {
       revision: (await state()).revision,
       decision: 'Choose reset behavior',
@@ -63,46 +63,30 @@ async function setup() {
       next: missing
         ? 'Stop UI implementation; obtain scope then reassess'
         : 'Prepare the scoped proposal',
-      ...(question ? { question } : {}),
     });
   return { root, repo, config, configFile, dir, file, state, send, evaluate };
 }
 
-test('question, restart, answer and reassessment retain evidence without premature progress', async () => {
+test('decisions and evidence require reassessment before progress', async () => {
   const t = await setup();
   expect(cli('gate', t.dir).status).toBe(1);
   const report = join(t.root, 'notes.md');
   await writeFile(report, 'Existing reset behavior verified against source revision abc.');
   expect(cli('note', t.dir, report).status).toBe(0);
-  expect((await t.evaluate(true, 'Should reset retain focus?')).status).toBe(0);
-  const question = (await t.state()).question;
+  expect((await t.evaluate(true)).status).toBe(0);
+  expect(cli('gate', t.dir).status).toBe(1);
+  await writeFile(
+    report,
+    'Agreed: retain focus for repeated searches; owner: requester; scope: reset control.',
+  );
   expect(cli('note', t.dir, report).status).toBe(0);
-  expect((await t.state()).question).toEqual(question);
-  const waiting = await t.state();
   expect(cli('status', t.dir).status).toBe(0);
   expect(cli('gate', t.dir).status).toBe(1);
-  expect((await t.evaluate()).status).toBe(1);
-  expect((await t.send('answer', { questionId: 0, text: 'Yes' })).status).toBe(1);
-  expect(await t.state()).toEqual(waiting);
-  expect(
-    (
-      await t.send('answer', {
-        questionId: waiting.question?.id,
-        text: 'Retain focus on the search field',
-      })
-    ).status,
-  ).toBe(0);
-  expect(cli('gate', t.dir).status).toBe(1);
-  expect(
-    (await t.send('answer', { questionId: waiting.question?.id, text: 'Duplicate' })).status,
-  ).toBe(1);
   expect((await t.evaluate()).status).toBe(0);
   expect(cli('gate', t.dir).status).toBe(0);
   const completed = await t.state();
   expect(completed.entries.some((item) => item.text.includes('source revision abc'))).toBe(true);
-  expect(
-    completed.entries.some((item) => item.text.includes('Retain focus on the search field')),
-  ).toBe(true);
+  expect(completed.entries.some((item) => item.text.includes('Agreed: retain focus'))).toBe(true);
   expect(cli('note', t.dir, report).status).toBe(0);
   expect(cli('gate', t.dir).status).toBe(1);
 });
@@ -137,7 +121,6 @@ test('all criteria and current revision are required; inputs do not replace save
 test('missing facts block progress without requiring a human question', async () => {
   const t = await setup();
   expect((await t.evaluate(true)).status).toBe(0);
-  expect((await t.state()).question).toBeNull();
   expect(cli('gate', t.dir).status).toBe(1);
   expect((await t.evaluate()).status).toBe(0);
   expect(cli('gate', t.dir).status).toBe(0);
@@ -199,16 +182,16 @@ test('corrupt saved state does not pass the gate', async () => {
   expect(await readFile(join(t.dir, 'state.json'), 'utf8')).toBe('{"assessment":"accepted"}');
 });
 
-test('an answer for another session cannot release a pending question', async () => {
-  const first = await setup();
-  const second = await setup();
-  expect((await first.evaluate(true, 'Choose scope')).status).toBe(0);
-  expect((await second.evaluate(true, 'Choose scope')).status).toBe(0);
-  expect(
-    (await second.send('answer', { questionId: (await first.state()).question?.id, text: 'Yes' }))
-      .status,
-  ).toBe(1);
-  expect(cli('gate', second.dir).status).toBe(1);
+test('question-tracking sessions are preserved and cannot silently pass the gate', async () => {
+  const t = await setup();
+  expect((await t.evaluate()).status).toBe(0);
+  const current = await t.state();
+  for (const question of [null, { id: 'pending', text: 'Choose scope' }]) {
+    const previous = JSON.stringify({ ...current, question });
+    await writeFile(join(t.dir, 'state.json'), previous);
+    expect(cli('gate', t.dir).status).toBe(1);
+    expect(await readFile(join(t.dir, 'state.json'), 'utf8')).toBe(previous);
+  }
 });
 
 test('symlinked work and research storage cannot redirect writes', async () => {

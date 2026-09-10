@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile, rename, rm, realpath, readdir } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, sep, join, dirname } from 'node:path';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { isRecord, isArray } from './input.ts';
 import { nonempty, criteria, assessment, session, ready } from './discovery-input.ts';
 import type { Session } from './discovery-input.ts';
@@ -72,32 +72,17 @@ async function start(file: string) {
     criteria: rules,
     revision: 0,
     assessment: null,
-    question: null,
     entries: [],
   };
   await save(dir, state);
   console.log(dir);
 }
 async function assess(state: Session, file: string) {
-  assert(state.question === null, 'Answer the pending question before reassessment');
   const value = await json(file);
   assessment(value, state.criteria);
   assert(value.revision === state.revision, 'Stale assessment; read current status');
   state.entries.push({ kind: 'assessment', text: JSON.stringify(value) });
   state.assessment = value;
-  state.question = value.question ? { id: randomUUID(), text: value.question } : null;
-}
-async function answer(state: Session, file: string) {
-  const value = await json(file);
-  assert(isRecord(value) && state.question !== null, 'No pending question');
-  assert(value.questionId === state.question.id, 'Stale or unrelated answer');
-  nonempty(value.text);
-  state.entries.push({
-    kind: 'answer',
-    text: JSON.stringify({ question: state.question, answer: value.text }),
-  });
-  state.question = null;
-  state.assessment = null;
 }
 async function note(state: Session, file: string) {
   const text = await readFile(file, 'utf8');
@@ -151,8 +136,6 @@ async function run(action: string, dir: string, file?: string) {
     }
     if (action === 'assess') {
       await assess(current, file);
-    } else if (action === 'answer') {
-      await answer(current, file);
     } else {
       await note(current, file);
     }
@@ -162,7 +145,6 @@ async function run(action: string, dir: string, file?: string) {
       JSON.stringify({
         revision: current.revision,
         ready: ready(current),
-        question: current.question,
       }),
     );
   } finally {
@@ -173,10 +155,10 @@ try {
   const [action, target, file, extra] = process.argv.slice(2);
   assert(
     action &&
-      ['start', 'status', 'gate', 'note', 'assess', 'answer', 'archive'].includes(action) &&
+      ['start', 'status', 'gate', 'note', 'assess', 'archive'].includes(action) &&
       target &&
       !extra,
-    'Usage: bun scripts/discovery.ts start CONFIG | status|gate SESSION | note|assess|answer|archive SESSION INPUT',
+    'Usage: bun scripts/discovery.ts start CONFIG | status|gate SESSION | note|assess|archive SESSION INPUT',
   );
   if (action === 'start') {
     assert(!file, 'Unexpected argument');
