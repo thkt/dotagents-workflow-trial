@@ -8,6 +8,8 @@ const stopReasons = [
   'requirements_changed',
   'source_changed',
   'check_unavailable',
+  'capture_unavailable',
+  'capture_timeout',
   'invalid_review',
   'invalid_repair',
   'human_decision_required',
@@ -20,6 +22,7 @@ export interface Config {
   runDir: string;
   issue: string[];
   check: string[];
+  capture?: string[];
   repair: string[];
   review: string[];
   repairLimit: number;
@@ -28,7 +31,7 @@ export interface Config {
   checkTimeMs: number;
 }
 interface Event {
-  role: ActorRole | 'check';
+  role: ActorRole | 'check' | 'capture';
   source?: string;
   code: number | null;
   timedOut: boolean;
@@ -42,10 +45,11 @@ export interface State {
   review: number;
   checks: number;
   modelMs: number;
-  active: { role: ActorRole | 'check'; prefix: string } | null;
+  active: { role: ActorRole | 'check' | 'capture'; prefix: string } | null;
   events: Event[];
   source?: string;
   result?: StopReason | null;
+  findings?: string;
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,7 +62,8 @@ const nonnegative = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const count = (value: unknown): value is number => nonnegative(value) && Number.isInteger(value);
 const optionalString = (value: unknown) => value === undefined || typeof value === 'string';
-const role = (value: unknown) => value === 'check' || value === 'repair' || value === 'review';
+const role = (value: unknown) =>
+  value === 'check' || value === 'repair' || value === 'review' || value === 'capture';
 const command = (value: unknown) =>
   isArray(value) &&
   typeof value[0] === 'string' &&
@@ -73,6 +78,7 @@ export function assertConfig(value: unknown): asserts value is Config {
   for (const key of ['issue', 'check', 'repair', 'review']) {
     assert(command(value[key]), `Invalid ${key} command`);
   }
+  assert(value.capture === undefined || command(value.capture), 'Invalid capture command');
   for (const key of ['repairLimit', 'reviewLimit']) {
     const limit: unknown = value[key];
     assert(count(limit) && limit > 0, `Invalid ${key}`);
@@ -116,5 +122,6 @@ export function assertState(value: unknown): asserts value is State {
     'Invalid active reservation',
   );
   assert(isArray(value.events) && value.events.every(isEvent), 'Invalid saved events');
+  assert(optionalString(value.findings), 'Invalid saved findings');
   assert(optionalString(value.source) && validResult(value.result), 'Invalid saved result');
 }

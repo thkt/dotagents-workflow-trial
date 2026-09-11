@@ -35,8 +35,16 @@ async function trial(mode: string, overrides: Partial<Config> = {}) {
     helper,
     `
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {join} from 'node:path';
 const role=process.argv[2], mode=${JSON.stringify(mode)};
 if(role==='issue') console.log(mode==='issue_changed'&&existsSync(${JSON.stringify(join(root, 'issue-changed'))})?'Changed requirement':'Agreed requirement: correct source and docs');
+if(role==='capture') {
+ if(mode==='capture_timeout') await new Promise(r=>setTimeout(r,10000));
+ if(mode==='capture_unavailable') {console.error('Host permission denied');process.exit(78);}
+ if(mode==='capture_changed') writeFileSync('source.txt','changed by capture');
+ if(mode==='capture_failure' && readFileSync('source.txt','utf8')==='broken') {console.error('Capture assertion failed');process.exit(1);}
+ writeFileSync(join(process.argv[3],'desktop.png'),readFileSync('source.txt','utf8'));
+}
 if(role==='check') {
  if(mode==='check_timeout') await new Promise(r=>setTimeout(r,10000));
  if(mode==='normal') {console.log('source must be correct');console.error('validation failed: source is broken');}
@@ -61,6 +69,9 @@ if(role==='repair') {
  console.log(JSON.stringify({status:'repaired',findings:'fixed'}));
 }
 if(role==='review') {
+ if(mode.startsWith('capture_') && readFileSync('trial/evidence/generated/desktop.png','utf8')!==readFileSync('source.txt','utf8')) process.exit(5);
+ if(mode==='capture_review'&&!existsSync('README.md')) {writeFileSync(${JSON.stringify(join(root, 'reviewed'))},'1');console.log(JSON.stringify({status:'needs_changes',findings:'README missing'}));process.exit(0);}
+
  if(mode==='null_review') {console.log('null');process.exit(0);}
  if(mode==='review_failed') process.exit(2);
  if(mode==='issue_changed') writeFileSync(${JSON.stringify(join(root, 'issue-changed'))},'yes');
@@ -76,6 +87,7 @@ if(role==='review') {
     runDir: join(root, 'evidence'),
     issue: [process.execPath, helper, 'issue'],
     check: [process.execPath, helper, 'check'],
+    ...(mode.startsWith('capture_') ? { capture: [process.execPath, helper, 'capture'] } : {}),
     repair: [process.execPath, helper, 'repair'],
     review: [process.execPath, helper, 'review'],
     repairLimit: 2,
@@ -188,7 +200,7 @@ async function waitForFile(path: string) {
   throw Error(`Timed out waiting for ${path}`);
 }
 
-for (const role of ['check', 'repair', 'review'] as const) {
+for (const role of ['check', 'repair', 'review', 'capture'] as const) {
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGKILL'] as const) {
     test(`${signal} during ${role} preserves reservation and blocks duplicate execution`, async () => {
       const t = await trial('normal', { checkTimeMs: 15000 });
@@ -226,7 +238,9 @@ if (pidFile) {
         const before = await readFile(stateFile, 'utf8');
         const state = object(JSON.parse(before));
         expect(object(state.active).role).toBe(role);
-        expect(state[role === 'check' ? 'checks' : role]).toBe(1);
+        expect(state[role === 'check' || role === 'capture' ? 'checks' : role]).toBe(
+          role === 'capture' ? 0 : 1,
+        );
         // A second controller must not enter the same run while the first is alive.
         expect(t.execute().status).toBe(1);
         child.kill(signal);
@@ -371,3 +385,38 @@ if(role==='review') await split(process.stdout,JSON.stringify({status:'accepted'
     expect(reply.findings).toBe(findings);
   }
 });
+
+for (const [mode, result, captures, reviews] of [
+  ['capture_success', 'ready_for_human_review', 2, 1],
+  ['capture_review', 'ready_for_human_review', 3, 2],
+  ['capture_failure', 'ready_for_human_review', 2, 1],
+  ['capture_unavailable', 'capture_unavailable', 1, 0],
+  ['capture_timeout', 'capture_timeout', 1, 0],
+  ['capture_changed', 'source_changed', 1, 0],
+] as const) {
+  test(`${mode} through controller entry`, async () => {
+    const t = await trial(mode, { checkTimeMs: 500 });
+    const resultProcess = t.execute();
+    expect(resultProcess.status).toBe(result === 'ready_for_human_review' ? 0 : 1);
+    const state = await t.state();
+    expect(state.result).toBe(result);
+    expect(state.review).toBe(reviews);
+    expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(
+      captures,
+    );
+    if (result === 'ready_for_human_review') {
+      expect(
+        await readFile(join(t.config.cwd, 'trial/evidence/generated/desktop.png'), 'utf8'),
+      ).toBe('correct');
+      const before = JSON.stringify(state);
+      expect(t.execute().status).toBe(0);
+      expect(JSON.stringify(await t.state())).toBe(before);
+      await writeFile(join(t.config.cwd, 'trial/evidence/generated/desktop.png'), 'stale');
+      expect(object(JSON.parse(t.execute().stdout)).result).toBe('target_changed_after_stop');
+    }
+    if (mode === 'capture_unavailable') {
+      expect(state.findings).toContain('capture-1.stderr');
+      expect(state.repair).toBe(0);
+    }
+  });
+}

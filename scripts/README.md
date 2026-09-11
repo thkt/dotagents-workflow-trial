@@ -3,6 +3,32 @@
 合意したIssueに対して、check失敗または独立評価の`needs_changes`から修正・再検証・再評価へ接続する実行担当向けの入口です。この文書をCLIの操作・実行制約の正本とします。
 通常の商品アプリ開発は[README](../README.md#セットアップと検証)、PRと人のレビュー・承認は[DEVELOPMENT.md](../DEVELOPMENT.md)を先に確認してください。共通check内の制御テストは模擬コマンドを使いますが、ここで説明するCLI試行は実モデルを呼びます。
 
+## IssueからPR作成
+
+```sh
+bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to/checkout
+```
+
+`development.ts`が、Issue全文の取得、隔離worktree、初回実装、既存correction.tsによる共通check・修正・独立評価、commit・push・AppによるPR作成、添付、最新headのCI確認を進めます。スキルはこのCLIを呼びます。初回実装も既存codex-actor.tsを使います。
+
+現段階の対象は`thkt/dotagents-workflow-trial`のみです。Bun・Git・gh・Codex、対象モデルの利用権限、既存のApp認証が必要です。入力checkoutはcleanな状態で使い、committed HEADから`codex/development-N`を作ります。未コミット変更や同名branchがあれば停止し、元checkoutを整理・上書きしません。依存とChromiumは隔離先へ固定版で準備します。実行する制御コードは隔離先の外に置きます。
+
+新規実行の上限は初回実装を含むモデル累計20分、追加修正2回・独立評価2回、各checkとCI待機9分です。初回実装の消費時間を既存correction.tsへ渡す残時間から差し引きます。設定変更による予算拡大や自動復旧は行いません。
+
+保存先は`~/.local/share/dotagents/development/<Git管理ディレクトリの識別値>/<Issue番号>/`、変更する場合は`--run-dir DIRECTORY`でcheckoutとGit管理領域の外を指定します。要求、初回実装の指示・結果、検証設定・ログ、作業checkout、PR本文・URL、CI結果を残します。既存保存先は再利用して再実行せず停止します。中断・失敗後は記録と実プロセス・GitHubの状態を照合し、保存先を削除したり別名にして自動再試行しません。
+
+`--no-publish`では独立評価までで止め、commit・push・PR作成を行いません。通常実行は公開条件を満たす変更のみcommitし、`trial/evidence/`内で今回変更した画像・動画を既存ghで添付します。PR内の表示・再生確認は結果の`rendered_media_check`として呼び出し担当へ渡します。CI失敗・確認不能時はPR URLと記録を保持して非zero終了し、成功とは報告しません。人のレビュー・承認・マージは自動実行しません。
+
+## ホストによるブラウザー検証と撮影
+
+実装・修正担当はsandbox内でコード・テスト・文書・撮影定義を準備し、ブラウザーやサーバーの起動はホストCLIが担当します。ホストの実行を残しているだけなら`repaired`を返し、要求・許可の判断が必要な場合は`needs_human`で具体的な理由を返します。
+
+画面証拠が必要な変更では`trial/capture.spec.js`を用意します。既存`trial/playwright.config.js`の画面幅・webServerを使い、`CAPTURE_OUTPUT`で渡された絶対パスの直下へ画像・動画だけを保存します。通常のE2Eとは別にホストが実行し、テスト0件・skip・失敗を成功扱いしません。撮影中はcheckoutのコード・文書を書き換えません。媒体の公開先は`trial/evidence/generated/`です。このディレクトリはホストが毎回置き換える生成媒体専用領域とし、手書きの記録は外に置きます。
+
+`development.ts`は既存correction設定に`capture: [BUN, TRUSTED_CAPTURE_TS]`を渡します。省略した既存のcorrection実行は従来どおりcheckから開始します。撮影定義がない場合は撮影を省略し、必要媒体の不足は独立評価で判定します。撮影定義がある場合はサーバー・Chromiumの起動可否をホストで確認します。
+
+撮影は各修正後にcheckout外の新しい出力先で行います。要求・ソースの不変を確認して媒体を取り込み、媒体を含む対象を確定して共通check・独立評価・公開へ進みます。撮影失敗はログを修正担当へ渡します。起動不能は`capture_unavailable`、撮影の時間切れは`capture_timeout`として停止し、ホスト側での環境確認が必要です。撮影にも各checkと同じ9分の上限とプロセスグループの中断処理を適用します。正常な`needs_human`と不正応答を区別して表示し、記録と既存の消費上限を保持します。
+
 ## 準備と実行
 
 ```text

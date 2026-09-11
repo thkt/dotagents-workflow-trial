@@ -2,7 +2,18 @@ import { assertConfig, assertState } from './input.ts';
 import type { Config, State, ActorRole, StopReason } from './input.ts';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdir, rename, lstat, readlink, rm } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  rename,
+  lstat,
+  readlink,
+  rm,
+  readdir,
+  cp,
+  realpath,
+} from 'node:fs/promises';
 import { resolve, relative, isAbsolute, sep } from 'node:path';
 
 interface CommandResult {
@@ -51,7 +62,7 @@ function assertRunning() {
 }
 
 // A process group includes tools launched by the actor, not just its CLI parent.
-async function command(
+export async function command(
   argv: string[],
   cwd: string,
   input: string,
@@ -144,7 +155,7 @@ async function readIssue(config: Config) {
   return result.stdout;
 }
 
-function parseReply(stdout: string): { status: string; findings: string } | null {
+export function parseReply(stdout: string): { status: string; findings: string } | null {
   let value: unknown;
   try {
     value = JSON.parse(stdout);
@@ -211,6 +222,145 @@ async function runModel(
   return result;
 }
 
+export const captureInstructions =
+  'For required media, prepare trial/capture.spec.js using Playwright and the existing trial/playwright.config.js projects and webServer. The host runs this separately from normal tests. Save only PNG/JPEG/WebP/MP4/WebM files directly under process.env.CAPTURE_OUTPUT (required absolute output directory). Close video contexts and save video there. Do not write media or reports into the checkout during capture. Reference final media at trial/evidence/generated/. No capture.spec.js is needed when the Issue requires no media. Return repaired when implementation and these test/capture definitions are ready; pending host execution alone is not needs_human. Actual requirement or authorization decisions still require needs_human.';
+
+async function hostCommand(
+  config: Config,
+  state: State,
+  role: 'capture' | 'check',
+  argv: string[],
+  persist: Persist,
+) {
+  const attempt =
+    role === 'capture'
+      ? state.events.filter((event) => event.role === 'capture').length + 1
+      : state.checks;
+  const prefix = resolve(config.runDir, `${role}-${attempt}`);
+  state.active = { role, prefix };
+  await persist();
+  const result = await command(argv, config.cwd, '', config.checkTimeMs, prefix);
+  state.active = null;
+  state.events.push({
+    role,
+    source: state.source,
+    code: result.code,
+    timedOut: result.timedOut,
+    prefix,
+  });
+  await persist();
+  return { ...result, prefix };
+}
+
+async function installMedia(config: Config, output: string) {
+  const names = await readdir(output);
+  for (const name of names) {
+    if (
+      !/\.(png|jpe?g|webp|mp4|webm)$/i.test(name) ||
+      !(await lstat(resolve(output, name))).isFile()
+    ) {
+      throw Error(`Invalid capture output: ${name}`);
+    }
+  }
+  const parent = resolve(config.cwd, 'trial/evidence');
+  await mkdir(parent, { recursive: true });
+  if ((await realpath(parent)) !== resolve(await realpath(config.cwd), 'trial/evidence')) {
+    throw Error('Capture destination must not resolve through a symlink');
+  }
+  const destination = resolve(parent, 'generated');
+  await rm(destination, { recursive: true, force: true });
+  if (names.length) {
+    await cp(output, destination, { recursive: true });
+  }
+}
+
+async function verifyHost(
+  config: Config,
+  state: State,
+  persist: Persist,
+): Promise<{ stop?: StopReason; findings?: string }> {
+  state.source = await snapshot(config.cwd);
+  if (config.capture) {
+    const output = resolve(
+      config.runDir,
+      `capture-${state.events.filter((event) => event.role === 'capture').length + 1}-media`,
+    );
+    await mkdir(output); // Each capture has a fresh directory, never prior media.
+    const capture = await hostCommand(
+      config,
+      state,
+      'capture',
+      [...config.capture, output],
+      persist,
+    );
+    const changed = await targetChange(config, state);
+    if (changed) {
+      return { stop: changed };
+    }
+    state.findings = `Capture logs: ${capture.prefix}.stdout and ${capture.prefix}.stderr; environment stops require the host operator, execution failures return to repair.`;
+    if (capture.timedOut) {
+      return { stop: 'capture_timeout' };
+    }
+    if (capture.code === null || capture.code === 78) {
+      return { stop: 'capture_unavailable' };
+    }
+    if (capture.code !== 0) {
+      return { findings: state.findings };
+    }
+    await installMedia(config, output);
+    state.source = await snapshot(config.cwd);
+  }
+  state.checks++;
+  const checked = await hostCommand(config, state, 'check', config.check, persist);
+  const changed = await targetChange(config, state);
+  if (changed) {
+    return { stop: changed };
+  }
+  state.findings = `Check logs: ${checked.prefix}.stdout and ${checked.prefix}.stderr.`;
+  if (checked.timedOut || checked.code === null) {
+    return { stop: 'check_unavailable' };
+  }
+  return checked.code === 0
+    ? {}
+    : { findings: `check failed. Read ${checked.prefix}.stdout and ${checked.prefix}.stderr.` };
+}
+
+async function evaluate(
+  config: Config,
+  state: State,
+  issue: string,
+  persist: Persist,
+): Promise<{ stop?: StopReason; findings?: string }> {
+  const prompt = [
+    'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
+    'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
+    'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
+    'The publisher owns PR creation, attachment upload and rendered-media checks; humans own review and approval. Their pending actions alone are not implementation defects.',
+    'If the deliverables are ready, return accepted and identify the remaining publisher/human actions in findings. Do not claim those actions are completed or waive them.',
+    'Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary and remaining handoff actions"}.',
+    `Requirements:\n${issue}`,
+  ].join('\n');
+  const reviewed = await runModel(config, state, 'review', prompt, persist);
+  if ('stop' in reviewed) {
+    return { stop: reviewed.stop };
+  }
+  const changed = await targetChange(config, state);
+  if (changed) {
+    return { stop: changed };
+  }
+  const review = parseReview(reviewed.stdout);
+  if (!review) {
+    return { stop: 'invalid_review' };
+  }
+  if (review.status === 'accepted') {
+    state.findings = review.findings;
+    return { stop: 'ready_for_human_review' };
+  }
+
+  state.findings = review.findings;
+  return { findings: review.findings };
+}
+
 async function cycle(
   config: Config,
   state: State,
@@ -220,60 +370,24 @@ async function cycle(
   if (digest(await readIssue(config)) !== state.issueHash) {
     return 'requirements_changed';
   }
-  state.source = await snapshot(config.cwd);
-  const prefix = resolve(config.runDir, `check-${++state.checks}`);
-  state.active = { role: 'check', prefix };
-  await persist();
-  const checked = await command(config.check, config.cwd, '', config.checkTimeMs, prefix);
-  state.active = null;
-  state.events.push({
-    role: 'check',
-    source: state.source,
-    code: checked.code,
-    timedOut: checked.timedOut,
-    prefix,
-  });
-  await persist();
-  const changed = await targetChange(config, state);
-  if (changed) {
-    return changed;
+  const host = await verifyHost(config, state, persist);
+  if (host.stop) {
+    return host.stop;
   }
-  if (checked.timedOut || checked.code === null) {
-    return 'check_unavailable';
-  }
-  let findings = `check failed. Read ${prefix}.stdout and ${prefix}.stderr.`;
-  if (checked.code === 0) {
-    const prompt = [
-      'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
-      'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
-      'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
-      'The publisher owns PR creation, attachment upload and rendered-media checks; humans own review and approval. Their pending actions alone are not implementation defects.',
-      'If the deliverables are ready, return accepted and identify the remaining publisher/human actions in findings. Do not claim those actions are completed or waive them.',
-      'Return JSON {"status":"accepted"|"needs_changes","findings":"concrete unmet conditions or review summary and remaining handoff actions"}.',
-      `Requirements:\n${issue}`,
-    ].join('\n');
-    const reviewed = await runModel(config, state, 'review', prompt, persist);
-    if ('stop' in reviewed) {
-      return reviewed.stop;
+  let findings = host.findings;
+  if (!findings) {
+    const result = await evaluate(config, state, issue, persist);
+    if (result.stop) {
+      return result.stop;
     }
-    const changed = await targetChange(config, state);
-    if (changed) {
-      return changed;
-    }
-    const review = parseReview(reviewed.stdout);
-    if (!review) {
-      return 'invalid_review';
-    }
-    if (review.status === 'accepted') {
-      return 'ready_for_human_review';
-    }
-    findings = review.findings;
+    findings = result.findings;
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
     'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
-    'The host will run the full check and an independent review after your changes.',
+    'The host runs full check, browser tests and capture after your changes; do not launch browsers or servers in the actor sandbox.',
+    ...(config.capture ? [captureInstructions] : []),
     'Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision.',
     'If requirements, permissions or execution limits must change, report needs_human without changing them.',
     `Requirements:\n${issue}\nFailure evidence:\n${findings}`,
@@ -282,6 +396,7 @@ async function cycle(
   if ('stop' in repaired) {
     return repaired.stop;
   }
+  state.findings = parseReply(repaired.stdout)?.findings;
   return repairOutcome(repaired.stdout);
 }
 
@@ -303,7 +418,7 @@ async function targetChange(config: Config, state: State): Promise<StopReason | 
   return null;
 }
 
-async function run(config: Config) {
+export async function run(config: Config) {
   validate(config);
   await mkdir(config.runDir, { recursive: true });
   const lock = resolve(config.runDir, 'lock');
@@ -363,25 +478,34 @@ async function execute(config: Config): Promise<State> {
   return state;
 }
 
-if (import.meta.main) {
+export async function withInterrupts<T>(action: () => Promise<T>): Promise<T> {
+  interrupted = false;
   process.on('SIGINT', interrupt);
   process.on('SIGTERM', interrupt);
   try {
-    const configFile = process.argv[2];
-    if (!configFile) {
-      throw Error('Usage: bun scripts/correction.ts CONFIG_FILE');
-    }
-    const config: unknown = JSON.parse(await readFile(configFile, 'utf8'));
-    assertConfig(config);
-    const result = await run(config);
-    assertRunning();
-    console.log(JSON.stringify(result, null, 2));
-    process.exitCode = result.result === 'ready_for_human_review' ? 0 : 1;
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
+    return await action();
   } finally {
     process.off('SIGINT', interrupt);
     process.off('SIGTERM', interrupt);
+  }
+}
+
+if (import.meta.main) {
+  try {
+    await withInterrupts(async () => {
+      const configFile = process.argv[2];
+      if (!configFile) {
+        throw Error('Usage: bun scripts/correction.ts CONFIG_FILE');
+      }
+      const config: unknown = JSON.parse(await readFile(configFile, 'utf8'));
+      assertConfig(config);
+      const result = await run(config);
+      assertRunning();
+      console.log(JSON.stringify(result, null, 2));
+      process.exitCode = result.result === 'ready_for_human_review' ? 0 : 1;
+    });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
   }
 }

@@ -1,0 +1,16 @@
+---
+name: implement
+description: 合意済みGitHub Issueを実装し、検証・独立評価を経てPRを作成する。Issue番号やURLを指定した開発依頼に使う。
+---
+
+# IssueからPR作成
+
+対象Issueが不明なら確認する。このスキルの実体から[development.ts](../../scripts/development.ts)を解決し、呼び出し元のrepoを指定して実行する。
+
+```sh
+bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to/target-checkout
+```
+
+明示的な開発依頼はPR作成までを含む。「公開しない」指定は`--no-publish`へ渡す。スキルの自動選択だけを公開許可にしない。人の承認・マージは含めない。
+
+結果に`rendered_media_check`があればPR内の画像表示・動画再生を確認する。PR URL・検証結果・未確認事項、または停止理由・記録の場所を返す。

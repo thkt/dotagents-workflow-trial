@@ -1,0 +1,7 @@
+
+Running 2 tests using 1 worker
+
+[1/2] [desktop] › trial/capture.spec.js:10:0 › 並び順の選択から再読み込み・復元までを撮影する
+[2/2] [mobile] › trial/capture.spec.js:10:0 › 並び順の選択から再読み込み・復元までを撮影する
+  2 passed (10.7s)
+Capture passed: 2 tests; evidence: /Users/thkt/.local/share/dotagents/trials/implement-host-75/run/verification
