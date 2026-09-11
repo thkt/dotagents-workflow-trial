@@ -456,7 +456,9 @@ for (const kind of [
               ? 'app.js'
               : 'README.md';
       await writeFile(join(cwd, name), 'current');
-      if (kind === 'staged-doc') git('add', 'README.md');
+      if (kind === 'staged-doc') {
+        git('add', 'README.md');
+      }
     }
     t.config.capture = [process.execPath, join(t.root, 'helper.js'), 'capture'];
     await writeFile(t.configFile, JSON.stringify(t.config));
