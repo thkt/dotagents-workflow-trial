@@ -1,6 +1,6 @@
 # IssueからPR作成までの入口
 
-ユーザーと、`$implement 99`を薄いスキルの入口とし、実行順序・停止条件をCLIに持たせる方針を合意した。要求整理からIssue作成はclarify-requirements、合意済みIssueからPR作成はimplementで分ける。
+ユーザーと、`$implement 99`を薄いスキルの入口とし、実行順序・停止条件をCLIに持たせる方針を合意した。要求整理からIssue作成はscoping、合意済みIssueからPR作成はimplementで分ける。
 
 [implementスキル](../../skills/implement/SKILL.md)は[development.ts](../../scripts/development.ts)を呼ぶ。CLIが隔離作業場所・初回実装・既存correction.tsによる検証/修正/独立評価・既存publish.tsによる公開・CI確認をつなぐ。新たなhookは追加しない。現段階は試行repoに限定し、正規.agentsへの導入と他repo対応は別の変更とする。
 

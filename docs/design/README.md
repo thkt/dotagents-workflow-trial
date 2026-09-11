@@ -15,7 +15,7 @@
 
 ## 現在の運用との関係
 
-現在の操作・検証は[README](../../README.md)、採用済みの開発・レビュー方針は[DEVELOPMENT.md](../../DEVELOPMENT.md)、制御CLIは[scripts/README.md](../../scripts/README.md)を正本とします。要求整理の実行方法は[スキル](../../skills/clarify-requirements/SKILL.md)に従います。
+現在の操作・検証は[README](../../README.md)、採用済みの開発・レビュー方針は[DEVELOPMENT.md](../../DEVELOPMENT.md)、制御CLIは[scripts/README.md](../../scripts/README.md)を正本とします。要求整理の実行方法は[スキル](../../skills/scoping/SKILL.md)に従います。
 
 この試行では全変更のマージ前に人のレビュー・承認が必要です。情報設計にあるレビュー省略の条件は検討案であり、有効な運用ではありません。各変更の採用範囲・完了条件はIssue、変更と検証結果はPRから確認します。
 
