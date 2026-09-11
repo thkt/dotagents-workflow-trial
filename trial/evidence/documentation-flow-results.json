@@ -1,0 +1,81 @@
+{
+  "issue": 87,
+  "model": "gpt-6-astra",
+  "reasoningEffort": "high",
+  "mode": "no-publish",
+  "perRunLimits": {
+    "modelMs": 1200000,
+    "repairs": 2,
+    "reviews": 2,
+    "checkMs": 540000
+  },
+  "runs": [
+    {
+      "run": "run",
+      "baseCommit": "30d69dd2744a1c97577afb7c53de2c09146636ec",
+      "initialImplementation": {
+        "code": 0,
+        "timedOut": false,
+        "ms": 90064.163
+      },
+      "correctionModelMs": 214337.39125000004,
+      "totalModelMs": 304401.55425000004,
+      "repairCalls": 2,
+      "reviewCalls": 2,
+      "hostChecks": 2,
+      "captures": 2,
+      "result": "human_decision_required",
+      "lastVerificationSourceDigest": "15c750a8660f13489c4b957a4c06776d16aca22db4a00e53d34701be79a5abfd",
+      "reviewResults": [
+        {
+          "status": "needs_changes",
+          "findings": "scripts/README.mdの案内・読む順序・リンクは各入口の実装およびDEVELOPMENT.mdと整合し、詳細手順の重複や未検証の保証もありません。文書のみのIssueなのでコード・新規テスト・媒体追加は不要です。ホストcheckは提示されたexit 0として扱い、再実行していません。ただし差分にはtrial/evidence/generated/product-order-restore-desktop.webmとproduct-order-restore-mobile.webmの変更もあり、「scripts/README.mdのみ変更、動画は変更しない」に違反しています。この2本を基準版に戻して差分を限定し、変更後の検証・評価を更新する必要があります。解消後のPR作成・最新CI確認は公開担当、人のレビュー・承認は人へ引き継ぎます。"
+        },
+        {
+          "status": "needs_changes",
+          "findings": "文書の入口区分・読む順序・リンクは既存方針と実装に整合し、追加コード・テスト・媒体は不要です。ホストcheckはexit 0。ただし差分にtrial/evidence/generated/product-order-restore-desktop.webmとproduct-order-restore-mobile.webmが含まれ、「scripts/README.mdのみ変更・動画は変更しない」の完了条件に違反しています。両動画はホストcapture-2の出力とSHA-256が一致し、生成元は確認済みですが、現行の公開処理はgit add --allで取り込みます。ホスト再撮影による混入を解消し、READMEのみの最終差分と検証対象を再照合してください。その後のPR作成・最新CI確認は公開担当、人のレビュー・承認は未実施の引き継ぎ事項です。"
+        }
+      ],
+      "repairResults": [
+        {
+          "status": "repaired",
+          "findings": "要件外の動画2本をHEADと同一内容へ戻し、差分をscripts/README.mdのみに限定しました。冒頭の入口案内・読む順序・12リンクを確認し、現行実装とDEVELOPMENT.mdの文書更新方針との整合を確認しました。git diff --check成功。媒体・撮影定義の追加は不要です。フルcheckと独立評価の再実行はホストへ引き継ぎます。commit・push・公開は行っていません。"
+        },
+        {
+          "status": "needs_human",
+          "findings": "混入した2動画をHEADと同一の内容へ復元し、最終差分がscripts/README.mdのみであることを確認しました。文書更新方針・各入口の実装との整合、冒頭12リンク、git diff --checkも確認済みです。根本原因はホストが既存capture.spec.jsを実行し、correction.tsで生成媒体を毎回置き換える処理です。次の撮影で再混入するため、文書のみのIssueで媒体を取り込まないホスト運用・制御変更の判断が必要です。これはREADMEのみという許可範囲外のため変更していません。全checkはホストに委ね、ブラウザー起動・commit・push・公開は行っていません。"
+        }
+      ],
+      "finalChangedPaths": [
+        "scripts/README.md"
+      ]
+    },
+    {
+      "run": "run-fixed",
+      "baseCommit": "c3ce35c46b4b64e010c46fd20a177657ef0c73e1",
+      "initialImplementation": {
+        "code": 0,
+        "timedOut": false,
+        "ms": 90562.41691599999
+      },
+      "correctionModelMs": 47796.20433400001,
+      "totalModelMs": 138358.62125,
+      "repairCalls": 0,
+      "reviewCalls": 1,
+      "hostChecks": 1,
+      "captures": 0,
+      "result": "ready_for_human_review",
+      "lastVerificationSourceDigest": "6b602ec7abf4230f9211b681a97e3a2c925f3b54c0c963eb6521da6a043e4820",
+      "reviewResults": [
+        {
+          "status": "accepted",
+          "findings": "変更はscripts/README.mdの冒頭のみ。開発・修正試行・通常開発・文書のみのIssue・未確定の相談を区別し、既存見出しとリンクで案内している。リンク先とCLI実装を照合し、手順・制約の重複や根拠のない保証の追加は認められない。DEVELOPMENT.mdの文書更新方針を満たし、新規コード・テスト・媒体は不要。checkは提供されたホスト側exit 0を根拠とし、再実行していない。公開担当にはPR作成、対象commitと本評価・検証結果の対応付け、最新CIの確認が残る。今回添付対象の媒体はない。人によるレビュー・承認は未実施であり、引き続き必要。"
+        }
+      ],
+      "repairResults": [],
+      "finalChangedPaths": [
+        "scripts/README.md"
+      ]
+    }
+  ]
+}

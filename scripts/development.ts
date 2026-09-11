@@ -137,6 +137,7 @@ async function implement(context: Context, io: typeof runtime) {
   const prompt = [
     'Implement the complete agreed Issue using existing code and verification assets. Read README.md, DEVELOPMENT.md and applicable repository instructions.',
     'Prepare meaningful tests, current documentation and capture definitions. The host runs browser tests and capture; do not launch browsers or servers in your sandbox.',
+    'Documentation-only Issues use the same flow. Apply the documentation update policy in DEVELOPMENT.md; add tests or code only when the agreed requirements need them.',
     captureInstructions,
     'Do not commit, push, publish, change the Issue or weaken acceptance criteria. Do not run the full check; the host will do it after implementation.',
     'Do not edit control scripts or credentials outside this checkout. If scope or authorization must change, return needs_human. Otherwise return repaired with a concrete summary.',

@@ -21,6 +21,7 @@
 - 通常の商品アプリ開発は、このREADMEの[セットアップと検証](#セットアップと検証)で起動・共通check・画像取得を確認し、[DEVELOPMENT.md](DEVELOPMENT.md)で変更とレビューの方針を確認します。制御CLIや実モデルの起動は不要です。
 - 修正・独立評価の接続を試す実行担当は、上記に続いて[scripts/README.md](scripts/README.md)の設定・実行上限・中断手順を読みます。通常開発とは別に、隔離した作業コピーで実行します。
 - 合意前の調査・要求整理は[clarify-requirements](skills/clarify-requirements/SKILL.md)を明示的に読み、保存・不足・回答・再評価の手順を使います。モデルを自動起動するCLIではありません。
+- 合意済みの文書整理Issueも[implement](skills/implement/SKILL.md)で進めます。実装に伴う更新と同じ[文書更新の方針](DEVELOPMENT.md#ドキュメントの更新)で判断します。
 - 検証結果は[検証記録](trial/evidence/README.md)を参照してください。
 
 文書の正本は、セットアップ・共通checkの順序と検証範囲がこのREADME、レビュー・開発方針がDEVELOPMENT.md、制御CLIの操作と実行制約がscripts/README.mdです。実際のコマンドと対象は[package.json](package.json)と各設定・実行入口で定義します。

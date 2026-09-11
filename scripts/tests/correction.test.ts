@@ -1,5 +1,5 @@
 import { test, expect, afterEach } from 'bun:test';
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -420,3 +420,83 @@ for (const [mode, result, captures, reviews] of [
     }
   });
 }
+
+for (const kind of [
+  'tracked-doc',
+  'staged-doc',
+  'new-doc',
+  'deleted-doc',
+  'new-code',
+  'tracked-code',
+]) {
+  test(`capture preserves existing media only for Markdown changes: ${kind}`, async () => {
+    const t = await trial('media_scope');
+    const { cwd } = t.config;
+    const git = (...args: string[]) => {
+      const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+      expect(result.status).toBe(0);
+    };
+    const media = join(cwd, 'trial/evidence/generated/desktop.png');
+    await mkdir(join(cwd, 'trial/evidence/generated'), { recursive: true });
+    await writeFile(join(cwd, 'source.txt'), 'correct');
+    await writeFile(join(cwd, 'README.md'), 'original');
+    await writeFile(join(cwd, 'app.js'), 'original');
+    await writeFile(media, 'retained');
+    git('add', '.');
+    git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'baseline');
+    if (kind === 'deleted-doc') {
+      await rm(join(cwd, 'README.md'));
+    } else {
+      const name =
+        kind === 'new-doc'
+          ? 'NEW.md'
+          : kind === 'new-code'
+            ? 'new.js'
+            : kind === 'tracked-code'
+              ? 'app.js'
+              : 'README.md';
+      await writeFile(join(cwd, name), 'current');
+      if (kind === 'staged-doc') {
+        git('add', 'README.md');
+      }
+    }
+    t.config.capture = [process.execPath, join(t.root, 'helper.js'), 'capture'];
+    await writeFile(t.configFile, JSON.stringify(t.config));
+    expect(t.execute().status).toBe(0);
+    const state = await t.state();
+    const hasCode = kind.endsWith('code');
+    expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(
+      hasCode ? 1 : 0,
+    );
+    expect(state.checks).toBe(1);
+    expect(state.review).toBe(1);
+    expect(state.result).toBe('ready_for_human_review');
+    expect(await readFile(media, 'utf8')).toBe(hasCode ? 'correct' : 'retained');
+  });
+}
+
+test('documentation repair keeps media unchanged through both checks and reviews', async () => {
+  const t = await trial('docs');
+  const { cwd } = t.config;
+  const git = (...args: string[]) => {
+    expect(spawnSync('git', args, { cwd }).status).toBe(0);
+  };
+  const media = join(cwd, 'trial/evidence/generated/desktop.png');
+  await mkdir(join(cwd, 'trial/evidence/generated'), { recursive: true });
+  await writeFile(join(cwd, 'source.txt'), 'correct');
+  await writeFile(join(cwd, 'README.md'), 'original');
+  await writeFile(media, 'retained');
+  git('add', '.');
+  git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'baseline');
+  await rm(join(cwd, 'README.md'));
+  t.config.capture = [process.execPath, join(t.root, 'helper.js'), 'capture'];
+  await writeFile(t.configFile, JSON.stringify(t.config));
+  expect(t.execute().status).toBe(0);
+  const state = await t.state();
+  expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(0);
+  expect(state.checks).toBe(2);
+  expect(state.review).toBe(2);
+  expect(state.repair).toBe(1);
+  expect(await readFile(join(cwd, 'README.md'), 'utf8')).toBe('current');
+  expect(await readFile(media, 'utf8')).toBe('retained');
+});

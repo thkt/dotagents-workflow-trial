@@ -11,6 +11,7 @@
 | [概念と責任範囲](architecture-concepts.md) | ハーネス・ガードレール・環境・コンテキストと合意済み資産 |
 | [情報・合意・証拠の設計案](information-and-evidence-design.md) | 要求・判断・証拠の配置とレビューの検討 |
 | [コンテキスト十分性](context-sufficiency.md) | 次の判断に必要な情報と不足の扱い |
+| [ドキュメント整備フローの計画](../workflow-refinement/documentation-flow-plan.md) | 文書のみの変更を含むimplementの更新基準・完了条件・検証順序 |
 
 ## 現在の運用との関係
 
