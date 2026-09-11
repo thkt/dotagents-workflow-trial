@@ -333,6 +333,7 @@ async function evaluate(
 ): Promise<{ stop?: StopReason; findings?: string }> {
   const prompt = [
     'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
+    'Apply the documentation update policy in DEVELOPMENT.md, including documentation-only changes; assess required updates and their evidence rather than requiring code or new tests for every Issue.',
     'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
     'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
     'The publisher owns PR creation, attachment upload and rendered-media checks; humans own review and approval. Their pending actions alone are not implementation defects.',
@@ -384,6 +385,7 @@ async function cycle(
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
+    'Apply the documentation update policy in DEVELOPMENT.md to documentation-only changes and updates accompanying implementation.',
     'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
     'The host runs full check, browser tests and capture after your changes; do not launch browsers or servers in the actor sandbox.',

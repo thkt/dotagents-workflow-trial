@@ -1,3 +1,0 @@
-interface:
-  display_name: "文書の整備"
-  short_description: "既存の要求と実装を照合し、文書の更新要否と正本への反映を判断する"
