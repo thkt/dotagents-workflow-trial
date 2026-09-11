@@ -25,6 +25,8 @@
 
 文書の正本は、セットアップ・共通checkの順序と検証範囲がこのREADME、レビュー・開発方針がDEVELOPMENT.md、制御CLIの操作と実行制約がscripts/README.mdです。実際のコマンドと対象は[package.json](package.json)と各設定・実行入口で定義します。
 
+設計の目的・判断原則・責任範囲と検討記録は[設計の入口](docs/design/README.md)を参照してください。
+
 ## 提供する機能
 
 架空の4商品を一覧表示し、商品名・商品コードで検索できます。CIとmainの保護設定を適用しています。
