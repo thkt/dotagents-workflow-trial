@@ -4,6 +4,7 @@
 
 | 記録 | 内容 |
 | --- | --- |
+| [文書のみのimplement実測](documentation-flow.md) | ホスト撮影による媒体混入の検出・修正と、文書のみの実装・評価の成立 |
 | [開発手順・検証追加の履歴](development-history.md) | 初期整備とIssue #9〜#23の検証追加の経緯 |
 | [検索・文書修正の試行](issue-10/evaluation.md) | JS版で親タスクが進行した試行、介入と未検証範囲 |
 | [修正・再評価CLIの試行](issue-13/evaluation.md) | JS版CLIによる実モデルの修正・再評価 |

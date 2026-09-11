@@ -474,3 +474,29 @@ for (const kind of [
     expect(await readFile(media, 'utf8')).toBe(hasCode ? 'correct' : 'retained');
   });
 }
+
+test('documentation repair keeps media unchanged through both checks and reviews', async () => {
+  const t = await trial('docs');
+  const { cwd } = t.config;
+  const git = (...args: string[]) => {
+    expect(spawnSync('git', args, { cwd }).status).toBe(0);
+  };
+  const media = join(cwd, 'trial/evidence/generated/desktop.png');
+  await mkdir(join(cwd, 'trial/evidence/generated'), { recursive: true });
+  await writeFile(join(cwd, 'source.txt'), 'correct');
+  await writeFile(join(cwd, 'README.md'), 'original');
+  await writeFile(media, 'retained');
+  git('add', '.');
+  git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'baseline');
+  await rm(join(cwd, 'README.md'));
+  t.config.capture = [process.execPath, join(t.root, 'helper.js'), 'capture'];
+  await writeFile(t.configFile, JSON.stringify(t.config));
+  expect(t.execute().status).toBe(0);
+  const state = await t.state();
+  expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(0);
+  expect(state.checks).toBe(2);
+  expect(state.review).toBe(2);
+  expect(state.repair).toBe(1);
+  expect(await readFile(join(cwd, 'README.md'), 'utf8')).toBe('current');
+  expect(await readFile(media, 'utf8')).toBe('retained');
+});

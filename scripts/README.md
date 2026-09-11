@@ -1,7 +1,13 @@
 # 制御CLIの試行手順
 
-合意したIssueに対して、check失敗または独立評価の`needs_changes`から修正・再検証・再評価へ接続する実行担当向けの入口です。この文書をCLIの操作・実行制約の正本とします。
-通常の商品アプリ開発は[README](../README.md#セットアップと検証)、PRと人のレビュー・承認は[DEVELOPMENT.md](../DEVELOPMENT.md)を先に確認してください。共通check内の制御テストは模擬コマンドを使いますが、ここで説明するCLI試行は実モデルを呼びます。
+合意済みIssueから新しい変更を作る担当者と、既存の修正・独立評価の構成を設定して試す担当者向けの手順です。この文書をCLIの操作・実行制約の正本とします。目的に応じて次の入口を選びます。
+
+- 合意済みIssueの開発は[implement](../skills/implement/SKILL.md)から`development.ts`を使います。初回実装からPR作成までの手順・利用条件・上限は[IssueからPR作成](#issueからpr作成)を参照してください。文書のみの合意済みIssueも同じ入口で扱い、[ドキュメントの更新](../DEVELOPMENT.md#ドキュメントの更新)を適用します。
+- 修正・独立評価の構成を設定して試す場合は`correction.ts`を使います。[準備と実行](#準備と実行)で設定・実行上限を確認し、check失敗または独立評価の`needs_changes`から修正・再検証・再評価へ接続します。
+- 通常の商品アプリ開発の起動・検証は[READMEのセットアップと検証](../README.md#セットアップと検証)、変更とレビューの方針は[DEVELOPMENT.md](../DEVELOPMENT.md)を参照してください。制御CLIや実モデルの起動は不要です。
+- 何を変更するか未確定の相談は[clarify-requirements](../skills/clarify-requirements/SKILL.md)で要求を整理し、[対話と方針の決定](../DEVELOPMENT.md#対話と方針の決定)に従って合意済みIssueへつなぎます。
+
+中断後の確認は[結果と再実行](#結果と再実行)、公開担当の操作は[PRの公開](#prの公開)、PRと人のレビュー・承認は[レビューを助ける説明](../DEVELOPMENT.md#レビューを助ける説明)を参照してください。公開の許可と範囲は[implement](../skills/implement/SKILL.md)と[IssueからPR作成](#issueからpr作成)で確認します。共通check内の制御テストは模擬コマンドを使いますが、ここで説明するCLI試行は実モデルを呼びます。
 
 ## IssueからPR作成
 
