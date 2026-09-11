@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
@@ -17,7 +18,8 @@ export default defineConfig({
     { name: "mobile", use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true } },
   ],
   webServer: {
-    command: "bun run start",
+    command: "bun server.js",
+    cwd: fileURLToPath(new URL(".", import.meta.url)),
     env: { PORT: "4173" },
     url: "http://127.0.0.1:4173",
     reuseExistingServer: false,

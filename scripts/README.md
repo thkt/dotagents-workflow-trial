@@ -71,7 +71,7 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 現在の共通checkの順序、制御TSと商品アプリJSの検証範囲は[README](../README.md#セットアップと検証)、書式・型情報を使うlint・テスト実行完了の方針は[DEVELOPMENT.md](../DEVELOPMENT.md#typescriptの書き方)を参照してください。
 制御テストの実装は[correction.test.ts](tests/correction.test.ts)と[test-runner.test.ts](tests/test-runner.test.ts)です。SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
 
-制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象・未検証範囲は[検証記録](../evidence/README.md)を参照してください。
+制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象・未検証範囲は[検証記録](../trial/evidence/README.md)を参照してください。
 
 ## PRの公開
 

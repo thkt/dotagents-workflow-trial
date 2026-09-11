@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, symlink, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -20,12 +20,15 @@ for (const runner of ['bun', 'playwright'] as const) {
     test(`${runner} runner: ${scenario}`, async () => {
       const cwd = await mkdtemp(join(tmpdir(), 'test-completion-'));
       try {
-        const dir = join(cwd, runner === 'bun' ? 'scripts/tests' : 'tests');
+        const temporaryReports = join(cwd, 'temporary-reports');
+        await mkdir(temporaryReports);
+        const dir = join(cwd, runner === 'bun' ? 'scripts/tests' : 'trial/tests');
         await mkdir(dir, { recursive: true });
         await symlink(modules, join(cwd, 'node_modules'));
         await writeFile(join(cwd, 'package.json'), '{"type":"module"}');
+        await mkdir(join(cwd, 'trial'), { recursive: true });
         await writeFile(
-          join(cwd, 'playwright.config.js'),
+          join(cwd, 'trial/playwright.config.js'),
           "export default {testDir:'./tests', outputDir:'./artifacts/results'};",
         );
         const bodies = {
@@ -53,8 +56,11 @@ for (const runner of ['bun', 'playwright'] as const) {
           cwd,
           encoding: 'utf8',
           timeout: 15000,
-          env: { ...process.env, CI: 'false' },
+          env: { ...process.env, CI: 'false', TMPDIR: temporaryReports },
         });
+        if (runner === 'bun') {
+          expect(await readdir(temporaryReports)).toEqual([]);
+        }
         expect(result.error).toBeUndefined();
         expect(result.status).toBe(scenario === 'normal' ? 0 : 1);
         if (scenario === 'skip' || scenario === 'conditional' || scenario === 'todo') {
