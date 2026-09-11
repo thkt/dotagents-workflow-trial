@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "scripts": {
-    "start": "bun server.js",
+    "start": "bun trial/server.js",
     "setup:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 playwright install --with-deps chromium",
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 bun scripts/test.ts playwright",
     "test:control": "bun scripts/test.ts bun",

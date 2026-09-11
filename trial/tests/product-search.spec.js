@@ -50,7 +50,7 @@ for (const { query, products, screenshot } of [
     await expectProducts(page, products);
     await expect(search).toBeFocused();
     if (screenshot) {
-      await page.screenshot({ path: `artifacts/product-search-${screenshot}-${testInfo.project.name}.png`, fullPage: true });
+      await page.screenshot({ path: `trial/artifacts/product-search-${screenshot}-${testInfo.project.name}.png`, fullPage: true });
     }
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.press("Backspace");
@@ -117,7 +117,7 @@ for (const operation of ["pointer", "Enter", "Space"]) {
         await expect(clear).toBeFocused();
         await expectProducts(page, allProducts);
         if (query === "ノート" && operation === "Enter") {
-          await page.screenshot({ path: `artifacts/product-clear-${testInfo.project.name}.png`, fullPage: true });
+          await page.screenshot({ path: `trial/artifacts/product-clear-${testInfo.project.name}.png`, fullPage: true });
         }
         await page.keyboard.press("Shift+Tab");
         await expect(search).toBeFocused();
@@ -143,7 +143,7 @@ test("並び順の切り替え、検索、0件・1件からの復帰と再読み
   await expectProducts(page, allProducts);
   await order.selectOption("descending");
   await expectProducts(page, reversedProducts);
-  await page.screenshot({ path: `artifacts/product-order-${testInfo.project.name}.png`, fullPage: true });
+  await page.screenshot({ path: `trial/artifacts/product-order-${testInfo.project.name}.png`, fullPage: true });
   await search.fill("ノート");
   await expectProducts(page, [allProducts[1], allProducts[0]]);
   await order.selectOption("ascending");
