@@ -171,8 +171,9 @@ test("並び順の切り替え、検索、0件・1件からの復帰と再読み
   await search.fill("");
   expect(navigations).toBe(0);
   await page.reload();
-  await expect(order).toHaveValue("original");
-  await expectProducts(page, allProducts);
+  await expect(order).toHaveValue("descending");
+  await expect(search).toHaveValue("");
+  await expectProducts(page, reversedProducts);
 });
 
 test.describe("モバイルの標準選択UI", () => {
@@ -209,6 +210,9 @@ test("同じ読みの商品は昇順・降順とも元の相対順を保つ", as
   await page.goto("/");
   const order = page.getByLabel("並び順", { exact: true });
   await order.selectOption("descending");
+  await expectProducts(page, [allProducts[3], allProducts[2], allProducts[0], allProducts[1]]);
+  await page.reload();
+  await expect(order).toHaveValue("descending");
   await expectProducts(page, [allProducts[3], allProducts[2], allProducts[0], allProducts[1]]);
   await order.selectOption("ascending");
   await expectProducts(page, allProducts);

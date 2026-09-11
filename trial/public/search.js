@@ -24,14 +24,38 @@ document.getElementById("clear-search").addEventListener("click", () => {
   search.value = "";
   updateSearch();
 });
+// 検索語は保存せず、ブラウザーのフォーム復元があっても空で開始する。
+search.value = "";
 updateSearch();
 
 const order = document.getElementById("product-order");
 const collator = new Intl.Collator("ja");
-order.addEventListener("change", () => {
+const orderStorageKey = "product-order";
+
+function readOrder() {
+  try {
+    const saved = window.localStorage.getItem(orderStorageKey);
+    return ["original", "ascending", "descending"].includes(saved) ? saved : "original";
+  } catch {
+    return "original";
+  }
+}
+
+function updateOrder() {
   const direction = order.value === "descending" ? -1 : 1;
   const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
     direction * collator.compare(a.dataset.reading, b.dataset.reading),
   );
   document.querySelector("tbody").append(...ordered);
+}
+
+order.value = readOrder();
+updateOrder();
+order.addEventListener("change", () => {
+  updateOrder();
+  try {
+    window.localStorage.setItem(orderStorageKey, order.value);
+  } catch {
+    // 保存できなくても、この画面の選択と検索操作は継続する。
+  }
 });

@@ -1,0 +1,108 @@
+$ bun run lint && bun run format:check && bun run complexity && bun run typecheck && bun run test:control && bun run test:e2e
+$ oxlint --deny-warnings --no-error-on-unmatched-pattern .
+$ oxfmt --check "scripts/**/*.ts"
+$ biome lint .
+$ tsc --noEmit
+$ bun scripts/test.ts bun
+
+scripts/tests/publish.test.ts:
+(pass) publisher: create [1.38ms]
+(pass) publisher: existing [0.48ms]
+(pass) publisher: create_failed [0.47ms]
+(pass) publisher: list_failed [0.43ms]
+(pass) publisher: empty [3.71ms]
+(pass) publisher: revoke_failed [0.75ms]
+(pass) publisher: wrong_app [0.52ms]
+(pass) publisher rejects a different signing key [65.74ms]
+
+scripts/tests/codex-actor.test.ts:
+(pass) Codex actor logs: normal [354.58ms]
+(pass) Codex actor logs: nonzero [368.06ms]
+(pass) Codex actor logs: missing [28.63ms]
+(pass) Codex actor logs: write_error [156.98ms]
+
+scripts/tests/test-runner.test.ts:
+(pass) bun runner: normal [23.18ms]
+(pass) bun runner: only [25.23ms]
+(pass) bun runner: skip [26.45ms]
+(pass) bun runner: conditional [25.14ms]
+(pass) bun runner: todo [27.24ms]
+(pass) bun runner: failure [26.40ms]
+(pass) bun runner: empty [21.41ms]
+(pass) playwright runner: normal [529.38ms]
+(pass) playwright runner: only [279.23ms]
+(pass) playwright runner: skip [481.21ms]
+(pass) playwright runner: conditional [484.03ms]
+(pass) playwright runner: todo [470.20ms]
+(pass) playwright runner: failure [485.90ms]
+(pass) playwright runner: empty [272.07ms]
+(pass) bun rejects missing or incomplete summary:  [0.14ms]
+(pass) bun rejects missing or incomplete summary: {}
+(pass) bun rejects missing or incomplete summary: <testsuites tests="1" skipped="0">
+(pass) playwright rejects missing or incomplete summary: 
+(pass) playwright rejects missing or incomplete summary: {}
+(pass) playwright rejects missing or incomplete summary: <testsuites tests="1" skipped="0">
+
+scripts/tests/discovery.test.ts:
+(pass) decisions and evidence require reassessment before progress [179.03ms]
+(pass) all criteria and current revision are required; inputs do not replace saved criteria [103.61ms]
+(pass) missing facts block progress without requiring a human question [84.40ms]
+(pass) research archiving requires sufficient context and preserves existing records [83.10ms]
+(pass) existing tasks, mismatched repositories and context inside checkout are rejected [129.56ms]
+(pass) lock and unfinished save block even a previously sufficient evaluation [94.61ms]
+(pass) corrupt saved state does not pass the gate [47.07ms]
+(pass) question-tracking sessions are preserved and cannot silently pass the gate [73.82ms]
+(pass) symlinked work and research storage cannot redirect writes [84.33ms]
+(pass) worktrees share research and keep task assessments separate (git-directory) [181.93ms]
+(pass) worktrees share research and keep task assessments separate (checkout) [178.11ms]
+
+scripts/tests/correction.test.ts:
+(pass) normal [163.77ms]
+(pass) null_repair [101.61ms]
+(pass) null_review [159.31ms]
+(pass) human [158.39ms]
+(pass) issue_changed [151.27ms]
+(pass) review_failed [144.01ms]
+(pass) docs [221.07ms]
+(pass) malformed [158.04ms]
+(pass) changed [155.41ms]
+(pass) exhaust [182.71ms]
+(pass) time limit terminates actor and keeps consumed reservation [205.71ms]
+(pass) changed limits cannot reset an existing trial [174.99ms]
+(pass) review limit prevents a third-party evaluator from being called again [177.48ms]
+(pass) check timeout is unavailable evidence and does not start a model [166.26ms]
+(pass) check startup failure retains the error without starting a model [62.60ms]
+(pass) SIGINT during check preserves reservation and blocks duplicate execution [286.68ms]
+(pass) SIGTERM during check preserves reservation and blocks duplicate execution [289.05ms]
+(pass) SIGKILL during check preserves reservation and blocks duplicate execution [125.35ms]
+(pass) SIGINT during repair preserves reservation and blocks duplicate execution [304.73ms]
+(pass) SIGTERM during repair preserves reservation and blocks duplicate execution [307.45ms]
+(pass) SIGKILL during repair preserves reservation and blocks duplicate execution [145.57ms]
+(pass) SIGINT during review preserves reservation and blocks duplicate execution [303.38ms]
+(pass) SIGTERM during review preserves reservation and blocks duplicate execution [313.55ms]
+(pass) SIGKILL during review preserves reservation and blocks duplicate execution [169.07ms]
+(pass) terminal success is not reused for changed documentation [170.12ms]
+(pass) terminal success is not reused for changed Issue [149.58ms]
+(pass) invalid config: missing cwd [24.66ms]
+(pass) invalid config: empty command [24.85ms]
+(pass) invalid config: invalid limit [24.70ms]
+(pass) invalid saved state is retained and rejected: {"repair":-1} [145.88ms]
+(pass) invalid saved state is retained and rejected: {"active":{"role":"repair"}} [147.81ms]
+(pass) invalid saved state is retained and rejected: {"events":[{}]} [146.41ms]
+(pass) invalid saved state is retained and rejected: {"result":"unrecognized_success"} [150.26ms]
+(pass) missing CLI configuration argument fails with usage [11.24ms]
+(pass) evidence directory boundary: . [21.70ms]
+(pass) evidence directory boundary: evidence [21.44ms]
+(pass) evidence directory boundary: ..evidence [21.82ms]
+(pass) evidence directory boundary: ../..external [133.68ms]
+(pass) split UTF-8 survives requirements, actor replies and both logs [735.56ms]
+
+ 82 pass
+ 0 fail
+ 505 expect() calls
+Ran 82 tests across 5 files. [11.97s]
+$ PLAYWRIGHT_BROWSERS_PATH=0 bun scripts/test.ts playwright
+(node:61794) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61944) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
