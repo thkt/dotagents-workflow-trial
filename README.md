@@ -27,6 +27,16 @@
 
 設計の目的・判断原則・責任範囲と検討記録は[設計の入口](docs/design/README.md)を参照してください。
 
+## IssueからPR作成
+
+```text
+$implement 99
+```
+
+現在のrepoのIssue番号、または試行repoのIssue URLを渡します。[implement](skills/implement/SKILL.md)がCLIを起動し、初回実装・必要な文書や証拠・検証・修正・独立評価・PR作成まで進めます。人の承認・マージは別です。「公開しない」場合はcommit・push・PR作成を省略します。
+
+対象は現在の`thkt/dotagents-workflow-trial`です。利用条件・実行上限・停止後の扱いは[CLI手順](scripts/README.md#issueからpr作成)を参照してください。hookを追加せず、スキルはCLIを呼ぶ入口だけを担います。
+
 ## 提供する機能
 
 架空の4商品を一覧表示し、商品名・商品コードで検索できます。CIとmainの保護設定を適用しています。
