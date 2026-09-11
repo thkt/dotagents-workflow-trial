@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { isRecord } from './input.ts';
 
@@ -28,14 +29,19 @@ export function checkReport(runner: 'bun' | 'playwright', text: string) {
 }
 
 if (import.meta.main) {
+  let temporaryReportDir: string | undefined;
   try {
     const runner = process.argv[2];
     assert(
       runner === 'bun' || runner === 'playwright',
       'Usage: bun scripts/test.ts bun|playwright',
     );
-    await mkdir('artifacts', { recursive: true });
-    const dir = await mkdtemp(resolve('artifacts', `${runner}-report-`));
+    const artifacts = runner === 'bun' ? tmpdir() : resolve('trial/artifacts');
+    await mkdir(artifacts, { recursive: true });
+    const dir = await mkdtemp(resolve(artifacts, `${runner}-report-`));
+    if (runner === 'bun') {
+      temporaryReportDir = dir;
+    }
     const report = resolve(dir, runner === 'bun' ? 'results.xml' : 'results.json');
     const argv =
       runner === 'bun'
@@ -50,6 +56,7 @@ if (import.meta.main) {
         : [
             resolve('node_modules/.bin/playwright'),
             'test',
+            '--config=trial/playwright.config.js',
             '--forbid-only',
             '--reporter=list,json',
           ];
@@ -64,9 +71,13 @@ if (import.meta.main) {
     }
     assert(result.status === 0, `${runner} did not succeed (${result.signal ?? result.status})`);
     checkReport(runner, await readFile(report, 'utf8'));
-    console.log(`All tests executed. Report: ${report}`);
+    console.log(runner === 'bun' ? 'All tests executed.' : `All tests executed. Report: ${report}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
+  } finally {
+    if (temporaryReportDir) {
+      await rm(temporaryReportDir, { recursive: true, force: true });
+    }
   }
 }
