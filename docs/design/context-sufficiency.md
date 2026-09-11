@@ -1,6 +1,6 @@
 # 次の判断に進むためのコンテキスト十分性
 
-次に進む判断と、その判断に必要な根拠を整理する設計基準。基準は調整可能とし、使用した版と評価を対応づける。実際の評価項目は[criteria.json](../../skills/clarify-requirements/references/criteria.json)、適用方法は[sufficiency.md](../../skills/clarify-requirements/references/sufficiency.md)、保存操作は[session.md](../../skills/clarify-requirements/references/session.md)を参照する。
+次に進む判断と、その判断に必要な根拠を整理する設計基準。基準は調整可能とし、使用した版と評価を対応づける。実際の評価項目は[criteria.json](../../skills/scoping/references/criteria.json)、適用方法は[sufficiency.md](../../skills/scoping/references/sufficiency.md)、保存操作は[session.md](../../skills/scoping/references/session.md)を参照する。
 
 ## 判断の単位
 

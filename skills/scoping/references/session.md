@@ -12,7 +12,7 @@
   "contextDir": "/absolute/path/to/private-context/github.com/owner/repository",
   "task": "reset-discovery",
   "referencePaths": ["README.md", "DEVELOPMENT.md"],
-  "criteriaFile": "/absolute/path/to/skills/clarify-requirements/references/criteria.json",
+  "criteriaFile": "/absolute/path/to/skills/scoping/references/criteria.json",
   "request": "絞り込み後に元の一覧へ戻す操作を分かりやすくしたい"
 }
 ```
@@ -60,7 +60,7 @@ CLIは対象checkout・Git管理ディレクトリ内への保存、別Gitリポ
 
 信頼する担当者が操作する単一ホスト用。悪意ある同一ユーザーによる保存ファイルの改変、外部資料の変更検出、全ディスク障害への耐久性は保証しない。gateは保存時の評価を返すため、外部のコード・要求・資料が変わったら担当者がnoteで変更を記録し再評価する。実装CLIの起動をシステム全体で禁止する機構ではない。
 
-スキル・CLIの配置は試行リポジトリ内。スキルのグローバルインストールや自動検出の設定は行わない。試行ではSKILL.mdを明示的に読み、そこからコマンドを使える。CLIの検証成功と、担当者がスキルを使って要求を精緻化できたかは分けて確認する。
+スキル本文は`skills/scoping`に置き、リポジトリ内の`.agents/skills/scoping`から相対symlinkで参照する。呼び出し方は[README](../../../README.md#要求整理とissue作成)を参照する。グローバルインストールは不要。CLIの検証成功と、担当者がスキルを使って要求を精緻化できたかは分けて確認する。
 
 repository.txtは共有するGit管理ディレクトリを記録する。checkoutパスが保存されている場合も、そのパスが存在し同じGit管理ディレクトリに解決できれば再利用できる。存在しないパスや保存庫の移転は自動修復しない。
 

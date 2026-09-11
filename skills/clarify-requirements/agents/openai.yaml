@@ -1,4 +1,0 @@
-interface:
-  display_name: "要求の調査と精緻化"
-  short_description: "根拠を調べ、不足を解消して合意できる要求へ整理する"
-  default_prompt: "依頼を調査し、既存機能の再利用と必要な判断を整理してください。"
