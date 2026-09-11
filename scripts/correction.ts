@@ -274,13 +274,28 @@ async function installMedia(config: Config, output: string) {
   }
 }
 
+async function hasOnlyMarkdownChanges(cwd: string) {
+  const tracked = await command(['git', 'diff', '--name-only', '-z', 'HEAD'], cwd, '', 10000);
+  const untracked = await command(
+    ['git', 'ls-files', '--others', '--exclude-standard', '-z'],
+    cwd,
+    '',
+    10000,
+  );
+  if (tracked.code !== 0 || untracked.code !== 0) {
+    return false;
+  }
+  const paths = `${tracked.stdout}${untracked.stdout}`.split('\0').filter(Boolean);
+  return paths.length > 0 && paths.every((path) => path.endsWith('.md'));
+}
+
 async function verifyHost(
   config: Config,
   state: State,
   persist: Persist,
 ): Promise<{ stop?: StopReason; findings?: string }> {
   state.source = await snapshot(config.cwd);
-  if (config.capture) {
+  if (config.capture && !(await hasOnlyMarkdownChanges(config.cwd))) {
     const output = resolve(
       config.runDir,
       `capture-${state.events.filter((event) => event.role === 'capture').length + 1}-media`,
