@@ -113,6 +113,28 @@ SIGKILL・OS停止は捕捉できません。CLIだけが強制終了すると�
 
 制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象・未検証範囲は[検証記録](../trial/evidence/README.md)を参照してください。
 
+## 日本語の確認と修正
+
+Antigravity CLIの`agy`と既存のCodex CLIを使います。初回利用前に`agy models`で`gemini-3.8-flash-high`を確認し、ログインはホストの既存設定を使います。CIにモデル認証は追加しません。
+
+Issueや直接作成・更新するPR本文、単独の文書は、本文案と事実・合意・出典のファイルを分けて準備します。対象に含まれない秘密・非公開ログを入力へ混ぜません。
+
+```sh
+bun /absolute/path/trusted-checkout/scripts/writing-review.ts file \
+  --input /absolute/path/draft.md --facts /absolute/path/facts.md \
+  --output /absolute/path/reviewed.md --run-dir /absolute/path/outside-checkout/writing-run
+```
+
+成功時にだけ、新しいoutputファイルへ確認済み候補を書きます。Issueではこのファイルを`gh issue create/edit --body-file`へ渡し、PRでは`publish.ts`または`gh pr edit --body-file`へ渡します。タイトルや機械的な識別子の生成はこの本文修正とは分けます。公開後は実際の本文・リンク・添付を読み直します。配置や説明を変更した場合も、その最新本文に同じ確認を適用します。
+
+`development.ts`は変更されたMarkdownを対象に、ホストの共通check・独立評価の前と修正後に`documents`モードを実行します。変更のない文書は対象外です。同じ文書と根拠に対する成功記録だけを再利用します。PR本文は検証結果から作成し、確認を通してからpush・公開します。`--no-publish`も文書の確認は行いますが、PR本文作成と公開は行いません。`correction.ts`を単独で使う場合は、設定の`writing`に同CLIの`--worker documents --facts FILE --run-dir DIRECTORY`呼び出しを指定します。
+
+Geminiは修正候補、別の読み取り専用Codexは原文・根拠・候補の意味の一致を評価します。モデルID・完了結果・JSON・コード表記・URL等は機械的に確認します。意味の評価はモデルの判断であり、事実の正しさや完全一致を保証するものではありません。元資料の確認と人のレビューも必要です。
+
+各モデル呼び出しの上限は5分、1処理の全体上限は11分です。文書処理は既存の修正サイクルごと、PR本文は公開前に1回で、自動の再試行はありません。この時間は従来の実装・独立評価のモデル時間枠とは別に扱い、ログへ残します。大きすぎる入力は情報を捨てず停止します。必要なら対象を分けて確認してから再開方法を判断します。
+
+記録はcheckout外に保存し、原文・根拠・執筆指示・Gemini候補・意味確認・成功記録を残します。失敗・中断した記録を削除してやり直しません。`writing_failed`ではログを確認し、入力の修正、実行環境の復旧、または必要な人の判断へ戻します。CLI外からのGitHub操作自体を禁止する仕組みではなく、担当者も確認済み本文を使用する責任を持ちます。
+
 ## PRの公開
 
 公開担当が、push済みブランチとレビュー用の本文を指定します。Bun、ghと、macOS login Keychainに登録したApp鍵を使います。

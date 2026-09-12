@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 export type ActorRole = 'repair' | 'review';
 const stopReasons = [
+  'writing_failed',
   'execution_limit',
   'repair_failed',
   'review_failed',
@@ -23,6 +24,7 @@ export interface Config {
   issue: string[];
   check: string[];
   capture?: string[];
+  writing?: string[];
   repair: string[];
   review: string[];
   repairLimit: number;
@@ -31,7 +33,7 @@ export interface Config {
   checkTimeMs: number;
 }
 interface Event {
-  role: ActorRole | 'check' | 'capture';
+  role: ActorRole | 'check' | 'capture' | 'writing';
   source?: string;
   code: number | null;
   timedOut: boolean;
@@ -45,7 +47,7 @@ export interface State {
   review: number;
   checks: number;
   modelMs: number;
-  active: { role: ActorRole | 'check' | 'capture'; prefix: string } | null;
+  active: { role: ActorRole | 'check' | 'capture' | 'writing'; prefix: string } | null;
   events: Event[];
   source?: string;
   captureSource?: string;
@@ -64,7 +66,11 @@ const nonnegative = (value: unknown): value is number =>
 const count = (value: unknown): value is number => nonnegative(value) && Number.isInteger(value);
 const optionalString = (value: unknown) => value === undefined || typeof value === 'string';
 const role = (value: unknown) =>
-  value === 'check' || value === 'repair' || value === 'review' || value === 'capture';
+  value === 'writing' ||
+  value === 'check' ||
+  value === 'repair' ||
+  value === 'review' ||
+  value === 'capture';
 const command = (value: unknown) =>
   isArray(value) &&
   typeof value[0] === 'string' &&
@@ -79,6 +85,7 @@ export function assertConfig(value: unknown): asserts value is Config {
   for (const key of ['issue', 'check', 'repair', 'review']) {
     assert(command(value[key]), `Invalid ${key} command`);
   }
+  assert(value.writing === undefined || command(value.writing), 'Invalid writing command');
   assert(value.capture === undefined || command(value.capture), 'Invalid capture command');
   for (const key of ['repairLimit', 'reviewLimit']) {
     const limit: unknown = value[key];
