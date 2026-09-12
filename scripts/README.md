@@ -23,7 +23,7 @@ bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to
 
 保存先は`~/.local/share/dotagents/development/<Git管理ディレクトリの識別値>/<Issue番号>/`、変更する場合は`--run-dir DIRECTORY`でcheckoutとGit管理領域の外を指定します。要求、初回実装の指示・結果、検証設定・ログ、作業checkout、PR本文・URL、CI結果を残します。既存保存先は再利用して再実行せず停止します。中断・失敗後は記録と実プロセス・GitHubの状態を照合し、保存先を削除したり別名にして自動再試行しません。
 
-`--no-publish`では独立評価までで止め、commit・push・PR作成を行いません。通常実行は公開条件を満たす変更のみcommitし、`trial/evidence/`内で今回変更した画像・動画を既存ghで添付します。PR内の表示・再生確認は結果の`rendered_media_check`として呼び出し担当へ渡します。CI失敗・確認不能時はPR URLと記録を保持して非zero終了し、成功とは報告しません。人のレビュー・承認・マージは自動実行しません。
+`--no-publish`では独立評価までで止め、commit・push・PR作成を行いません。通常実行は公開条件を満たす変更のみcommitし、`trial/evidence/`内で今回変更した画像・動画を既存ghで添付します。PR内の表示・再生と配置の確認は結果の`rendered_media_check`として呼び出し担当へ渡します。CI失敗・確認不能時はPR URLと記録を保持して非zero終了し、成功とは報告しません。人のレビュー・承認・マージは自動実行しません。
 
 ## ホストによるブラウザー検証と撮影
 
@@ -139,4 +139,4 @@ gh pr edit PR_NUMBER --repo thkt/dotagents-workflow-trial \
 
 添付後は`gh pr view PR_NUMBER --repo thkt/dotagents-workflow-trial --json body --jq .body`で本文を取得し、アップロード先の URL を確認します。配置を整える場合は、この最新の本文をファイルに保存して編集し、`gh pr edit PR_NUMBER --repo thkt/dotagents-workflow-trial --body-file /absolute/path/pr.md`で反映します。既存の説明と添付 URL を維持し、画像は必要に応じて table に並べます。動画の添付 URL は単独の行に置き、PR 内で再生できるようにします。
 
-PR 画面で画像の表示と動画の再生を確認して、添付を完了とします。一部のアップロードが失敗すると、成功した添付を反映したうえでコマンドが失敗終了するため、本文を確認し、未添付のファイルだけを再実行します。
+公開担当は[レビューを助ける説明](../DEVELOPMENT.md#レビューを助ける説明)に従い、実際のPR画面で表示・再生と配置・説明の読みやすさを確認します。動画には確認する操作・状態と画面条件が分かる見出し・説明を添え、撮影準備時に選んだ説明手段が実際に伝わるかを確認します。キー表示・字幕・音声がある場合の確認と、説明不足の戻り先も同方針に従います。必要な整形後に再確認して完了とし、確認できない場合は未確認点を報告します。`rendered_media_check`はこの確認全体を指し、CLIのアップロード成功だけでは完了しません。一部のアップロードが失敗すると、成功した添付を反映したうえでコマンドが失敗終了するため、本文を確認し、未添付のファイルだけを再実行します。
