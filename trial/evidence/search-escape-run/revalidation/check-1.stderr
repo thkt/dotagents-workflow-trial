@@ -1,0 +1,169 @@
+$ bun run lint && bun run format:check && bun run complexity && bun run typecheck && bun run test:control && bun run test:e2e
+$ oxlint --deny-warnings --no-error-on-unmatched-pattern .
+$ oxfmt --check "scripts/**/*.ts"
+$ biome lint .
+$ tsc --noEmit
+$ bun scripts/test.ts bun
+
+scripts/tests/publish.test.ts:
+(pass) publisher: create [2.74ms]
+(pass) publisher: existing [0.42ms]
+(pass) publisher: create_failed [0.38ms]
+(pass) publisher: list_failed [0.41ms]
+(pass) publisher: empty [4.69ms]
+(pass) publisher: revoke_failed [0.46ms]
+(pass) publisher: wrong_app [0.29ms]
+(pass) publisher rejects a different signing key [90.95ms]
+
+scripts/tests/codex-actor.test.ts:
+(pass) Codex actor logs: normal [339.43ms]
+(pass) Codex actor logs: nonzero [341.62ms]
+(pass) Codex actor logs: missing [25.03ms]
+(pass) Codex actor logs: write_error [178.39ms]
+
+scripts/tests/test-runner.test.ts:
+(pass) bun runner: normal [26.87ms]
+(pass) bun runner: only [27.89ms]
+(pass) bun runner: skip [28.89ms]
+(pass) bun runner: conditional [28.50ms]
+(pass) bun runner: todo [34.43ms]
+(pass) bun runner: failure [30.80ms]
+(pass) bun runner: empty [22.38ms]
+(pass) playwright runner: normal [620.73ms]
+(pass) playwright runner: only [339.17ms]
+(pass) playwright runner: skip [649.12ms]
+(pass) playwright runner: conditional [584.87ms]
+(pass) playwright runner: todo [540.80ms]
+(pass) playwright runner: failure [572.72ms]
+(pass) playwright runner: empty [348.17ms]
+(pass) bun rejects missing or incomplete summary:  [0.23ms]
+(pass) bun rejects missing or incomplete summary: {} [0.02ms]
+(pass) bun rejects missing or incomplete summary: <testsuites tests="1" skipped="0">
+(pass) playwright rejects missing or incomplete summary: 
+(pass) playwright rejects missing or incomplete summary: {} [0.01ms]
+(pass) playwright rejects missing or incomplete summary: <testsuites tests="1" skipped="0">
+
+scripts/tests/discovery.test.ts:
+(pass) decisions and evidence require reassessment before progress [248.50ms]
+(pass) all criteria and current revision are required; inputs do not replace saved criteria [131.46ms]
+(pass) missing facts block progress without requiring a human question [94.94ms]
+(pass) research archiving requires sufficient context and preserves existing records [105.71ms]
+(pass) existing tasks, mismatched repositories and context inside checkout are rejected [148.59ms]
+(pass) lock and unfinished save block even a previously sufficient evaluation [151.02ms]
+(pass) corrupt saved state does not pass the gate [72.40ms]
+(pass) question-tracking sessions are preserved and cannot silently pass the gate [106.68ms]
+(pass) symlinked work and research storage cannot redirect writes [151.74ms]
+(pass) worktrees share research and keep task assessments separate (git-directory) [375.28ms]
+(pass) worktrees share research and keep task assessments separate (checkout) [225.74ms]
+
+scripts/tests/correction.test.ts:
+(pass) normal [209.67ms]
+(pass) null_repair [131.51ms]
+(pass) null_review [196.02ms]
+(pass) human [121.30ms]
+(pass) issue_changed [172.31ms]
+(pass) review_failed [165.30ms]
+(pass) docs [269.91ms]
+(pass) malformed [184.13ms]
+(pass) changed [182.76ms]
+(pass) exhaust [206.72ms]
+(pass) time limit terminates actor and keeps consumed reservation [227.46ms]
+(pass) changed limits cannot reset an existing trial [210.23ms]
+(pass) review limit prevents a third-party evaluator from being called again [207.09ms]
+(pass) check timeout is unavailable evidence and does not start a model [175.59ms]
+(pass) check startup failure retains the error without starting a model [68.75ms]
+(pass) SIGINT during check preserves reservation and blocks duplicate execution [278.46ms]
+(pass) SIGTERM during check preserves reservation and blocks duplicate execution [308.98ms]
+(pass) SIGKILL during check preserves reservation and blocks duplicate execution [128.97ms]
+(pass) SIGINT during repair preserves reservation and blocks duplicate execution [298.83ms]
+(pass) SIGTERM during repair preserves reservation and blocks duplicate execution [297.03ms]
+(pass) SIGKILL during repair preserves reservation and blocks duplicate execution [168.10ms]
+(pass) SIGINT during review preserves reservation and blocks duplicate execution [320.98ms]
+(pass) SIGTERM during review preserves reservation and blocks duplicate execution [318.63ms]
+(pass) SIGKILL during review preserves reservation and blocks duplicate execution [165.41ms]
+(pass) SIGINT during capture preserves reservation and blocks duplicate execution [298.23ms]
+(pass) SIGTERM during capture preserves reservation and blocks duplicate execution [297.00ms]
+(pass) SIGKILL during capture preserves reservation and blocks duplicate execution [143.28ms]
+(pass) terminal success is not reused for changed documentation [191.14ms]
+(pass) terminal success is not reused for changed Issue [183.23ms]
+(pass) invalid config: missing cwd [27.52ms]
+(pass) invalid config: empty command [27.16ms]
+(pass) invalid config: invalid limit [46.05ms]
+(pass) invalid saved state is retained and rejected: {"repair":-1} [242.49ms]
+(pass) invalid saved state is retained and rejected: {"active":{"role":"repair"}} [245.80ms]
+(pass) invalid saved state is retained and rejected: {"events":[{}]} [198.67ms]
+(pass) invalid saved state is retained and rejected: {"result":"unrecognized_success"} [171.79ms]
+(pass) invalid saved state is retained and rejected: {"captureSource":42} [198.34ms]
+(pass) missing CLI configuration argument fails with usage [12.68ms]
+(pass) evidence directory boundary: . [27.66ms]
+(pass) evidence directory boundary: evidence [25.06ms]
+(pass) evidence directory boundary: ..evidence [24.08ms]
+(pass) evidence directory boundary: ../..external [152.77ms]
+(pass) split UTF-8 survives requirements, actor replies and both logs [699.51ms]
+(pass) capture_success through controller entry [321.86ms]
+(pass) capture_review through controller entry [412.14ms]
+(pass) capture_failure through controller entry [289.69ms]
+(pass) capture_unavailable through controller entry [86.35ms]
+(pass) capture_timeout through controller entry [588.05ms]
+(pass) capture_changed through controller entry [82.48ms]
+(pass) capture preserves existing media only for Markdown changes: tracked-doc [136.17ms]
+(pass) capture preserves existing media only for Markdown changes: staged-doc [152.58ms]
+(pass) capture preserves existing media only for Markdown changes: new-doc [145.39ms]
+(pass) capture preserves existing media only for Markdown changes: deleted-doc [145.03ms]
+(pass) capture preserves existing media only for Markdown changes: new-code [196.98ms]
+(pass) capture preserves existing media only for Markdown changes: tracked-code [183.05ms]
+(pass) documentation repair keeps media unchanged through both checks and reviews [238.15ms]
+(pass) successful capture reuse after review repair: records [274.01ms]
+(pass) successful capture reuse after review repair: delete-record [249.46ms]
+(pass) successful capture reuse after review repair: source [301.29ms]
+(pass) successful capture reuse after review repair: definition [301.47ms]
+(pass) successful capture reuse after review repair: media [313.80ms]
+(pass) successful capture reuse after review repair: symlink [326.01ms]
+(pass) successful capture reuse after review repair: executable [349.14ms]
+
+scripts/tests/development.test.ts:
+Development #99; checkout: /private/tmp/development-epkYsG/run/checkout; evidence: /private/tmp/development-epkYsG/run
+Implementing, checking and independently reviewing the Issue
+Verified; committing, publishing and checking CI
+(pass) development success [187.97ms]
+Development #99; checkout: /private/tmp/development-6zPrlF/run/checkout; evidence: /private/tmp/development-6zPrlF/run
+Implementing, checking and independently reviewing the Issue
+(pass) development initial_failure [109.17ms]
+Development #99; checkout: /private/tmp/development-GTzuga/run/checkout; evidence: /private/tmp/development-GTzuga/run
+Implementing, checking and independently reviewing the Issue
+(pass) development needs_human [111.31ms]
+Development #99; checkout: /private/tmp/development-kF6DoL/run/checkout; evidence: /private/tmp/development-kF6DoL/run
+Implementing, checking and independently reviewing the Issue
+(pass) development invalid_reply [110.39ms]
+Development #99; checkout: /private/tmp/development-JmBwNS/run/checkout; evidence: /private/tmp/development-JmBwNS/run
+Implementing, checking and independently reviewing the Issue
+(pass) development timeout [114.64ms]
+Development #99; checkout: /private/tmp/development-qKLUox/run/checkout; evidence: /private/tmp/development-qKLUox/run
+Implementing, checking and independently reviewing the Issue
+(pass) development local_only [115.57ms]
+Development #99; checkout: /private/tmp/development-BJflIK/run/checkout; evidence: /private/tmp/development-BJflIK/run
+Implementing, checking and independently reviewing the Issue
+(pass) development review_failure [115.18ms]
+Development #99; checkout: /private/tmp/development-HJBbW4/run/checkout; evidence: /private/tmp/development-HJBbW4/run
+Implementing, checking and independently reviewing the Issue
+(pass) development requirements_changed [119.78ms]
+Development #99; checkout: /private/tmp/development-jiy3lY/run/checkout; evidence: /private/tmp/development-jiy3lY/run
+Implementing, checking and independently reviewing the Issue
+Verified; committing, publishing and checking CI
+(pass) development source_changed [134.19ms]
+Development #99; checkout: /private/tmp/development-mXVB8e/run/checkout; evidence: /private/tmp/development-mXVB8e/run
+Implementing, checking and independently reviewing the Issue
+Verified; committing, publishing and checking CI
+(pass) development ci_failure [170.85ms]
+(pass) development wrong_repo [61.41ms]
+(pass) development dirty [97.88ms]
+
+ 118 pass
+ 0 fail
+ 886 expect() calls
+Ran 118 tests across 6 files. [21.44s]
+$ PLAYWRIGHT_BROWSERS_PATH=0 bun scripts/test.ts playwright
+(node:29309) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:29531) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

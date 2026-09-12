@@ -1,0 +1,7 @@
+{
+  "priorRun": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90",
+  "priorStateSha256": "2566b226c5b4e8d029dff01ebd3b3c397943d840bb5c6eba2bae47a9f83d9902",
+  "inheritedDiffSha256": "be42cbe4d049d682929478b83358e7371d993fb09f11b1b5e9a5fce3f69272d5",
+  "base": "7bebfd3b8828873fd176b8a97a9497637d1affdc",
+  "authorization": "User requested revalidation after PR #92 merge; new bounded validation, preserve previous state and budget."
+}

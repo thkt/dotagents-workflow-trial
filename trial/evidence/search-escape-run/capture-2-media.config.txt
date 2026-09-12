@@ -1,0 +1,5 @@
+import base from "file:///Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/checkout/trial/playwright.config.js";
+export default { ...base, testDir: "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/checkout/trial", testMatch: 'capture.spec.js',
+  testIgnore: [], forbidOnly: true, retries: 0, repeatEach: 1, workers: 1,
+  outputDir: "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/capture-2-media.artifacts",
+  reporter: [['json', {outputFile: "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/capture-2-media.report.json"}]] };

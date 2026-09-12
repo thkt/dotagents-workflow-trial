@@ -1,0 +1,39 @@
+{
+  "configHash": "f3ada5d113c7a5b44d18964d862a0da7c56fa3c11dcc870e05903c9e0a4528f8",
+  "issueHash": "a2d86509dc387674f82118da3be5369d3580cbd0253a91339977e9762700e5da",
+  "repair": 1,
+  "review": 1,
+  "checks": 1,
+  "modelMs": 83041.25070799999,
+  "active": {
+    "role": "repair",
+    "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90-revalidation-after-92/verification/repair-1"
+  },
+  "events": [
+    {
+      "role": "capture",
+      "source": "6665176792ea1b4dbc4a8defcc59607632ea7234d51f27b62b06b8b07f56532d",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90-revalidation-after-92/verification/capture-1"
+    },
+    {
+      "role": "check",
+      "source": "edc2c5b2708975ef57e980bc58a2545635e56ec793e8cad269a4e399da0c95ee",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90-revalidation-after-92/verification/check-1"
+    },
+    {
+      "role": "review",
+      "source": "edc2c5b2708975ef57e980bc58a2545635e56ec793e8cad269a4e399da0c95ee",
+      "code": 0,
+      "timedOut": false,
+      "ms": 83041.25070799999,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90-revalidation-after-92/verification/review-1"
+    }
+  ],
+  "source": "edc2c5b2708975ef57e980bc58a2545635e56ec793e8cad269a4e399da0c95ee",
+  "captureSource": "38e3c9565fdb22d09edce5e5e529c1b96e8fffd6b400114adc8fb092c7d187a9",
+  "findings": "実装の再利用、追加E2E18件、READMEの操作説明・対応範囲は要件と整合しています。checkは提示されたホスト結果exit 0として扱い、再実行していません。ただし、generated内のEsc・並び順復元のdesktop/mobile動画4点すべてが、保存済みcapture-2ログとprovenance.jsonのSHA-256・バイト数に一致しません。例：Esc desktopは記録587152 bytes／0cdc8a32…に対し、現物511631 bytes／bb646335…です。現在の動画に対応する撮影ログ・設定・対象版・結果を保存して照合し、search-escape.mdと関連記録を更新する必要があります。これは添付待ちではなく、提出証拠の来歴不足です。修正後も、公開担当者のPR作成・媒体添付・表示／再生確認と、人のレビュー・承認は別途必要です。"
+}

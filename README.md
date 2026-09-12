@@ -86,6 +86,7 @@ bun run start
 | 該当なしの後に入力を全削除 | 全4件に復帰し、該当なしの表示は消える |
 
 キーボードだけでも操作できます。Tabで検索欄に移動して入力し、検索欄でCtrl+A（macOSはCommand+A）→Backspaceで全削除します。
+現行の依存Chromiumでは、「商品名・商品コードで検索」欄にフォーカスがあるときEscで検索語を空にできます。絞り込み中・該当なしのどちらからも全4件に戻り、件数表示は「全4件中4件を表示」、該当なしのメッセージは非表示になります。選択した並び順と検索欄のフォーカスは保持され、そのまま入力して再検索できます。空欄でEscを押しても全件表示・並び順・フォーカスを保ち、続けて検索できます。これは `type="search"` のブラウザー標準動作を使う操作で、検索欄以外からのグローバルショートカットではありません。
 「検索をクリア」ボタンは常時表示され、クリック・タップ・Enter・Spaceで検索を解除します。件数表示も全件に戻ります。キーボードでは検索欄からTabでボタンへ移動でき、クリア後もフォーカスはボタンに残ります。Shift+Tabで検索欄へ戻って再検索できます。
 [trial/public/search.js](trial/public/search.js) は商品データを保持したまま行の表示・非表示と並び順を更新するため、全削除後も選択した順で再検索できます。
 全角・半角変換、かな変換、複数語検索、曖昧検索、通信、保存済み検索、認証、本番配布は対象外です。
@@ -119,6 +120,7 @@ E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。こ�
 [trial/tests/product-search.spec.js](trial/tests/product-search.spec.js) は同じ2画面幅で上記の入力・結果・順序、キーボードだけの移動と入力ごとの更新、全削除による復帰と再検索、各状態の件数表示と検索欄のフォーカスを検証します。並び順の切り替え・検索との組み合わせ・同じ読みの相対順・再読み込み時の並び順復元も同じ画面の処理で確認します。タッチ環境ではselectをtapして開き、選択の確定はキーボードで行います。実機の選択UIへのタップ検証ではありません。デスクトップの標準selectのキー操作は、実ブラウザで補足確認します。
 [trial/tests/product-order-persistence.spec.js](trial/tests/product-order-persistence.spec.js) は両画面幅で3種類の保存・再読み込み・タブ再オープン、検索語の非復元、0件・1件での保存、クリア・全削除、未対応値、Storage API境界の取得・読取・書込例外、タブ間で即時同期しないこと、復元後のキーボード操作（既存のモバイルUIエミュレーションを両画面幅で使用）を検証します。OSの一時ディレクトリに永続プロファイルを作り、Chromiumプロセスを終了・再起動して同じURLで復元することと、別プロファイルへ引き継がないことも確認します。storageStateの注入を再起動の代用にはしません。保存例外はブラウザー内のAPIに注入するテストであり、ブラウザー設定による実際の保存拒否を検証したとは扱いません。
 実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
+Esc操作は既存のdesktop・mobileプロジェクトで、検索結果あり・該当なし・空欄と3種類の並び順を組み合わせ、全件復帰・件数・該当なし表示の解除・並び順保持・検索欄のフォーカス・再検索を確認します。mobileはモバイル画面・タッチ設定でのキー入力検証であり、実機のソフトウェアキーボード対応を保証しません。
 Firefox・WebKit・実機・支援技術・日本語IMEの変換途中の動作はこのE2Eの検出範囲外です。
 
 スクリーンショットの再取得（E2Eも実行）:
@@ -141,7 +143,7 @@ bun run test:e2e
 
 CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保護)に実行条件・時間上限・承認条件と限界をまとめています。
 
-## 並び順復元のレビュー用キャプチャ
+## レビュー用キャプチャ
 
 ホストが通常の `bun run check` とは別に以下を実行します。`CAPTURE_OUTPUT` は必須の絶対パスで、checkout外の出力ディレクトリを指定します。
 
@@ -149,13 +151,15 @@ CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保�
 CAPTURE_OUTPUT=/absolute/path/to/capture-output PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright test --config trial/capture.config.js
 ```
 
-[trial/capture.spec.js](trial/capture.spec.js) は降順の選択→検索→再読み込み→降順の復元と検索欄の空・全4件を撮影します。[trial/capture.config.js](trial/capture.config.js) は既存のPlaywright設定のprojects・画面幅・webServerを再利用し、通常テストから撮影を分離します。PNGとWebMだけを `CAPTURE_OUTPUT` 直下へ保存し、動画contextを閉じて確定します。runnerの出力先はOSの一時ディレクトリで、撮影中にcheckoutへ画像・動画・レポートを書きません。
+[trial/capture.spec.js](trial/capture.spec.js) は降順の選択→検索→再読み込み→降順の復元と検索欄の空・全4件、および降順での検索結果あり・該当なし・空欄からEsc→全件復帰→再検索を撮影します。[trial/capture.config.js](trial/capture.config.js) は既存のPlaywright設定のprojects・画面幅・webServerを再利用し、通常テストから撮影を分離します。PNGとWebMだけを `CAPTURE_OUTPUT` 直下へ保存し、動画contextを閉じて確定します。runnerの出力先はOSの一時ディレクトリで、撮影中にcheckoutへ画像・動画・レポートを書きません。
 
-ホストが収集した最終媒体の参照先:
+ホストが収集する最終媒体の参照先（取得状況は各検証記録を参照）:
 
 | 状態 | デスクトップ | モバイル |
 | --- | --- | --- |
 | 降順を復元した全件表示 | [画像](trial/evidence/generated/product-order-restored-desktop.png) | [画像](trial/evidence/generated/product-order-restored-mobile.png) |
 | 選択→検索→再読み込み→復元 | [動画](trial/evidence/generated/product-order-restore-desktop.webm) | [動画](trial/evidence/generated/product-order-restore-mobile.webm) |
+| 該当なしからEscで全件復帰（降順・検索欄にフォーカス） | [画像](trial/evidence/generated/product-search-escape-cleared-desktop.png) | [画像](trial/evidence/generated/product-search-escape-cleared-mobile.png) |
+| 検索結果あり・該当なし・空欄からEsc→再検索 | [動画](trial/evidence/generated/product-search-escape-desktop.webm) | [動画](trial/evidence/generated/product-search-escape-mobile.webm) |
 
-ホスト実行では両画面幅の画像2点・動画2点を収集済みで、撮影2件成功、共通checkはexit 0（制御82件・E2E 84件成功）です。対象差分・撮影条件・実行ログと媒体の照合結果は[並び順復元の検証記録](trial/evidence/order-persistence.md)を参照してください。再撮影では上記媒体を更新し、撮影テストの標準出力に対象ファイルと媒体のSHA-256・撮影結果を記録します。撮影の成功だけでは永続プロファイルによるブラウザー再起動や保存失敗の証拠にはしません。人によるレビュー・承認と、公開担当者による添付・公開先での表示確認は未実施です。
+対象差分・撮影条件・実行結果と未確認事項は[並び順復元の検証記録](trial/evidence/order-persistence.md)と[Esc操作の検証記録](trial/evidence/search-escape.md)を参照してください。再撮影では上記媒体を更新し、撮影テストの標準出力に対象ファイルと媒体のSHA-256・撮影結果を記録します。撮影の成功だけでは永続プロファイルによるブラウザー再起動や保存失敗の証拠にはしません。
