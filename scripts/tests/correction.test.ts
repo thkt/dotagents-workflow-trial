@@ -305,6 +305,7 @@ for (const change of [
   { active: { role: 'repair' } },
   { events: [{}] },
   { result: 'unrecognized_success' },
+  { captureSource: 42 },
 ]) {
   test(`invalid saved state is retained and rejected: ${JSON.stringify(change)}`, async () => {
     const t = await trial('normal');
@@ -388,7 +389,7 @@ if(role==='review') await split(process.stdout,JSON.stringify({status:'accepted'
 
 for (const [mode, result, captures, reviews] of [
   ['capture_success', 'ready_for_human_review', 2, 1],
-  ['capture_review', 'ready_for_human_review', 3, 2],
+  ['capture_review', 'ready_for_human_review', 2, 2],
   ['capture_failure', 'ready_for_human_review', 2, 1],
   ['capture_unavailable', 'capture_unavailable', 1, 0],
   ['capture_timeout', 'capture_timeout', 1, 0],
@@ -500,3 +501,66 @@ test('documentation repair keeps media unchanged through both checks and reviews
   expect(await readFile(join(cwd, 'README.md'), 'utf8')).toBe('current');
   expect(await readFile(media, 'utf8')).toBe('retained');
 });
+
+for (const change of [
+  'records',
+  'delete-record',
+  'source',
+  'definition',
+  'media',
+  'symlink',
+  'executable',
+]) {
+  test(`successful capture reuse after review repair: ${change}`, async () => {
+    const t = await trial('reuse');
+    const helper = join(t.root, 'reuse.js');
+    await writeFile(join(t.config.cwd, 'source.txt'), 'correct');
+    await mkdir(join(t.config.cwd, 'trial/evidence'), { recursive: true });
+    await writeFile(join(t.config.cwd, 'trial/evidence/old.json'), '{}');
+    await writeFile(
+      helper,
+      `
+import {readFileSync,writeFileSync,existsSync,mkdirSync,rmSync,symlinkSync,chmodSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+const role=process.argv[2], change=${JSON.stringify(change)};
+const media='trial/evidence/generated/demo.webm', record='trial/evidence/provenance.json';
+const hash=()=>createHash('sha256').update(readFileSync(media)).digest('hex');
+if(role==='capture') writeFileSync(join(process.argv[3],'demo.webm'),crypto.randomUUID());
+if(role==='repair') {
+ writeFileSync('README.md','updated explanation');
+ writeFileSync(record,JSON.stringify({hash:hash()}));
+ writeFileSync('trial/evidence/check.stdout','passed');
+ if(change==='delete-record') rmSync('trial/evidence/old.json');
+ if(change==='source') writeFileSync('app.js','changed app');
+ if(change==='definition') writeFileSync('trial/capture.spec.js','changed capture');
+ if(change==='media') writeFileSync(media,'altered');
+ if(change==='symlink') symlinkSync('../source.txt','trial/input.md');
+ if(change==='executable') {writeFileSync('trial/evidence/command.txt','executable');chmodSync('trial/evidence/command.txt',0o755);}
+ console.log(JSON.stringify({status:'repaired',findings:'updated'}));
+}
+if(role==='review') {
+ const status=existsSync(record)?'accepted':'needs_changes';
+ if(status==='accepted') {
+  const same=JSON.parse(readFileSync(record,'utf8')).hash===hash();
+  if(same!==['records','delete-record'].includes(change)) process.exit(7);
+ }
+ console.log(JSON.stringify({status,findings:'verify media identity'}));
+}
+`,
+    );
+    t.config.capture = [process.execPath, helper, 'capture'];
+    t.config.repair = [process.execPath, helper, 'repair'];
+    t.config.review = [process.execPath, helper, 'review'];
+    await writeFile(t.configFile, JSON.stringify(t.config));
+    expect(t.execute().status).toBe(0);
+    const state = await t.state();
+    expect(state.result).toBe('ready_for_human_review');
+    expect(state.checks).toBe(2);
+    expect(state.review).toBe(2);
+    expect(state.repair).toBe(1);
+    expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(
+      ['records', 'delete-record'].includes(change) ? 1 : 2,
+    );
+  });
+}

@@ -48,6 +48,7 @@ export interface State {
   active: { role: ActorRole | 'check' | 'capture'; prefix: string } | null;
   events: Event[];
   source?: string;
+  captureSource?: string;
   result?: StopReason | null;
   findings?: string;
 }
@@ -123,5 +124,6 @@ export function assertState(value: unknown): asserts value is State {
   );
   assert(isArray(value.events) && value.events.every(isEvent), 'Invalid saved events');
   assert(optionalString(value.findings), 'Invalid saved findings');
+  assert(optionalString(value.captureSource), 'Invalid saved capture source');
   assert(optionalString(value.source) && validResult(value.result), 'Invalid saved result');
 }

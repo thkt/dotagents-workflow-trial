@@ -113,7 +113,18 @@ export async function command(
   return { code, stdout, stderr, timedOut, ms: performance.now() - start };
 }
 
-async function snapshot(cwd: string) {
+// Plain documentation and saved verification records do not change the rendered app.
+// Keep media, executable files and symlinks in the capture identity.
+function isCaptureRecord(name: string) {
+  return (
+    name.endsWith('.md') ||
+    (name.startsWith('trial/evidence/') &&
+      !name.startsWith('trial/evidence/generated/') &&
+      /\.(json|txt|log|stdout|stderr|diff)$/.test(name))
+  );
+}
+
+async function snapshot(cwd: string, captureOnly = false) {
   const list = await command(
     ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
     cwd,
@@ -128,13 +139,18 @@ async function snapshot(cwd: string) {
     const path = resolve(cwd, name);
     try {
       const stat = await lstat(path);
+      if (captureOnly && stat.isFile() && !(stat.mode & 0o111) && isCaptureRecord(name)) {
+        continue;
+      }
       const bytes = stat.isSymbolicLink() ? await readlink(path) : await readFile(path);
       entries.push([name, stat.mode, digest(bytes)]);
     } catch (error) {
       if (!isMissing(error)) {
         throw error;
       }
-      entries.push([name, 'deleted']);
+      if (!captureOnly) {
+        entries.push([name, 'deleted']);
+      }
     }
   }
   return digest(JSON.stringify(entries));
@@ -274,7 +290,10 @@ async function installMedia(config: Config, output: string) {
   }
 }
 
-async function hasOnlyMarkdownChanges(cwd: string) {
+async function needsCapture(cwd: string, previousSource?: string) {
+  if (previousSource !== undefined) {
+    return previousSource !== (await snapshot(cwd, true));
+  }
   const tracked = await command(['git', 'diff', '--name-only', '-z', 'HEAD'], cwd, '', 10000);
   const untracked = await command(
     ['git', 'ls-files', '--others', '--exclude-standard', '-z'],
@@ -283,10 +302,10 @@ async function hasOnlyMarkdownChanges(cwd: string) {
     10000,
   );
   if (tracked.code !== 0 || untracked.code !== 0) {
-    return false;
+    return true;
   }
   const paths = `${tracked.stdout}${untracked.stdout}`.split('\0').filter(Boolean);
-  return paths.length > 0 && paths.every((path) => path.endsWith('.md'));
+  return !(paths.length > 0 && paths.every((path) => path.endsWith('.md')));
 }
 
 async function verifyHost(
@@ -295,7 +314,8 @@ async function verifyHost(
   persist: Persist,
 ): Promise<{ stop?: StopReason; findings?: string }> {
   state.source = await snapshot(config.cwd);
-  if (config.capture && !(await hasOnlyMarkdownChanges(config.cwd))) {
+  if (config.capture && (await needsCapture(config.cwd, state.captureSource))) {
+    state.captureSource = undefined;
     const output = resolve(
       config.runDir,
       `capture-${state.events.filter((event) => event.role === 'capture').length + 1}-media`,
@@ -324,6 +344,8 @@ async function verifyHost(
     }
     await installMedia(config, output);
     state.source = await snapshot(config.cwd);
+    state.captureSource = await snapshot(config.cwd, true);
+    await persist();
   }
   state.checks++;
   const checked = await hostCommand(config, state, 'check', config.check, persist);
