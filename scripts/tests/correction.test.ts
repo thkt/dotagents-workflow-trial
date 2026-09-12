@@ -38,6 +38,10 @@ import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 const role=process.argv[2], mode=${JSON.stringify(mode)};
 if(role==='issue') console.log(mode==='issue_changed'&&existsSync(${JSON.stringify(join(root, 'issue-changed'))})?'Changed requirement':'Agreed requirement: correct source and docs');
+if(role==='writing') {
+ if(mode==='writing_failure') process.exit(1);
+ writeFileSync('README.md','reviewed '+readFileSync('source.txt','utf8'));
+}
 if(role==='capture') {
  if(mode==='capture_timeout') await new Promise(r=>setTimeout(r,10000));
  if(mode==='capture_unavailable') {console.error('Host permission denied');process.exit(78);}
@@ -87,6 +91,7 @@ if(role==='review') {
     runDir: join(root, 'evidence'),
     issue: [process.execPath, helper, 'issue'],
     check: [process.execPath, helper, 'check'],
+    ...(mode.startsWith('writing_') ? { writing: [process.execPath, helper, 'writing'] } : {}),
     ...(mode.startsWith('capture_') ? { capture: [process.execPath, helper, 'capture'] } : {}),
     repair: [process.execPath, helper, 'repair'],
     review: [process.execPath, helper, 'review'],
@@ -562,5 +567,32 @@ if(role==='review') {
     expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(
       ['records', 'delete-record'].includes(change) ? 1 : 2,
     );
+  });
+}
+
+for (const mode of ['writing_success', 'writing_failure']) {
+  test(`writing before check and after repair: ${mode}`, async () => {
+    const fixture = await trial(mode);
+    fixture.execute();
+    const state = await fixture.state();
+    expect(state.result).toBe(
+      mode === 'writing_success' ? 'ready_for_human_review' : 'writing_failed',
+    );
+    if (mode === 'writing_success') {
+      expect(await readFile(join(fixture.config.cwd, 'README.md'), 'utf8')).toBe(
+        'reviewed correct',
+      );
+      expect(events(state.events).map((event) => object(event).role)).toEqual([
+        'writing',
+        'check',
+        'repair',
+        'writing',
+        'check',
+        'review',
+      ]);
+    } else {
+      expect(state.checks).toBe(0);
+      expect(state.review).toBe(0);
+    }
   });
 }
