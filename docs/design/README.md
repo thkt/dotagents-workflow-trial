@@ -12,6 +12,7 @@
 | [情報・合意・証拠の設計案](information-and-evidence-design.md) | 要求・判断・証拠の配置とレビューの検討 |
 | [コンテキスト十分性](context-sufficiency.md) | 次の判断に必要な情報と不足の扱い |
 | [ドキュメント整備フローの計画](../workflow-refinement/documentation-flow-plan.md) | 文書のみの変更を含むimplementの更新基準・完了条件・検証順序 |
+| [正規agents運用への移行案](../workflow-refinement/agents-migration-plan.md) | 既存 `.agents` と試行repoの責任・保証・保存互換性を比較し、保全・切替・受入・復帰と移行前の残作業を判断する（実際の移行は未承認） |
 
 ## 現在の運用との関係
 
