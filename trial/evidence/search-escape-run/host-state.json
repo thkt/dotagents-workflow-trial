@@ -1,0 +1,69 @@
+{
+  "configHash": "a77d336bfa3c06f5582fce22500bdf7e29a7e85ae6f40f93404c2066caa1fdfe",
+  "issueHash": "a2d86509dc387674f82118da3be5369d3580cbd0253a91339977e9762700e5da",
+  "repair": 2,
+  "review": 2,
+  "checks": 2,
+  "modelMs": 350138.74316600006,
+  "active": {
+    "role": "repair",
+    "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/repair-2"
+  },
+  "events": [
+    {
+      "role": "capture",
+      "source": "61e2ec58e3a4d5698d766e187dda60b741b144ab39d5cd4d2960b1cf27c741ff",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/capture-1"
+    },
+    {
+      "role": "check",
+      "source": "c1f6fe3f90ab7ce3e39ba7b2ecaf74570ccc85d4786003abf72516b5a0aaa958",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/check-1"
+    },
+    {
+      "role": "review",
+      "source": "c1f6fe3f90ab7ce3e39ba7b2ecaf74570ccc85d4786003abf72516b5a0aaa958",
+      "code": 0,
+      "timedOut": false,
+      "ms": 64887.68320799997,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/review-1"
+    },
+    {
+      "role": "repair",
+      "source": "c1f6fe3f90ab7ce3e39ba7b2ecaf74570ccc85d4786003abf72516b5a0aaa958",
+      "code": 0,
+      "timedOut": false,
+      "ms": 184648.02208300005,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/repair-1"
+    },
+    {
+      "role": "capture",
+      "source": "dee9dcab472abb225e0a4d652ba55a086f477f6190e65a4e72fd1da76dac4180",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/capture-2"
+    },
+    {
+      "role": "check",
+      "source": "f0c39c0e5c45c9aa6b647faf175a521af3b905973bf6676afabd4203ff4d4107",
+      "code": 0,
+      "timedOut": false,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/check-2"
+    },
+    {
+      "role": "review",
+      "source": "f0c39c0e5c45c9aa6b647faf175a521af3b905973bf6676afabd4203ff4d4107",
+      "code": 0,
+      "timedOut": false,
+      "ms": 100603.03787500004,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/90/verification/review-2"
+    }
+  ],
+  "source": "f0c39c0e5c45c9aa6b647faf175a521af3b905973bf6676afabd4203ff4d4107",
+  "findings": "README・既存実装・追加E2Eは完了条件に整合し、保存レポートでもEsc追加18件を含む102件成功を確認しました。checkは実行せず、提示されたexit 0を前提としています。ただし証拠の来歴に不一致があります。generated/のEsc動画2点と並び順復元動画2点はcapture-2の実出力に一致しますが、search-escape.mdとsearch-escape-run/provenance.jsonはcapture-1のハッシュを現在の媒体と一致すると記載しています。例：Esc desktop動画の実際のSHA-256は0cdc8a32…、記録はe39ec75e…です。capture-2の実ログ・設定・結果と対象差分を保存・参照し、4動画のハッシュと関連文書を更新してください。これはDEVELOPMENT.mdが求める証拠整備の不足です。PR作成、媒体添付と公開先の表示・再生確認、人のレビュー・承認は別途必要な引き渡し作業であり、その未実施自体は欠陥としていません。",
+  "result": null
+}

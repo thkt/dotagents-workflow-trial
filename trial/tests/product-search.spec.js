@@ -133,6 +133,36 @@ for (const operation of ["pointer", "Enter", "Space"]) {
 
 const reversedProducts = [allProducts[3], allProducts[2], allProducts[1], allProducts[0]];
 
+for (const value of ["original", "ascending", "descending"]) {
+  for (const query of ["note", "missing", ""]) {
+    test(`${value}・検索語 ${JSON.stringify(query)} からEscでクリアし、フォーカスと並び順を保って再検索できる`, async ({ page }) => {
+      await page.goto("/");
+      const order = page.getByLabel("並び順", { exact: true });
+      const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+      const orderedProducts = value === "descending" ? reversedProducts : allProducts;
+      const orderedNotes = value === "descending" ? [allProducts[1], allProducts[0]] : notes;
+      await order.selectOption(value);
+      await search.focus();
+      await page.keyboard.type(query);
+      await expect(search).toHaveValue(query);
+      await expectProducts(page, query === "note" ? orderedNotes : query === "missing" ? [] : orderedProducts);
+      await expect(search).toBeFocused();
+
+      await page.keyboard.press("Escape");
+      await expect(search).toHaveValue("");
+      await expectProducts(page, orderedProducts);
+      await expect(order).toHaveValue(value);
+      await expect(search).toBeFocused();
+      // locatorのfill/pressで再フォーカスせず、Esc後の入力先を検証する。
+      await page.keyboard.type("note");
+      await expect(search).toHaveValue("note");
+      await expectProducts(page, orderedNotes);
+      await expect(order).toHaveValue(value);
+      await expect(search).toBeFocused();
+    });
+  }
+}
+
 test("並び順の切り替え、検索、0件・1件からの復帰と再読み込み", async ({ page }, testInfo) => {
   await page.goto("/");
   const order = page.getByLabel("並び順", { exact: true });
