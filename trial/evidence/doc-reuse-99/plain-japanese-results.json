@@ -1,0 +1,20 @@
+{
+  "model": "gemini-3.6-flash-high",
+  "status": "SUCCESS",
+  "wall_seconds": 97.15644693374634,
+  "usage": {
+    "input_tokens": 24013,
+    "output_tokens": 38464,
+    "thinking_tokens": 25883,
+    "cache_read_tokens": 0,
+    "total_tokens": 62477
+  },
+  "sha256": "5b866b1da604ac32fc167b3054e4eaca38bd738b571182bc956899182b031464",
+  "tool_event_count": 0,
+  "original_characters": 17697,
+  "output_characters": 26548,
+  "headings_equal": true,
+  "links_equal": true,
+  "table_rows_original": 69,
+  "table_rows_output": 69
+}
