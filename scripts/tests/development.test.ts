@@ -43,6 +43,17 @@ function actorReply(mode: string) {
       });
 }
 
+async function writingStub(argv: string[], mode: string) {
+  if (mode === 'writing_failure') {
+    return { ...ok(), code: 1 };
+  }
+  const input = argv[argv.indexOf('--input') + 1];
+  const output = argv[argv.indexOf('--output') + 1];
+  assert(input && output);
+  await writeFile(output, await readFile(input, 'utf8'));
+  return ok();
+}
+
 const ok = (stdout = '') => ({ code: 0, stdout, stderr: '', timedOut: false, ms: 1 });
 async function git(cwd: string, ...args: string[]) {
   const result = await command(['git', ...args], cwd, '', 10000);
@@ -61,6 +72,7 @@ for (const mode of [
   'requirements_changed',
   'source_changed',
   'ci_failure',
+  'writing_failure',
   'wrong_repo',
   'dirty',
 ] as const) {
@@ -128,6 +140,9 @@ for (const mode of [
         timeout: number,
         prefix?: string,
       ) => {
+        if (argv[1]?.endsWith('/writing-review.ts')) {
+          return writingStub(argv, mode);
+        }
         if (argv[0] === 'git' && argv[1] === 'push') {
           pushes++;
           return ok();

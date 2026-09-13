@@ -1,0 +1,101 @@
+{
+  "issue": 101,
+  "runs": [
+    {
+      "kind": "issue",
+      "model": "gemini-3.8-flash-high",
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 15052,
+        "output_tokens": 4595,
+        "thinking_tokens": 4160,
+        "cache_read_tokens": 0,
+        "total_tokens": 19647
+      },
+      "tool_events": 0,
+      "input_sha256": "31aa082cd769a308302e2476811e076565066a624fcb28d550eb937895d54ca8",
+      "candidate_sha256": "8ba4741163bd2fc72f11c374575db94d8749790e12aafb99c8775e67a2314714"
+    },
+    {
+      "kind": "documents",
+      "model": "gemini-3.8-flash-high",
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 26414,
+        "output_tokens": 43454,
+        "thinking_tokens": 31727,
+        "cache_read_tokens": 0,
+        "total_tokens": 69868
+      },
+      "tool_events": 0,
+      "input_sha256": "9dd71ff10cc6a6a9132b67df5ab52f698b47691e790d6c0c8da8881789f667f1",
+      "candidate_sha256": "4738c8102dfcb6aff75c1c497b6b3e28081e5f1d6ecdc155d5f5d2cc4d6aeb37"
+    },
+    {
+      "kind": "pr",
+      "model": "gemini-3.8-flash-high",
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 15254,
+        "output_tokens": 5745,
+        "thinking_tokens": 5433,
+        "cache_read_tokens": 0,
+        "total_tokens": 20999
+      },
+      "tool_events": 0,
+      "input_sha256": "a748196335810cc2443367cfc6016362254ac86bdf193c3084f54e49a37af2cd",
+      "candidate_sha256": "af9762bfa2e4d5c3d045d4bbde3ee8e8660ceb6cb5b497555211d8381f7bd892"
+    }
+  ],
+  "issue_fidelity": {
+    "initial": "reviewer failed outside Git; candidate retained",
+    "recovery": "needs_changes: unconditional retry prohibition became conditional",
+    "correction": "parent restored the original condition without another Gemini call",
+    "final": {
+      "status": "accepted",
+      "findings": "主体・条件・権限・数量・未確認事項を含め、意味の追加・省略・変更はありません。"
+    }
+  },
+  "documents_fidelity": {
+    "status": "accepted",
+    "findings": "差分は助詞・接続表現の調整のみで、意味は保持されています。事実・合意・範囲・権限・限定・未確認事項・数値・条件・参照先の追加、欠落、変更や、執筆指示の本文への混入は認められません。"
+  },
+  "validation": {
+    "control_tests": 128,
+    "e2e_tests": 102,
+    "common_check": "passed",
+    "skill_validation": "both passed"
+  },
+  "limits": [
+    "single real-model Issue and document batch",
+    "no full implement model E2E",
+    "model fidelity judgment is not a proof of semantic equivalence"
+  ],
+  "raw_logs": "retained outside checkout; not published",
+  "pr_fidelity": {
+    "status": "accepted",
+    "findings": "候補は原文の事実・範囲・条件・権限・未実施事項・件数・参照先を保持し、提示された事実とも整合しています。変更は表現の整理にとどまり、執筆指示の本文への混入はありません。"
+  },
+  "regressions": [
+    "renamed Markdown with edits",
+    "facts changed during review",
+    "active adoption with zero remaining document changes",
+    "child-process cleanup on model timeout and host interruption",
+    "partial stdout/stderr retained on interruption",
+    "successful reuse invalidated by changed text or facts"
+  ],
+  "implementation_reviews": [
+    {
+      "status": "needs_changes",
+      "findings": "1. [P1] scripts/writing-review.ts:22 — `--diff-filter=AM` excludes staged renames. A renamed Markdown file with substantial retained content and new prose is classified R, and its tracked destination is absent from `ls-files --others`. It can therefore reach checks and publication without writing review. Include rename destinations and test a staged rename with edits.\n\n2. [P2] scripts/writing-review.ts:108–111 — Documents mode reads the facts file once and never revalidates it before applying candidates. Unlike file mode, changing `--facts` during either model call still allows adoption and a successful exit against stale evidence. Revalidate facts before writing documents; the existing test only changes facts between completed calls.\n\n3. [P2] scripts/writing.ts:25–29 — The five-minute timeout kills only the immediate child. For fidelity review, that child is codex-actor.ts, which spawns Codex separately. Killing the wrapper can leave Codex running; the worker then fails normally and the outer command clears its group timeout without killing remaining descendants. Terminate and reconcile the entire model process tree on timeout, and test with a wrapper that launches a persistent child.\n\n4. [P2] scripts/writing.ts:31–49 — Gemini output is buffered exclusively in the writing worker until the child closes. The outer SIGINT/SIGTERM handler kills that worker alongside its children, so already-produced output and diagnostics never reach the evidence files. This breaks the documented retention of interrupted-run evidence. Stream model output to durable logs and test interruption after partial output.\n\n5. [P2] scripts/writing-review.ts:75–79 — Standalone documents mode has no durable adoption reservation. If interrupted after writing a candidate but before recording the receipt, its next invocation hashes the changed files, selects a different review directory, and silently launches another review. Interruption during a write can also make truncated content the next review's original. Preserve an active adoption record across file replacement and receipt creation, and require reconciliation after interruption. Existing tests only retry an identical review directory.\n\nValidation: the two read-only parser tests passed. Full check was not run; no files were edited or published."
+    },
+    {
+      "status": "needs_changes",
+      "findings": "[P2] scripts/writing-review.ts:79–88 — The empty-document return bypasses the active reservation check. If Gemini restores the only changed Markdown file to its HEAD content and execution stops after atomic replacement but before receipt persistence, the next documents invocation finds no changes and succeeds despite active.json. Move the reservation check before the empty-input return and add this regression case. An in-memory reproduction confirmed success with zero reservation reads.\n\nPrior findings 1–4 are addressed by inspection: rename destinations are included, facts are revalidated before adoption, failed workers trigger inherited process-group cleanup, and logs retain streamed partial output. Finding 5 remains incomplete as described above. No other material regressions found.\n\nValidation: two read-only parser tests and git diff --check passed. Process tests were inspected, not executed. No files edited, full check run, or publication performed."
+    },
+    {
+      "status": "accepted",
+      "findings": "Scope: remaining finding 5 and regressions from the final guard/test change only; findings 1–4 were not reopened. scripts/writing-review.ts:62–66 now checks active.json before the empty-document return. The final test at scripts/tests/writing.test.ts:184–187 commits all document changes while retaining the external reservation, then requires reconciliation rejection. It would fail before the fix because reviewDocuments resolved successfully. An in-memory comparison confirmed both behaviors and verified that zero documents without a reservation still succeeds. No material regression found. The filesystem test was inspected, not executed; no edits, publishing, or full check performed."
+    }
+  ]
+}
