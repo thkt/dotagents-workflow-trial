@@ -4,11 +4,19 @@ import { resolve, join, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
-import { command, run, withInterrupts, parseReply, captureInstructions } from './correction.ts';
+import {
+  command,
+  run,
+  withInterrupts,
+  parseReply,
+  captureInstructions,
+  testInstructions,
+} from './correction.ts';
 import { isRecord } from './input.ts';
 import { publish } from './publish.ts';
+import { waitForCi } from './ci.ts';
 import { writingHostTimeoutMs } from './writing.ts';
-import { readTarget, issueNumber, targetCommand } from './target.ts';
+import { readTarget, issueNumber, targetCommand, pushArguments } from './target.ts';
 
 const runtime = { command, verify: run, publish };
 const modelTimeMs = 1200000;
@@ -153,8 +161,8 @@ async function implement(context: Context, io: typeof runtime) {
   await unchangedTarget(context, io);
   const prompt = [
     'Implement the complete agreed Issue using existing code and verification assets. Read the target README, development policy and applicable repository instructions when present.',
-    'Prepare meaningful tests, current documentation and capture definitions. The host runs browser tests and capture; do not launch browsers or servers in your sandbox.',
-    'Before creating or updating tests, apply the target test policy when present and these common test criteria. Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
+    'Prepare meaningful tests and current documentation. The host runs the configured verification; do not launch browsers or servers in your sandbox.',
+    testInstructions,
     'Documentation-only Issues use the same flow. Apply the target documentation policy when present; keep current operating instructions accurate and place historical results in evidence; add tests or code only when the agreed requirements need them.',
     captureInstructions(context.target.config.capture),
     `Target setup/check/capture contract (do not weaken or replace): ${JSON.stringify(context.target.config)}`,
@@ -298,15 +306,10 @@ async function ship(
   );
   await unchangedTarget(context, io, commit);
   await io.publish(['--repo', cwd, ...context.appArgs, '--preflight']);
-  await git(
-    '-c',
-    'credential.helper=',
-    '-c',
-    'credential.helper=!gh auth git-credential',
-    'push',
-    '-u',
-    `https://github.com/${repository}.git`,
-    branch,
+  await checked(
+    io,
+    await pushArguments(repository, branch, cwd, (argv, path) => checked(io, argv, path)),
+    cwd,
   );
   const url = await io.publish([
     '--repo',
@@ -362,12 +365,10 @@ async function ship(
     'Published PR does not match the verified commit',
   );
   await writeFile(join(dir, 'pr.json'), view);
-  const ci = await io.command(
-    ['gh', 'pr', 'checks', url, '--repo', repository, '--watch', '--interval', '10'],
-    cwd,
-    '',
+  const ci = await waitForCi(
+    { cwd, repository, url, commit, baseBranch, dir },
+    io.command,
     checkTimeMs,
-    join(dir, 'ci'),
   );
   const latest: unknown = JSON.parse(
     await checked(
@@ -387,7 +388,7 @@ async function ship(
     url,
     commit,
     evidence: dir,
-    ci: ci.code === 0 && !ci.timedOut ? 'passed' : 'pending_or_failed',
+    ci: ci?.code === 0 && !ci.timedOut ? 'passed' : 'pending_or_failed',
     remaining: ['human_review', ...(media.length ? ['rendered_media_check'] : [])],
   };
   await writeFile(join(dir, 'result.json'), JSON.stringify(result, null, 2));

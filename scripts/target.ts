@@ -17,7 +17,9 @@ function argv(value: unknown): value is string[] {
   return (
     Array.isArray(value) &&
     value.length > 0 &&
-    value.every((part) => typeof part === 'string' && part.trim().length > 0)
+    typeof value[0] === 'string' &&
+    value[0].trim().length > 0 &&
+    value.every((part) => typeof part === 'string')
   );
 }
 function assertTarget(value: unknown): asserts value is TargetConfig {
@@ -52,7 +54,8 @@ export function remoteRepository(url: string) {
   return match[1];
 }
 export function issueNumber(input: string, repository: string) {
-  const raw = input.replace(`https://github.com/${repository}/issues/`, '').replace(/^#/, '');
+  const prefix = `https://github.com/${repository}/issues/`;
+  const raw = input.startsWith(prefix) ? input.slice(prefix.length) : input.replace(/^#/, '');
   assert(
     /^[1-9]\d*$/.test(raw) && Number.isSafeInteger(Number(raw)),
     'Issue does not match target repository',
@@ -109,6 +112,34 @@ export async function readTarget(checkout: string, read: Reader, writable = fals
   );
   return { cwd, config, text, repositoryId: identity.id, actor: actor.login };
 }
+// A command-scoped pushurl bypasses pushInsteadOf. Check insteadOf expansion too.
+export async function pushArguments(repository: string, branch: string, cwd: string, read: Reader) {
+  const url = `https://github.com/${repository}.git`;
+  const remote = 'dotagents-publish';
+  const options = [
+    '-c',
+    `remote.${remote}.url=${url}`,
+    '-c',
+    `remote.${remote}.pushurl=${url}`,
+    '-c',
+    'credential.helper=',
+    '-c',
+    'credential.helper=!gh auth git-credential',
+    '-c',
+    'protocol.allow=never',
+    '-c',
+    'protocol.https.allow=always',
+  ];
+  const pushUrls = await read(
+    ['git', ...options, 'config', '--get-all', `remote.${remote}.pushurl`],
+    cwd,
+  );
+  assert(pushUrls === url, 'Effective push URL differs from verified HTTPS target');
+  const effective = await read(['git', ...options, 'ls-remote', '--get-url', remote], cwd);
+  assert(effective === url, 'Effective push URL differs from verified HTTPS target');
+  return ['git', ...options, 'push', remote, `${branch}:refs/heads/${branch}`];
+}
+
 export function targetCommand(command: string[]) {
   return command.map((part) => part.replaceAll('{harness}', resolve(import.meta.dir, '..')));
 }

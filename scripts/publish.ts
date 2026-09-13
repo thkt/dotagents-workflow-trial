@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { createHash, createPrivateKey, createPublicKey, sign } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -7,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { isRecord } from './input.ts';
 import { readTarget } from './target.ts';
+import { command as runCommand, assertRunning, withInterrupts } from './correction.ts';
 
 export interface AppConfig {
   id: number;
@@ -43,16 +43,16 @@ async function appConfig(path: string | undefined): Promise<AppConfig> {
   );
   return { id, clientId, installationId, keychainService, keychainAccount, keyFingerprint };
 }
-function command(argv: string[], token?: string, cwd?: string) {
-  const [executable, ...args] = argv;
+async function command(argv: string[], token?: string, cwd?: string) {
+  const executable = argv[0];
   assert(executable);
   const env = { ...process.env };
   delete env.GH_DEBUG;
   if (token) {
     env.GH_TOKEN = token;
   }
-  const result = spawnSync(executable, args, { env, cwd, encoding: 'utf8', timeout: 120000 });
-  assert(!result.error && result.status === 0, `Command failed: ${executable}`);
+  const result = await runCommand(argv, cwd ?? process.cwd(), '', 120000, undefined, env);
+  assert(result.code === 0 && !result.timedOut, `Command failed: ${executable}`);
   return result.stdout;
 }
 
@@ -66,17 +66,19 @@ export function keyJwt(pem: string, config: AppConfig) {
   const payload = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({ iat: now - 60, exp: now + 300, iss: config.clientId })}`;
   return `${payload}.${sign('RSA-SHA256', Buffer.from(payload), key).toString('base64url')}`;
 }
-function authenticate(config: AppConfig) {
-  const stored = command([
-    '/usr/bin/security',
-    'find-generic-password',
-    '-s',
-    config.keychainService,
-    '-a',
-    config.keychainAccount,
-    '-w',
-    join(homedir(), 'Library/Keychains/login.keychain-db'),
-  ]).trim();
+async function authenticate(config: AppConfig) {
+  const stored = (
+    await command([
+      '/usr/bin/security',
+      'find-generic-password',
+      '-s',
+      config.keychainService,
+      '-a',
+      config.keychainAccount,
+      '-w',
+      join(homedir(), 'Library/Keychains/login.keychain-db'),
+    ])
+  ).trim();
   return keyJwt(
     stored.startsWith('-----BEGIN') ? stored : Buffer.from(stored, 'hex').toString(),
     config,
@@ -142,18 +144,20 @@ export async function publish(args: string[], io = runtime) {
   }
   const target = await readTarget(
     values.repo,
-    async (argv, cwd) => io.command(argv, undefined, cwd).trim(),
+    async (argv, cwd) => (await io.command(argv, undefined, cwd)).trim(),
     true,
   );
   const { repository: repo, baseBranch: base } = target.config;
   assert(values.preflight || head !== base, 'Head must differ from base');
   const config = await appConfig(values['app-config'] ?? process.env.DOTAGENTS_APP_CONFIG);
-  const jwt = io.authenticate(config);
+  const jwt = await io.authenticate(config);
+  assertRunning();
   const app = await io.api('/app', jwt);
   assert(
     isRecord(app) && app.id === config.id && typeof app.slug === 'string' && app.slug,
     'Unexpected App',
   );
+  assertRunning();
   const installation = await io.api(`/repos/${repo}/installation`, jwt);
   assert(
     isRecord(installation) &&
@@ -164,6 +168,7 @@ export async function publish(args: string[], io = runtime) {
       installation.permissions.pull_requests === 'write',
     'App installation lacks target access',
   );
+  assertRunning();
   const issued = await io.api(
     `/app/installations/${config.installationId}/access_tokens`,
     jwt,
@@ -179,6 +184,7 @@ export async function publish(args: string[], io = runtime) {
   );
   const token = issued.token;
   try {
+    assertRunning();
     const accessible = await io.api(`/repos/${repo}`, token);
     assert(
       isRecord(accessible) &&
@@ -186,6 +192,7 @@ export async function publish(args: string[], io = runtime) {
         accessible.full_name === repo,
       'Installation token cannot access target repository',
     );
+    assertRunning();
     if (values.preflight) {
       return JSON.stringify({
         repository: repo,
@@ -196,8 +203,8 @@ export async function publish(args: string[], io = runtime) {
       });
     }
     assert(head && title);
-    const existing = io
-      .command(
+    const existing = (
+      await io.command(
         [
           'gh',
           'pr',
@@ -219,13 +226,14 @@ export async function publish(args: string[], io = runtime) {
         ],
         token,
       )
-      .trim();
+    ).trim();
+    assertRunning();
     if (existing) {
       await checkExisting(io, repo, existing, app.slug, token);
       return existing;
     }
-    return io
-      .command(
+    return (
+      await io.command(
         [
           'gh',
           'pr',
@@ -243,7 +251,7 @@ export async function publish(args: string[], io = runtime) {
         ],
         token,
       )
-      .trim();
+    ).trim();
   } finally {
     await io.api('/installation/token', token, 'DELETE');
   }
@@ -251,7 +259,7 @@ export async function publish(args: string[], io = runtime) {
 
 if (import.meta.main) {
   try {
-    console.log(await publish(process.argv.slice(2)));
+    console.log(await withInterrupts(() => publish(process.argv.slice(2))));
     console.log('Temporary installation token revoked.');
   } catch (error) {
     // Stop reasons name the failed step, never the JWT or the installation token.

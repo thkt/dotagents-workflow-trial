@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
-import { test, expect } from 'bun:test';
+import { test, expect, afterEach } from 'bun:test';
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync, createHash } from 'node:crypto';
+import { withInterrupts } from '../correction.ts';
 import { publish, keyJwt } from '../publish.ts';
 import { initializeTarget, githubTarget, git, testApp } from './support/target.ts';
+
+afterEach(async () => {
+  await withInterrupts(async () => {});
+});
 
 function option(args: string[], name: string) {
   expect(args).toContain(name);
@@ -86,6 +91,8 @@ for (const mode of [
   'denied_app',
   'wrong_token_repo',
   'denied_operator',
+  'app_interrupted',
+  'token_interrupted',
 ] as const) {
   test(`publisher: ${mode}`, async () => {
     const dir = await mkdtemp(join(tmpdir(), 'publisher-test-'));
@@ -101,7 +108,7 @@ for (const mode of [
       const requests: { path: string; method: string; input: object | undefined }[] = [];
       let authenticated = false;
       const io = {
-        authenticate: (value: typeof testApp) => {
+        authenticate: async (value: typeof testApp) => {
           expect(value).toEqual(testApp);
           authenticated = true;
           return 'jwt-secret';
@@ -113,6 +120,12 @@ for (const mode of [
           input?: object,
         ): Promise<unknown> => {
           requests.push({ path, method, input });
+          if (
+            (mode === 'app_interrupted' && path === '/app') ||
+            (mode === 'token_interrupted' && path.endsWith('access_tokens'))
+          ) {
+            process.emit('SIGINT');
+          }
           if (path === '/installation/token') {
             expect(token).toBe('installation-secret');
             if (mode === 'revoke_failed') {
@@ -129,7 +142,7 @@ for (const mode of [
           assert(path in responses, `Unexpected API request: ${path}`);
           return responses[path];
         },
-        command: (args: string[], token?: string, cwd?: string) => {
+        command: async (args: string[], token?: string, cwd?: string) => {
           if (args[0] === 'git') {
             assert(cwd);
             return git(cwd, ...args.slice(1));
@@ -154,10 +167,12 @@ for (const mode of [
           : ['--head', 'codex/test', '--title', 'Title with spaces', '--body-file', body]),
       ];
       if (['create', 'existing', 'preflight'].includes(mode)) {
-        const result = await publish(args, io);
+        const result = await withInterrupts(() => publish(args, io));
         checkSuccessfulPublication(mode, result);
       } else {
         const reasons = {
+          app_interrupted: /Interrupted execution/,
+          token_interrupted: /Interrupted execution/,
           personal_pr: /Existing PR was not created by the configured App/,
           create_failed: /create_failed/,
           list_failed: /list_failed/,
@@ -170,13 +185,14 @@ for (const mode of [
           denied_operator: /push permission required/,
         };
         assert(mode !== 'create' && mode !== 'existing' && mode !== 'preflight');
-        await assert.rejects(() => publish(args, io), reasons[mode]);
+        await assert.rejects(() => withInterrupts(() => publish(args, io)), reasons[mode]);
       }
       expect(authenticated).toBe(!['empty', 'denied_operator'].includes(mode));
       const issued = ![
         'empty',
         'denied_operator',
         'wrong_app',
+        'app_interrupted',
         'wrong_installation',
         'denied_app',
       ].includes(mode);
@@ -197,7 +213,8 @@ for (const mode of [
       expect(requests.filter(({ path }) => path === '/installation/token')).toEqual(
         issued ? [{ path: '/installation/token', method: 'DELETE', input: undefined }] : [],
       );
-      const listed = issued && !['preflight', 'wrong_token_repo'].includes(mode);
+      const listed =
+        issued && !['preflight', 'wrong_token_repo', 'token_interrupted'].includes(mode);
       expect(commands.map(({ args }) => args[2])).toEqual([
         ...(listed ? ['list'] : []),
         ...(['create', 'create_failed', 'revoke_failed'].includes(mode) ? ['create'] : []),

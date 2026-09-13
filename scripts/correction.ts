@@ -57,7 +57,7 @@ function interrupt() {
   killGroup(activeGroup);
 }
 
-function assertRunning() {
+export function assertRunning() {
   if (interrupted) {
     throw Error(interruptionMessage);
   }
@@ -70,6 +70,7 @@ export async function command(
   input: string,
   timeoutMs: number,
   files?: string,
+  env?: NodeJS.ProcessEnv,
 ): Promise<CommandResult> {
   assertRunning();
   let stdout = '',
@@ -83,6 +84,7 @@ export async function command(
   const child = spawn(executable, args, {
     cwd,
     detached: true,
+    env,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   activeGroup = child.pid;
@@ -289,6 +291,9 @@ async function runModel(
   }
   return result;
 }
+
+export const testInstructions =
+  'Before creating or updating tests, apply the target test policy when present and these common test criteria. Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.';
 
 export function captureInstructions(capture: { destination: string } | null) {
   return [
@@ -529,13 +534,15 @@ async function cycle(
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
-    'Before creating or updating tests, apply the target test policy when present and these common test criteria. Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
+    testInstructions,
     'Apply the target documentation policy when present to documentation-only changes and accompanying updates; keep current operating instructions accurate and historical results in evidence.',
     'Preserve agreed acceptance criteria and the verification needed to protect required behavior. Removing or consolidating unnecessary tests is allowed; making checks pass by hiding a realistic regression is not. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
-    'The host runs full check, browser tests and capture after your changes; do not launch browsers or servers in the actor sandbox.',
+    'The host runs the configured verification after your changes; do not launch browsers or servers in the actor sandbox.',
     captureInstructions(
-      config.captureDestination ? { destination: config.captureDestination } : null,
+      config.capture && config.captureDestination
+        ? { destination: config.captureDestination }
+        : null,
     ),
     'Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision.',
     'If requirements, permissions or execution limits must change, report needs_human without changing them.',
@@ -632,7 +639,9 @@ export async function withInterrupts<T>(action: () => Promise<T>): Promise<T> {
   process.on('SIGINT', interrupt);
   process.on('SIGTERM', interrupt);
   try {
-    return await action();
+    const result = await action();
+    assertRunning();
+    return result;
   } finally {
     process.off('SIGINT', interrupt);
     process.off('SIGTERM', interrupt);

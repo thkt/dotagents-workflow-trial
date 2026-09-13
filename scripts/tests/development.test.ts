@@ -29,6 +29,11 @@ const stopReasons = {
   wrong_issue: /Issue does not match target repository/,
   wrong_push: /Remote\/repository mismatch/,
   denied_app: /App installation lacks target access/,
+  actor_changed: /Target configuration or GitHub actor changed/,
+  local_actor_changed: /Target configuration or GitHub actor changed/,
+  config_changed: /Target configuration or GitHub actor changed/,
+  branch_changed: /Actor changed branch or HEAD/,
+  head_changed: /Actor changed branch or HEAD/,
   dirty: /Commit or preserve pending work before development/,
 };
 
@@ -114,6 +119,31 @@ async function prepareInput(repo: string, mode: string, settings: typeof targetC
   return git(repo, 'rev-parse', 'HEAD');
 }
 
+function targetResponse(mode: string, reply: string, repository: string, reviews: number) {
+  if (mode === 'wrong_repo') {
+    return reply.replace(repository, 'other/repo');
+  }
+  return ['actor_changed', 'local_actor_changed'].includes(mode) && reviews > 0
+    ? reply.replace('operator', 'different-operator')
+    : reply;
+}
+function localArguments(mode: string) {
+  return mode === 'local_actor_changed' ? ['--no-publish'] : [];
+}
+async function changeTarget(mode: string, config: Config, settings: typeof targetConfig) {
+  switch (mode) {
+    case 'config_changed':
+      await writeFile(join(config.cwd, '.dotagents.json'), JSON.stringify(settings) + '\n');
+      break;
+    case 'branch_changed':
+      await git(config.cwd, 'switch', '-c', 'unexpected');
+      break;
+    case 'head_changed':
+      await git(config.cwd, 'add', '.');
+      await git(config.cwd, 'commit', '-m', 'unexpected actor commit');
+  }
+}
+
 for (const mode of [
   'success',
   'initial_failure',
@@ -133,6 +163,11 @@ for (const mode of [
   'wrong_push',
   'denied_app',
   'other_repo',
+  'actor_changed',
+  'local_actor_changed',
+  'config_changed',
+  'branch_changed',
+  'head_changed',
 ] as const) {
   test(`development ${mode}`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'development-'));
@@ -182,11 +217,7 @@ for (const mode of [
     async function github(argv: string[], cwd: string) {
       const targetReply = githubTarget(argv, settings);
       if (targetReply !== undefined) {
-        return ok(
-          mode === 'wrong_repo'
-            ? targetReply.replace(settings.repository, 'other/repo')
-            : targetReply,
-        );
+        return ok(targetResponse(mode, targetReply, settings.repository, reviews));
       }
       switch (`${argv[1]}/${argv[2]}`) {
         case 'issue/view':
@@ -205,6 +236,7 @@ for (const mode of [
               baseRefName: settings.baseBranch,
               state: 'OPEN',
               body: 'Closes #99',
+              statusCheckRollup: [{ name: 'checks' }],
             }),
           );
         default:
@@ -224,7 +256,9 @@ for (const mode of [
         }
         if (argv[0] === 'git' && argv.includes('push')) {
           pushes++;
-          expect(argv).toContain(`https://github.com/${settings.repository}.git`);
+          expect(argv).toContain(
+            `remote.dotagents-publish.pushurl=https://github.com/${settings.repository}.git`,
+          );
           expect(argv).toContain('credential.helper=!gh auth git-credential');
           return ok();
         }
@@ -239,7 +273,9 @@ for (const mode of [
         }
         implementations++;
         if (mode === 'other_repo') {
-          expect(input).not.toContain('prepare trial/capture.spec.js');
+          expect(input).not.toContain('CAPTURE_OUTPUT');
+          expect(input).not.toContain('Close video contexts');
+          expect(input).toContain('If the agreed Issue needs media, return needs_human');
           expect(await readFile(join(cwd, 'setup.txt'), 'utf8')).toBe('configured');
         }
         expect(input).toContain('Show the requested result.');
@@ -248,6 +284,9 @@ for (const mode of [
       },
       verify: async (config: Config): Promise<State> => {
         reviews++;
+        if (reviews === 1) {
+          await changeTarget(mode, config, settings);
+        }
         if (mode === 'other_repo') {
           expect(config.check).toEqual(settings.check);
           expect(config.capture).toBeUndefined();
@@ -299,6 +338,7 @@ for (const mode of [
         '--run-dir',
         dir,
       ];
+      args.push(...localArguments(mode));
       if (mode === 'local_only' || mode === 'other_repo') {
         const result = await develop([...args, '--no-publish'], io);
         assert('status' in result);

@@ -23,7 +23,7 @@ bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to
 
 保存先は `~/.local/share/dotagents/development/<Git管理ディレクトリの識別値>/<Issue番号>/` です。`--run-dir DIRECTORY` でcheckout・Git管理領域外を指定できます。`target.json` に対象設定・repo ID・gh主体、ほかに要求、指示・結果、検証ログ、作業checkout、PR本文・URL、CI結果を残します。既存保存先は再実行に使いません。中断後は記録・実プロセス・GitHubの状態を照合し、保存先の削除や別名での自動再試行をしません。
 
-`--no-publish` は独立評価までで止め、commit・push・PR作成を行わず、App設定とpush権限の確認も不要です。通常実行は検証済み対象を再照合し、commit、PR本文の文章確認、App権限の再確認、gh主体の資格情報を明示したpush、専用AppによるPR作成へ進みます。生成媒体の変更を設定した保存先から添付します。最新CIとPRのhead・baseを照合し、表示・再生・配置の確認は `rendered_media_check` として担当者へ渡します。CI未確認時はPR URLと記録を保持して非zero終了します。人がレビュー・承認・マージします。
+`--no-publish` は独立評価までで止め、commit・push・PR作成を行わず、App設定とpush権限の確認も不要です。通常実行は検証済み対象を再照合し、commit、PR本文の文章確認、App権限の再確認、gh主体の資格情報を明示したpush、専用AppによるPR作成へ進みます。pushにはコマンド内だけで定義するHTTPSの公開先を使い、GitのURL書き換え後も対象が一致することを確認します。SSHへの切替や別repoへの書き換えは拒否します。生成媒体の変更を設定した保存先から添付します。新規PRのcheck登録もCI待機9分の中で待ち、登録待ち中もPRのhead・base・OPEN状態を照合します。最新CIとPRのhead・baseを照合し、表示・再生・配置の確認は `rendered_media_check` として担当者へ渡します。CI未確認時はPR URLと記録を保持して非zero終了します。人がレビュー・承認・マージします。
 
 ## 対象repoの設定
 
@@ -40,7 +40,7 @@ bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to
 }
 ```
 
-コマンドはshell文字列ではなくargv配列です。対象checkoutで実行し、非zeroは失敗です。セットアップ不要なら `setup: []` と明示します。`check` の欠落・空配列、撮影方針の省略を拒否します。対象のcheckがテスト未実行・skip等を成功扱いしないことも設定担当と独立評価で確認します。CLIが任意の外部runnerのレポート形式や合意の意味を判定するものではありません。
+コマンドはshell文字列ではなくargv配列です。実行ファイル名は非空とし、後続の空文字・空白引数はそのまま渡します。対象checkoutで実行し、非zeroは失敗です。セットアップ不要なら `setup: []` と明示します。`check` の欠落・空配列、撮影方針の省略を拒否します。対象のcheckがテスト未実行・skip等を成功扱いしないことも設定担当と独立評価で確認します。CLIが任意の外部runnerのレポート形式や合意の意味を判定するものではありません。
 
 `capture: null` は必要媒体がない場合に使います。媒体が必要なら `command`（argv）、`destination`（生成媒体専用のrepo相対ディレクトリ）、`required` を指定します。必要媒体を常に撮る場合、Markdownを画面の入力にするrepo、文書Issueでも媒体が必要な場合は `required: true` です。`false` は下記の文書・保存記録が画面に影響しないrepoでのみ使えます。設定時にIssueの必要証拠と照合し、未設定を成功へ読み替えません。実装・評価担当は設定と要求が矛盾したら停止します。
 
@@ -210,7 +210,7 @@ bun /absolute/path/to/trusted/scripts/publish.ts --repo /absolute/path/target-ch
 
 preflightは対象とghのpush権限、App ID・鍵fingerprint、対象repoのinstallation・PR書込権限を照合し、対象repo ID限定tokenのアクセスを確認して失効します。PRを作りません。公開時も同じ確認を行います。App権限がなければ停止し、個人アカウントへ自動切替しません。
 
-PRのrepoとbase branchは対象設定を使います。同じhead・baseのopen PRがあればURLを返し、なければApp tokenで作成します。既存PRの本文更新、push、承認、マージはこのCLIでは行いません。tokenはfinallyで失効し、鍵とtokenをログやファイルへ出しません。通信断・強制終了・失効失敗時は、PRとtokenの状態を照合してから対応します。制御テストの模擬応答は実際のAppアクセスを確認した証拠ではありません。
+PRのrepoとbase branchは対象設定を使います。同じhead・baseのopen PRがあればURLを返し、なければApp tokenで作成します。既存PRの本文更新、push、承認、マージはこのCLIでは行いません。SIGINT・SIGTERMでは実行中のコマンドとその子プロセスを停止し、後続の公開操作へ進みません。発行済みtokenは中断時もfinallyで失効を試み、鍵とtokenをログやファイルへ出しません。通信断・強制終了・失効失敗時は、PRとtokenの状態を照合してから対応します。制御テストの模擬応答は実際のAppアクセスを確認した証拠ではありません。
 
 ### PRへの画像・動画の添付
 
