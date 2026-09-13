@@ -1,4 +1,14 @@
 import assert from 'node:assert/strict';
+import { isAbsolute } from 'node:path';
+
+export function relativeDirectory(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    !isAbsolute(value) &&
+    value.split('/').every((part) => /^[a-zA-Z0-9_-][a-zA-Z0-9._-]*$/.test(part)) &&
+    !value.split('/').some((part) => part === '.git' || part === 'node_modules')
+  );
+}
 
 export type ActorRole = 'repair' | 'review';
 const stopReasons = [
@@ -24,6 +34,8 @@ export interface Config {
   issue: string[];
   check: string[];
   capture?: string[];
+  captureDestination?: string;
+  captureRequired?: boolean;
   writing?: string[];
   repair: string[];
   review: string[];
@@ -87,6 +99,14 @@ export function assertConfig(value: unknown): asserts value is Config {
   }
   assert(value.writing === undefined || command(value.writing), 'Invalid writing command');
   assert(value.capture === undefined || command(value.capture), 'Invalid capture command');
+  assert(
+    value.captureRequired !== true || command(value.capture),
+    'Required capture command missing',
+  );
+  if (value.capture) {
+    assert(relativeDirectory(value.captureDestination), 'Invalid capture destination');
+    assert(typeof value.captureRequired === 'boolean', 'Explicit capture requirement required');
+  }
   for (const key of ['repairLimit', 'reviewLimit']) {
     const limit: unknown = value[key];
     assert(count(limit) && limit > 0, `Invalid ${key}`);

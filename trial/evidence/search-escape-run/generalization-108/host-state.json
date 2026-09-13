@@ -1,0 +1,48 @@
+{
+  "configHash": "6af17ca20e6645d42e84a360cc20ef2754b0133249efc1da353f7f21c3df6b8c",
+  "issueHash": "0cdecedb09f345c789c5067b7972686fc03266f15af34a97e022ea766c1617d7",
+  "repair": 1,
+  "review": 1,
+  "checks": 1,
+  "modelMs": 133495.477625,
+  "active": {
+    "role": "repair",
+    "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/repair-1"
+  },
+  "events": [
+    {
+      "role": "writing",
+      "code": 0,
+      "timedOut": false,
+      "ms": 80236.02458400001,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/writing-1"
+    },
+    {
+      "role": "capture",
+      "source": "2e5b7ccb4c4acb6d710420f66115e9d518965a6ada7b558d90e07da42546ff9f",
+      "code": 0,
+      "timedOut": false,
+      "ms": 37511.431083,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-1"
+    },
+    {
+      "role": "check",
+      "source": "9a09556fd10846b8d8ea4efb0c2349797e277010f236ef1f16073c0d8997551b",
+      "code": 0,
+      "timedOut": false,
+      "ms": 39594.700417,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/check-1"
+    },
+    {
+      "role": "review",
+      "source": "9a09556fd10846b8d8ea4efb0c2349797e277010f236ef1f16073c0d8997551b",
+      "code": 0,
+      "timedOut": false,
+      "ms": 133495.477625,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/review-1"
+    }
+  ],
+  "findings": "媒体の来歴更新が未完了です。trial/evidence/generated/ のWebM 4件は今回の再撮影で置換されていますが、search-escape.md:27 と search-escape-run/provenance.json は旧実行・旧ハッシュを現在の媒体の根拠としており、repository-generalization.md にも「既存媒体は変更していない」とあります。例：desktop Esc動画は現在563841 bytes、SHA-256 8609fe338bf8c735eea86819ffedb672d9518443f4d17ffa7f53523d1162e9edで、文書の511631 bytesと不一致です。ホストの resume-20260913/verification-108-content-fixed/capture-1.stdout に今回の来歴があります。旧記録を履歴として保持し、提出媒体と今回の撮影対象・設定・結果・ハッシュを結ぶ記録と参照を更新してください。\n対象照合・権限拒否・必須撮影の追加テストとrunnerテストの移動には具体的な保証があり、不当な重複や検出条件の削除は確認しませんでした。実測ハーネスと提出scripts/skillsの一致も確認しました。修正後の公開担当によるPR作成・添付・表示／再生確認・最新CI確認、人によるレビュー・承認は引き続き必要です。",
+  "source": "9a09556fd10846b8d8ea4efb0c2349797e277010f236ef1f16073c0d8997551b",
+  "captureSource": "56ca926576c09ac8f3124b7220b0e5d6f5b6aea19b2f7c44ecd3c1a750c8ae8f"
+}

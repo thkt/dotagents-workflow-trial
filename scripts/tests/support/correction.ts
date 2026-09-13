@@ -96,6 +96,8 @@ if(role==='review') {
       check: [process.execPath, helper, 'check'],
       ...(mode.startsWith('writing_') ? { writing: [process.execPath, helper, 'writing'] } : {}),
       ...(mode.startsWith('capture_') ? { capture: [process.execPath, helper, 'capture'] } : {}),
+      captureDestination: 'trial/evidence/generated',
+      captureRequired: false,
       repair: [process.execPath, helper, 'repair'],
       review: [process.execPath, helper, 'review'],
       repairLimit: 2,

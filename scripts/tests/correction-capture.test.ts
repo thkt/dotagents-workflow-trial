@@ -1,4 +1,5 @@
 import { test, expect, afterEach } from 'bun:test';
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -178,3 +179,71 @@ if(role==='review') {
     );
   });
 }
+
+test('required capture without a command is rejected before starting a run', async () => {
+  const t = await trial('media_scope', { captureRequired: true });
+  const result = t.execute();
+  expect(result.status).toBe(1);
+  expect(result.stderr.trim()).toBe('Required capture command missing');
+  expect(await readFile(join(t.config.cwd, 'source.txt'), 'utf8')).toBe('broken');
+  expect(existsSync(t.config.runDir)).toBe(false);
+});
+
+// Markdown can itself be a rendering input in other repositories.
+test('required capture runs for documentation and installs into the configured media directory', async () => {
+  const t = await trial('media_scope', {
+    captureDestination: 'review/media',
+    captureRequired: true,
+  });
+  await writeFile(join(t.config.cwd, 'source.txt'), 'correct');
+  await writeFile(join(t.config.cwd, 'README.md'), 'original');
+  expect(spawnSync('git', ['add', '.'], { cwd: t.config.cwd }).status).toBe(0);
+  expect(
+    spawnSync(
+      'git',
+      ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'baseline'],
+      { cwd: t.config.cwd },
+    ).status,
+  ).toBe(0);
+  await writeFile(join(t.config.cwd, 'README.md'), 'rendered documentation');
+  t.config.capture = [process.execPath, join(t.root, 'helper.js'), 'capture'];
+  await writeFile(t.configFile, JSON.stringify(t.config));
+  expect(t.execute().status).toBe(0);
+  expect(await readFile(join(t.config.cwd, 'review/media/desktop.png'), 'utf8')).toBe('correct');
+  expect((await t.state()).result).toBe('ready_for_human_review');
+});
+
+test('a successful capture command without media cannot reach review or remove prior media', async () => {
+  const t = await trial('media_scope', {
+    captureDestination: 'review/media',
+    captureRequired: true,
+  });
+  const media = join(t.config.cwd, 'review/media');
+  await mkdir(media, { recursive: true });
+  await writeFile(join(media, 'prior.png'), 'keep');
+  t.config.capture = [process.execPath, '-e', 'process.exit(0)'];
+  await writeFile(t.configFile, JSON.stringify(t.config));
+  const result = t.execute();
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('Capture succeeded without required media');
+  expect((await t.state()).review).toBe(0);
+  expect(await readFile(join(media, 'prior.png'), 'utf8')).toBe('keep');
+});
+
+test('Playwright capture rejects a missing spec before attempting browser or server startup', async () => {
+  const t = await trial('media_scope');
+  const output = join(t.root, 'output');
+  const config = join(t.config.cwd, 'capture.config.js');
+  const spec = join(t.config.cwd, 'missing.spec.js');
+  await mkdir(output);
+  await writeFile(config, 'export default {};');
+  const result = spawnSync(
+    process.execPath,
+    [join(import.meta.dir, '../capture.ts'), spec, config, output],
+    { cwd: t.config.cwd, encoding: 'utf8' },
+  );
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('ENOENT');
+  expect(result.stderr).toContain(spec);
+  expect(result.stderr).not.toContain('Host cannot start');
+});

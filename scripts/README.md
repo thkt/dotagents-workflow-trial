@@ -12,30 +12,63 @@
 ## IssueからPR作成
 
 ```sh
-bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to/checkout
+bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to/target-checkout --app-config /absolute/path/to/host/app.json
 ```
 
-`development.ts`が、Issue全文の取得、隔離worktreeの作成、初回実装、既存correction.tsによる共通check・修正・独立評価、commit、push、AppによるPR作成、添付、最新headのCI確認を進めます。スキルはこのCLIを呼びます。初回実装も既存codex-actor.tsを使います。
+番号または対象repoのIssue URLを渡します。実行前に対象のREADME・開発方針・適用される指示と、下記の設定を確認してください。ハーネスはBun、Git、gh、Codex CLIとホストの日本語確認環境を使います。対象repoの言語やテストツールは設定に従います。
 
-現段階の対象は`thkt/dotagents-workflow-trial`のみです。Bun、Git、gh、Codex、対象モデルの利用権限、既存のApp認証が必要です。入力checkoutはcleanな状態で使い、committed HEADから`codex/development-N`を作ります。未コミット変更や同名branchがあれば停止し、元checkoutを整理・上書きしません。依存とChromiumは隔離先へ固定版で準備します。実行する制御コードは隔離先の外に置きます。
+開始時にcheckout・設定・fetch/push remote・GitHub repo ID・base branch・ghの主体とpush権限を照合します。公開する実行では専用Appの対象アクセスも実装前に確認します。元checkoutがdirty、run保存先が既存、同名branchが存在する場合は作業を始めません。要求全文を保存し、元checkoutのcommitted HEADから `codex/development-N` の隔離worktreeを作ります。設定のsetupを隔離先で順に実行し、初回実装、文章確認、必要な撮影、対象のcheck、独立評価へ進みます。要求変更、対象・設定・主体の変更、上限超過は停止します。
 
-新規実行の上限は初回実装を含むモデル累計20分、追加修正2回・独立評価2回、各checkとCI待機9分です。初回実装の消費時間を既存correction.tsへ渡す残時間から差し引きます。設定変更による予算拡大や自動復旧は行いません。
+新規実行の上限は初回実装を含むモデル累計20分、追加修正2回・独立評価2回、各checkとCI待機9分です。初回実装の消費時間をcorrectionへ渡す残時間から差し引きます。予算拡大や途中実行の自動復旧は行いません。
 
-保存先は`~/.local/share/dotagents/development/<Git管理ディレクトリの識別値>/<Issue番号>/`です。変更する場合は`--run-dir DIRECTORY`でcheckoutとGit管理領域の外を指定します。要求、初回実装の指示・結果、検証設定・ログ、作業checkout、PR本文・URL、CI結果を残します。既存保存先は再利用して再実行せず停止します。中断・失敗後は記録と実プロセス、GitHubの状態を照合します。保存先を削除したり別名にして自動再試行しません。
+保存先は `~/.local/share/dotagents/development/<Git管理ディレクトリの識別値>/<Issue番号>/` です。`--run-dir DIRECTORY` でcheckout・Git管理領域外を指定できます。`target.json` に対象設定・repo ID・gh主体、ほかに要求、指示・結果、検証ログ、作業checkout、PR本文・URL、CI結果を残します。既存保存先は再実行に使いません。中断後は記録・実プロセス・GitHubの状態を照合し、保存先の削除や別名での自動再試行をしません。
 
-`--no-publish`では独立評価までで止め、commit、push、PR作成を行いません。通常実行は公開条件を満たす変更のみcommitし、`trial/evidence/`内で今回変更した画像・動画を既存ghで添付します。PR内の表示・再生と配置の確認は、結果の`rendered_media_check`として呼び出し担当へ渡します。CI失敗時や確認不能時はPR URLと記録を保持して非zero終了し、成功とは報告しません。人のレビュー、承認、マージは自動実行しません。
+`--no-publish` は独立評価までで止め、commit・push・PR作成を行わず、App設定とpush権限の確認も不要です。通常実行は検証済み対象を再照合し、commit、PR本文の文章確認、App権限の再確認、gh主体の資格情報を明示したpush、専用AppによるPR作成へ進みます。pushにはコマンド内だけで定義するHTTPSの公開先を使い、GitのURL書き換え後も対象が一致することを確認します。SSHへの切替や別repoへの書き換えは拒否します。生成媒体の変更を設定した保存先から添付します。新規PRのcheck登録もCI待機9分の中で待ち、登録待ち中もPRのhead・base・OPEN状態を照合します。最新CIとPRのhead・baseを照合し、表示・再生・配置の確認は `rendered_media_check` として担当者へ渡します。CI未確認時はPR URLと記録を保持して非zero終了します。人がレビュー・承認・マージします。
+
+## 対象repoの設定
+
+対象checkoutのルートに `.dotagents.json` を置き、コミット済みの合意した設定から開始します。設定自体を変更するIssueは、実行前に適用する設定と検証方法を照合してください。実行中の設定置換で検証を省略することはできません。
+
+```json
+{
+  "repository": "team/component",
+  "remote": "upstream",
+  "baseBranch": "release",
+  "setup": [["python3", "-m", "venv", ".venv"], [".venv/bin/pip", "install", "-r", "requirements-dev.txt"]],
+  "check": [".venv/bin/python", "-m", "pytest"],
+  "capture": null
+}
+```
+
+コマンドはshell文字列ではなくargv配列です。実行ファイル名は非空とし、後続の空文字・空白引数はそのまま渡します。対象checkoutで実行し、非zeroは失敗です。セットアップ不要なら `setup: []` と明示します。`check` の欠落・空配列、撮影方針の省略を拒否します。対象のcheckがテスト未実行・skip等を成功扱いしないことも設定担当と独立評価で確認します。CLIが任意の外部runnerのレポート形式や合意の意味を判定するものではありません。
+
+`capture: null` は必要媒体がない場合に使います。媒体が必要なら `command`（argv）、`destination`（生成媒体専用のrepo相対ディレクトリ）、`required` を指定します。必要媒体を常に撮る場合、Markdownを画面の入力にするrepo、文書Issueでも媒体が必要な場合は `required: true` です。`false` は下記の文書・保存記録が画面に影響しないrepoでのみ使えます。設定時にIssueの必要証拠と照合し、未設定を成功へ読み替えません。実装・評価担当は設定と要求が矛盾したら停止します。
+
+`{harness}` はコマンド引数内で信頼するハーネス実体の絶対パスへ展開します。trialの設定は [../.dotagents.json](../.dotagents.json) が正本です。別repoへこの設定を無条件にコピーしません。
+
+読み取りによる照合は次で行えます。`--write` はghのpush権限も検証します。Issue作成・更新の主体はここで表示するghユーザーで、PR主体のAppとは分けて記録します。scopingの保存・十分性評価CLIはGitHubへ書き込まず、担当者が合意と対象を照合して既存ghのIssue操作を行います。
+
+```sh
+bun /absolute/path/to/trusted/scripts/target.ts /absolute/path/to/target-checkout https://github.com/team/component/issues/99 --write
+```
+
+対応は現在のmacOSホストとgithub.comです。GitHub Enterprise、他ホスティング、旧code/cleanup入口、旧state変換は対象外です。全調査への必須監査、質問・回答のruntime所有、公開intentの機械的拘束、自動再開は提供しません。人の合意と変更時の停止、対象の検証、独立評価、検証済み対象の同一性確認を維持します。
 
 ## ホストによるブラウザー検証と撮影
 
 実装・修正担当はsandbox内でコード、テスト、文書、撮影定義を準備し、ブラウザーやサーバーの起動はホストCLIが担当します。ホストの実行を残しているだけなら`repaired`を返し、要求や許可の判断が必要な場合は`needs_human`で具体的な理由を返します。
 
-画面証拠が必要な変更では`trial/capture.spec.js`を用意します。既存`trial/playwright.config.js`の画面幅とwebServerを使い、`CAPTURE_OUTPUT`で渡された絶対パスの直下へ画像と動画だけを保存します。通常のE2Eとは別にホストが実行し、テスト0件、skip、失敗を成功扱いしません。撮影中はcheckoutのコードや文書を書き換えません。媒体の公開先は`trial/evidence/generated/`です。このディレクトリはホストが毎回置き換える生成媒体専用領域とし、手書きの記録は外に置きます。
+必要媒体は対象設定のcapture commandで撮影します。コマンドにはcheckout外の新しい絶対出力ディレクトリを最後の引数として渡します。PNG/JPEG/WebP/MP4/WebMだけを直下に保存し、動画contextを閉じて確定してください。撮影中はcheckoutに媒体・コード・文書・レポートを書きません。ホストは空の出力、不正形式、symlinkを拒否し、対象不変を確認して `destination` へ取り込みます。生成媒体専用領域は置き換えるため手書きの記録を置きません。
 
-`development.ts`は既存correction設定に`capture: [BUN, TRUSTED_CAPTURE_TS]`を渡します。省略した既存のcorrection実行は従来どおりcheckから開始します。撮影定義がない場合は撮影を省略し、必要媒体の不足は独立評価で判定します。撮影定義がある場合はサーバーやChromiumの起動可否をホストで確認します。
+付属のPlaywrightアダプターは `bun {harness}/scripts/capture.ts SPEC CONFIG ABSOLUTE_OUTPUT` です。対象repo側のPlaywright依存、指定したspecと設定のprojects・webServerを使います。spec欠落、テスト0件、skip、失敗は成功扱いしません。trialでは既存の `trial/capture.spec.js` と `trial/playwright.config.js` を使い、spec内の `CAPTURE_OUTPUT` に保存します。最終媒体は `trial/evidence/generated/` です。ブラウザーやサーバーの起動可否をホストで確認します。
+
+correctionを単独で設定する場合も、capture commandに加えて `captureDestination` と `captureRequired` を明示します。`captureRequired: true` でcommandがない設定は実行前に拒否します。capture commandの省略は、媒体不要の合意がある場合だけ使います。通常入口のdevelopmentは対象設定をそのまま渡します。
+
+以下の撮影再利用は `required: false` の場合だけ適用します。`true` は文書も撮影対象の同一性に含め、初回は必ず撮影します。
 
 各検証の前に、HEADからの追跡ファイルの差分と未追跡ファイルを確認します。変更が`.md`のみなら撮影と媒体の置き換えを省略し、既存媒体を保持して共通check・独立評価へ進みます。コード、撮影定義、媒体など他の変更を含む場合や、変更を判定できない場合は通常どおり撮影します。文書が参照する媒体の不足や不整合は独立評価で確認します。
 
-初回撮影後は、最後に成功した撮影と媒体取り込み時点のファイル内容、モード、パスを保存し、修正後と比較します。通常のMarkdown文書と、`trial/evidence/`内（`generated/`を除く）の保存記録（`.json`・`.txt`・`.log`・`.stdout`・`.stderr`・`.diff`）だけの更新なら撮影を省略し、既存の媒体と撮影ログを保持します。これらは撮影の入力として使わない文書・記録の配置です。実行可能ファイルとsymlinkは省略対象にしません。コード、設定、撮影定義、媒体、その他のファイルが変わった場合、撮影失敗後、成功した比較基準がない場合は再利用しません。初回のMarkdownのみの変更を省略する条件は上記のとおりです。
+初回撮影後は、最後に成功した撮影と媒体取り込み時点のファイル内容、モード、パスを保存し、修正後と比較します。通常のMarkdown文書と、`destination`の親ディレクトリ内（`destination`を除く）の保存記録（`.json`・`.txt`・`.log`・`.stdout`・`.stderr`・`.diff`）だけの更新なら撮影を省略し、既存の媒体と撮影ログを保持します。これらは撮影の入力として使わない文書・記録の配置です。実行可能ファイルとsymlinkは省略対象にしません。コード、設定、撮影定義、媒体、その他のファイルが変わった場合、撮影失敗後、成功した比較基準がない場合は再利用しません。初回のMarkdownのみの変更を省略する条件は上記のとおりです。
 
 撮影を再利用しても、文書や記録を含む全体の変更検知、共通check、独立評価は省略しません。評価者は保持された媒体の撮影対象と現在のコードの対応、および証拠記録の整合を確認します。停止済み実行の上限や状態は変更せず、この仕組みは同じ実行の修正ループ内で使います。
 
@@ -47,13 +80,13 @@ bun /absolute/path/to/trusted/scripts/development.ts 99 --repo /absolute/path/to
 bun scripts/correction.ts /absolute/path/config.json
 ```
 
-設定は信頼する公開・実行担当が用意します。mainから隔離した作業コピーを用意し、設定、制御コード、証拠ディレクトリを修正対象の外へ配置します。以下は設定形式の例です。Issue番号、絶対パス、実行上限はその試行で合意した値を起動前に設定してください。例の値自体は新たな実行許可を意味しません。
+設定は信頼する公開・実行担当が用意します。対象base branchと照合した隔離作業コピーを用意し、設定、制御コード、証拠ディレクトリを修正対象の外へ配置します。以下は設定形式の例です。Issue番号、絶対パス、実行上限はその試行で合意した値を起動前に設定してください。例の値自体は新たな実行許可を意味しません。
 
 ```json
 {
   "cwd": "/absolute/path/isolated-worktree",
   "runDir": "/absolute/path/evidence",
-  "issue": ["gh", "issue", "view", "DELIVERABLE_ISSUE_NUMBER", "--repo", "thkt/dotagents-workflow-trial", "--json", "title,body,updatedAt"],
+  "issue": ["gh", "issue", "view", "DELIVERABLE_ISSUE_NUMBER", "--repo", "OWNER/REPO", "--json", "title,body,updatedAt"],
   "check": ["bun", "run", "check"],
   "repair": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "repair", "/absolute/path/evidence"],
   "review": ["bun", "/absolute/path/controller/scripts/codex-actor.ts", "review", "/absolute/path/evidence"],
@@ -121,6 +154,8 @@ SIGKILLやOS停止は捕捉できません。CLIだけが強制終了すると�
 | 文書レビュープロセスの失敗分類・停止・ログ | [writing-process.test.ts](tests/writing-process.test.ts) |
 | テスト実行完了の判定 | [test-runner.test.ts](tests/test-runner.test.ts) |
 
+Playwright runnerを起動する契約テストは `trial/control/` で商品側の依存を使い、共通checkの `test:trial-control` が実行します。Bun runnerと両レポート形式の拒否条件は `scripts/tests/test-runner.test.ts` に残します。
+
 開発入口・要求整理・PR公開・Codex実行は、それぞれ `development.test.ts`・`discovery.test.ts`・`publish.test.ts`・`codex-actor.test.ts` で確認します。共有する試験環境とモデル応答データの組み立ては `tests/support/` に置き、テストケースと期待値は各テストファイルに置きます。
 
 画面テストでは一覧・該当なしのレイアウト確認と、検索・並べ替え・保存の振る舞い確認を分けます。`@storage`を付けたStorage境界のケースはdesktopで一度実行し、mobileのprojectでは収集対象から除きます。検索・クリアの操作とレイアウトは両projectで確認します。`@mobile-select`を付けた標準selectのキー操作はmobileで一度実行します。テスト内のskipは使いません。
@@ -153,28 +188,40 @@ Geminiは修正候補を作成し、別の読み取り専用Codexは原文、根
 
 ## PRの公開
 
-公開担当が、push済みブランチとレビュー用の本文を指定します。Bun、ghと、macOS login Keychainに登録したApp鍵を使います。
+公開担当は、信頼するハーネスから対象checkoutとホスト上のApp設定を指定します。Bun・gh・macOS login Keychainを使います。App設定は `--app-config` または `DOTAGENTS_APP_CONFIG` の絶対パスで指定し、対象repoへ鍵やtokenを置きません。
 
-```sh
-bun /absolute/path/trusted-checkout/scripts/publish.ts --head codex/example --title '変更の概要' --body-file /absolute/path/pr.md
+```json
+{
+  "id": 42,
+  "clientId": "configured-client-id",
+  "installationId": 89,
+  "keychainService": "registered-service",
+  "keychainAccount": "registered-account",
+  "keyFingerprint": "registered-public-key-sha256-base64"
+}
 ```
 
-対象は`thkt/dotagents-workflow-trial`の`main`です。同じheadのopen PRがあればそのURLを返します。既存PRの本文更新、push、承認、マージは行いません。App認証を確認し、対象リポジトリ限定のtokenで`gh pr create`を実行した後、tokenを失効します。応答不明の場合はGitHub上のPRを照合してから再実行してください。
+数値と文字列は形式例です。ホスト担当が登録済みApp・installation・Keychain項目・公開鍵fingerprintを照合して設定します。このIssueで登録を切り替えません。
 
-公開スクリプトはレビュー済みの信頼するcheckoutから実行し、actorが編集する作業コピーからは実行しません。強制終了や通信断による失効失敗時は、tokenの状態を別途確認します。
+```sh
+bun /absolute/path/to/trusted/scripts/publish.ts --repo /absolute/path/target-checkout --app-config /absolute/path/host/app.json --preflight
+bun /absolute/path/to/trusted/scripts/publish.ts --repo /absolute/path/target-checkout --app-config /absolute/path/host/app.json --head codex/example --title '変更の概要' --body-file /absolute/path/pr.md
+```
 
-公開処理のテストは模擬した外部呼び出しを使い、共通check内のtest:controlで実行します。秘密鍵はメモリ内で署名に使用し、ファイルへ保存しません。
+preflightは対象とghのpush権限、App ID・鍵fingerprint、対象repoのinstallation・PR書込権限を照合し、対象repo ID限定tokenのアクセスを確認して失効します。PRを作りません。公開時も同じ確認を行います。App権限がなければ停止し、個人アカウントへ自動切替しません。
+
+PRのrepoとbase branchは対象設定を使います。同じhead・baseのopen PRがあればURLを返し、なければApp tokenで作成します。既存PRの本文更新、push、承認、マージはこのCLIでは行いません。SIGINT・SIGTERMでは実行中のコマンドとその子プロセスを停止し、後続の公開操作へ進みません。発行済みtokenは中断時もfinallyで失効を試み、鍵とtokenをログやファイルへ出しません。通信断・強制終了・失効失敗時は、PRとtokenの状態を照合してから対応します。制御テストの模擬応答は実際のAppアクセスを確認した証拠ではありません。
 
 ### PRへの画像・動画の添付
 
 App で PR を作成した後、公開担当の既存の gh 認証で`gh pr edit --attach`を実行します。対象 commit で取得した画像・動画を指定します。本文を指定しなければ、既存の本文を保って添付が追加されます。
 
 ```sh
-gh pr edit PR_NUMBER --repo thkt/dotagents-workflow-trial \
+gh pr edit PR_NUMBER --repo OWNER/REPO \
   --attach '/absolute/path/screenshot.png#検索結果の表示' \
   --attach /absolute/path/demo.mp4
 ```
 
-添付後は`gh pr view PR_NUMBER --repo thkt/dotagents-workflow-trial --json body --jq .body`で本文を取得し、アップロード先の URL を確認します。配置を整える場合は、この最新の本文をファイルに保存して編集し、`gh pr edit PR_NUMBER --repo thkt/dotagents-workflow-trial --body-file /absolute/path/pr.md`で反映します。既存の説明と添付 URL を維持し、画像は必要に応じて table に並べます。動画の添付 URL は単独の行に置き、PR 内で再生できるようにします。
+添付後は`gh pr view PR_NUMBER --repo OWNER/REPO --json body --jq .body`で本文を取得し、アップロード先の URL を確認します。配置を整える場合は、この最新の本文をファイルに保存して編集し、`gh pr edit PR_NUMBER --repo OWNER/REPO --body-file /absolute/path/pr.md`で反映します。既存の説明と添付 URL を維持し、画像は必要に応じて table に並べます。動画の添付 URL は単独の行に置き、PR 内で再生できるようにします。
 
 公開担当は[レビューを助ける説明](../DEVELOPMENT.md#レビューを助ける説明)に従い、実際のPR画面で表示・再生と配置・説明の読みやすさを確認します。動画には確認する操作・状態と画面条件が分かる見出し・説明を添え、撮影準備時に選んだ説明手段が実際に伝わるかを確認します。キー表示・字幕・音声がある場合の確認と、説明不足の戻り先も同方針に従います。必要な整形後に再確認して完了とし、確認できない場合は未確認点を報告します。`rendered_media_check`はこの確認全体を指し、CLIのアップロード成功だけでは完了しません。一部のアップロードが失敗すると、成功した添付を反映したうえでコマンドが失敗終了するため、本文を確認し、未添付のファイルだけを再実行します。

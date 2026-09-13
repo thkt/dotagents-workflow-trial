@@ -2,27 +2,27 @@
   "hostRun": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913",
   "checkoutHead": "28642977a02518f79c6729af550ddf8c191b0fc5",
   "target": "checkoutHead plus generalization-108/captured-source.diff reconstructs the 11 logged sourceFiles, not the entire Issue change. Evidence-only repair does not alter these files.",
-  "captureRun": "generalization-108/capture-2",
-  "previousProvenance": "generalization-108-capture-1-provenance.json",
+  "captureRun": "generalization-108/capture-1",
+  "previousProvenance": "revalidation-provenance.json",
   "hashAlgorithm": "SHA-256 of file bytes; sourceFiles and media paths are relative to checkout. Original CAPTURE_PROVENANCE source paths resolve against sourcePathBase trial/.",
-  "verification": "All 11 logged source files and 8 installed media match capture-2. Host output, byte counts and SHA-256 were verified. The controller stopped at the independent-review count limit after successful check-3; this is not final acceptance.",
+  "verification": "All 11 unique logged source files and all 8 installed media match capture-1 byte counts and SHA-256. All 8 installed media also match host output byte-for-byte. No browser/server was launched by this repair. This record identifies this saved capture, not future captures.",
   "captureReuse": {
-    "identity": "e4075ba19df66b43f5ca4a7c581a7f24ef0c8a5dd3c9ee71e88eb089c9a712a2",
+    "identity": "56ca926576c09ac8f3124b7220b0e5d6f5b6aea19b2f7c44ecd3c1a750c8ae8f",
     "scope": "scripts/correction.ts snapshot(cwd, true, trial/evidence/generated), checked against saved host captureSource. Ordinary Markdown and non-executable saved evidence records are excluded; code, definitions and media remain included. Host decides reuse after repair."
   },
   "events": [
     {
       "role": "capture",
-      "source": "5f8b3468584749d0a928c0d7f5da81c8428677a33b3a13eb960f89d8d200f70f",
+      "source": "2e5b7ccb4c4acb6d710420f66115e9d518965a6ada7b558d90e07da42546ff9f",
       "code": 0,
       "timedOut": false,
-      "ms": 37201.487375000026,
-      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-2"
+      "ms": 37511.431083,
+      "prefix": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-1"
     }
   ],
   "captureStats": {
-    "startTime": "2026-09-13T13:55:55.416Z",
-    "duration": 36540.966,
+    "startTime": "2026-09-13T13:40:05.276Z",
+    "duration": 36685.291000000005,
     "expected": 4,
     "skipped": 0,
     "unexpected": 0,
@@ -89,13 +89,13 @@
   "media": [
     {
       "path": "trial/evidence/generated/product-order-restore-desktop.webm",
-      "bytes": 131272,
-      "sha256": "4cbbf199b30b226f8716b00709573f98b0bec2588ac0dde5df875f2b7cc4e284"
+      "bytes": 130317,
+      "sha256": "fb31a003df8bda94d7c3f37e0bce0fea39d1eb1d653aec60640dea206028c04f"
     },
     {
       "path": "trial/evidence/generated/product-order-restore-mobile.webm",
-      "bytes": 59280,
-      "sha256": "15dda91e0ad91f56c386daa37763a821f7d488e88497b036c91535338efff0cc"
+      "bytes": 64871,
+      "sha256": "d2d11460d75d0afebc49a9d51b5912a6783f88cd4dec5ae49b1abfdc422fb6b3"
     },
     {
       "path": "trial/evidence/generated/product-order-restored-desktop.png",
@@ -109,8 +109,8 @@
     },
     {
       "path": "trial/evidence/generated/product-search-escape-cleared-desktop.png",
-      "bytes": 43044,
-      "sha256": "3f4c174bd128042a4b0fd4ef4c19045f554c056ccc5b478baccffcfad0aa5911"
+      "bytes": 43046,
+      "sha256": "80fb652a74fbb7de155969c502acf65f55fbebee4e58cd407e58805a9b12af7a"
     },
     {
       "path": "trial/evidence/generated/product-search-escape-cleared-mobile.png",
@@ -119,35 +119,35 @@
     },
     {
       "path": "trial/evidence/generated/product-search-escape-desktop.webm",
-      "bytes": 530077,
-      "sha256": "6eec6f480d0efc2f6e0a2db53cc29605e51918592100ab440c9a82775ab2edc4"
+      "bytes": 563841,
+      "sha256": "8609fe338bf8c735eea86819ffedb672d9518443f4d17ffa7f53523d1162e9ed"
     },
     {
       "path": "trial/evidence/generated/product-search-escape-mobile.webm",
-      "bytes": 266195,
-      "sha256": "ed84eb557041b3cc05bd13ff2ca53251086dba4a442db2b5421fb3537e70b4ee"
+      "bytes": 262142,
+      "sha256": "5c176b510d5a931f121e5eb084a9149c9f4cd9985736b6a1f11fd6e71f1b4487"
     }
   ],
   "savedFiles": [
     {
-      "path": "generalization-108/capture-2.stdout",
-      "bytes": 8799,
-      "sha256": "0a35cb99709720ced155aa74aa6df3851c5e5a246e7b6eeda14c1410b7bd2670"
+      "path": "generalization-108/capture-1-media.config.txt",
+      "bytes": 700,
+      "sha256": "29a522ab79f770794bf0de7ff543e97094b7dd3cec7f7cb88bdc05f4c202b698"
     },
     {
-      "path": "generalization-108/capture-2.stderr",
+      "path": "generalization-108/capture-1-media.report.json",
+      "bytes": 18073,
+      "sha256": "3f4c85e2c2a2c83721fe5dc926e42002f97630699af55b3ef4818e96d4338968"
+    },
+    {
+      "path": "generalization-108/capture-1.stderr",
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
-      "path": "generalization-108/capture-2-media.report.json",
-      "bytes": 18064,
-      "sha256": "d3e5a4cf629fd23216d465742a6b7633443f114f95824285e30530bcd60e8382"
-    },
-    {
-      "path": "generalization-108/capture-2-media.config.txt",
-      "bytes": 700,
-      "sha256": "902264995f001abf950e9811634ee8a01d29b18461da10f677934c80eee60cf3"
+      "path": "generalization-108/capture-1.stdout",
+      "bytes": 8799,
+      "sha256": "b57b2155d9e25e9dd3eae5d17db59bbcfec523e22072ee822e6e995c36d95dc1"
     },
     {
       "path": "generalization-108/captured-source.diff",
@@ -155,9 +155,9 @@
       "sha256": "07a9dd81e05795e85cea4069573a32c215fd21a13e6d064345705652d9b75382"
     },
     {
-      "path": "generalization-108/host-state-after-check-3.json",
-      "bytes": 4706,
-      "sha256": "f02ffed73c7648c1c0568251db152e61b7b9b03e3a3d0c2d0dbd742bc84b0814"
+      "path": "generalization-108/host-state.json",
+      "bytes": 3106,
+      "sha256": "44946415faa12cb8ee1e57ed584e7282ed65f26e6e5a8e93351f07c60efbf281"
     }
   ]
 }
