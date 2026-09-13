@@ -1,6 +1,6 @@
 # 次の判断に進むためのコンテキスト十分性
 
-次に進む判断と、その判断に必要な根拠を整理する設計基準。基準は調整可能とし、使用した版と評価を対応づける。実際の評価項目は[criteria.json](../../skills/scoping/references/criteria.json)、適用方法は[sufficiency.md](../../skills/scoping/references/sufficiency.md)、保存操作は[session.md](../../skills/scoping/references/session.md)を参照する。
+次に進む判断と、その判断に必要な根拠を整理する設計基準である。基準は調整可能とし、使用した版と評価を対応づける。実際の評価項目は[criteria.json](../../skills/scoping/references/criteria.json)、適用方法は[sufficiency.md](../../skills/scoping/references/sufficiency.md)、保存操作は[session.md](../../skills/scoping/references/session.md)を参照する。
 
 ## 判断の単位
 
@@ -55,7 +55,7 @@ Storybookがなくても、現行の部品・テスト・仕様・承認され�
 
 ## 不足時の動きと再開
 
-事実不足は調査し、目的・優先順位・重要なトレードオフは根拠と選択肢を示して人へ確認する。外部回答やアクセス待ちなら、依存する作業を止める。
+事実の不足は調査し、目的・優先順位・重要なトレードオフは根拠と選択肢を示して人へ確認する。外部回答やアクセス待ちなら、依存する作業を止める。
 
 記録には、次の判断、適用した基準の版、各項目の評価と根拠、不足の影響、解消方法、止める作業、再開条件を含める。形式のために情報を複製せず、既存の作業メモとIssueを参照する。質問と回答は対応づけ、回答後に不足が解消したかを再評価する。返答の受領だけで充足や合意へ変更しない。
 
