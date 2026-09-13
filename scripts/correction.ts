@@ -1,5 +1,6 @@
 import { assertConfig, assertState } from './input.ts';
 import type { Config, State, ActorRole, StopReason } from './input.ts';
+import { writingHostTimeoutMs } from './writing.ts';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -97,11 +98,42 @@ export async function command(
     killGroup(child.pid);
   }, timeoutMs);
   const writingWorker = argv[1]?.endsWith('/writing-review.ts') && argv[2] === '--worker';
-  const code = await new Promise<number | null>((resolveCode) => {
+  const code = await new Promise<number | null>((done) => {
+    // Bun 1.4.2 can drop 'close', or the whole exit notification, for a child that
+    // the timeout or an interrupt killed. Finish on exit plus ended pipes as well,
+    // and poll for the kill until the runtime reports it.
+    const poll = setInterval(() => {
+      if ((timedOut || interrupted) && child.pid !== undefined) {
+        try {
+          process.kill(child.pid, 0);
+        } catch {
+          resolveCode(null);
+        }
+      }
+    }, 50);
+    const resolveCode = (code: number | null) => {
+      clearInterval(poll);
+      done(code);
+    };
+    let exitCode: number | null | undefined;
+    let openPipes = 2;
+    const settle = () => {
+      if (exitCode !== undefined && openPipes === 0) {
+        resolveCode(exitCode);
+      }
+    };
+    for (const pipe of [child.stdout, child.stderr]) {
+      pipe.once('end', () => {
+        openPipes--;
+        settle();
+      });
+    }
     child.on('exit', (code) => {
       if (code !== 0 || writingWorker) {
         killGroup(child.pid);
       }
+      exitCode = code;
+      settle();
     });
     child.on('error', (error) => {
       stderr += `${error.message}\n`;
@@ -162,10 +194,18 @@ async function snapshot(cwd: string, captureOnly = false) {
   return digest(JSON.stringify(entries));
 }
 
-function validate(config: Config) {
-  const relation = relative(resolve(config.cwd), resolve(config.runDir));
-  if (relation !== '..' && !relation.startsWith(`..${sep}`) && !isAbsolute(relation)) {
+function outside(parent: string, child: string) {
+  const relation = relative(parent, child);
+  return relation === '..' || relation.startsWith(`..${sep}`) || isAbsolute(relation);
+}
+
+async function validate(config: Config) {
+  if (!outside(resolve(config.cwd), resolve(config.runDir))) {
     throw Error('Evidence must be outside the worktree');
+  }
+  await mkdir(config.runDir, { recursive: true });
+  if (!outside(await realpath(config.cwd), await realpath(config.runDir))) {
+    throw Error('Evidence must not resolve inside the worktree');
   }
 }
 
@@ -265,7 +305,7 @@ async function hostCommand(
     argv,
     config.cwd,
     '',
-    role === 'writing' ? 660000 : config.checkTimeMs,
+    role === 'writing' ? writingHostTimeoutMs : config.checkTimeMs,
     prefix,
   );
   state.active = null;
@@ -407,6 +447,7 @@ async function evaluate(
 ): Promise<{ stop?: StopReason; findings?: string }> {
   const prompt = [
     'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
+    'Read DEVELOPMENT.md section "実装とテストの整理" and evaluate the tests relevant to this change against it. Ask what realistic bug deleting each relevant test would miss and weigh its additional assurance against runtime, flakiness and maintenance cost. Passing checks alone do not establish behavioral assurance. Return needs_changes for concrete missed behavior or unjustified tests, identifying the affected tests and reasons; do not reject justified deletion or consolidation merely because test counts or coverage metrics decrease.',
     'Apply the documentation update policy in DEVELOPMENT.md, including documentation-only changes; assess required updates and their evidence rather than requiring code or new tests for every Issue.',
     'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
     'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
@@ -459,8 +500,9 @@ async function cycle(
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
+    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理". Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
     'Apply the documentation update policy in DEVELOPMENT.md to documentation-only changes and updates accompanying implementation.',
-    'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
+    'Preserve agreed acceptance criteria and the verification needed to protect required behavior. Removing or consolidating unnecessary tests is allowed; making checks pass by hiding a realistic regression is not. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
     'The host runs full check, browser tests and capture after your changes; do not launch browsers or servers in the actor sandbox.',
     ...(config.capture ? [captureInstructions] : []),
@@ -495,8 +537,7 @@ async function targetChange(config: Config, state: State): Promise<StopReason | 
 }
 
 export async function run(config: Config) {
-  validate(config);
-  await mkdir(config.runDir, { recursive: true });
+  await validate(config);
   const lock = resolve(config.runDir, 'lock');
   await mkdir(lock); // Existing lock requires reconciliation, never an automatic takeover.
   try {

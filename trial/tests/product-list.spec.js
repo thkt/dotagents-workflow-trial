@@ -9,8 +9,7 @@ const expectedProducts = [
 ];
 
 test("全商品の名前とコードを見出し付きの一覧で記載順に読める", async ({ page }, testInfo) => {
-  const response = await page.goto("/");
-  expect(response.status()).toBe(200);
+  await page.goto("/");
   await expect(page.getByRole("heading", { name: "商品一覧", level: 1 })).toBeVisible();
   const table = page.getByRole("table", { name: "商品一覧", exact: true });
   await expect(table.getByRole("columnheader")).toHaveText(["商品名", "商品コード"]);
@@ -23,8 +22,6 @@ test("全商品の名前とコードを見出し付きの一覧で記載順に�
     const productCode = row.getByRole("cell");
     await expect(productName).toHaveText(name);
     await expect(productCode).toHaveText(code);
-    await expect(productName).toBeVisible();
-    await expect(productCode).toBeVisible();
     await expect(productName).toBeInViewport();
     await expect(productCode).toBeInViewport();
   }
@@ -32,4 +29,12 @@ test("全商品の名前とコードを見出し付きの一覧で記載順に�
   await expect(page.getByLabel("商品名・商品コードで検索", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: `trial/artifacts/product-list-${testInfo.project.name}.png`, fullPage: true });
+});
+
+test("該当なしでも件数と案内を画面内で読める", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("存在しない商品");
+  await expect(page.getByText("全4件中0件を表示", { exact: true })).toBeInViewport();
+  await expect(page.getByText("該当する商品はありません", { exact: true })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

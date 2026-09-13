@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, writeFile, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, writeFile, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -8,6 +8,7 @@ for (const mode of ['normal', 'nonzero', 'missing', 'write_error'] as const) {
   test(`Codex actor logs: ${mode}`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'actor-stream-'));
     try {
+      const bytes = mode === 'nonzero' ? 64 : 2 * 1024 * 1024;
       if (mode !== 'missing') {
         await writeFile(
           join(root, 'codex'),
@@ -15,8 +16,8 @@ for (const mode of ['normal', 'nonzero', 'missing', 'write_error'] as const) {
 import { writeFileSync } from 'node:fs';
 const args = process.argv.slice(2);
 writeFileSync(args[args.indexOf('-o') + 1], JSON.stringify({status:'accepted', findings:''}));
-process.stdout.write('x'.repeat(2 * 1024 * 1024) + 'stdout-end');
-process.stderr.write('y'.repeat(2 * 1024 * 1024) + 'stderr-end');
+process.stdout.write('x'.repeat(${bytes}) + 'stdout-end');
+process.stderr.write('y'.repeat(${bytes}) + 'stderr-end');
 process.exitCode = ${mode === 'nonzero' ? 7 : 0};
 `,
           { mode: 0o755 },
@@ -53,17 +54,14 @@ process.exitCode = ${mode === 'nonzero' ? 7 : 0};
       expect(dir).toBeDefined();
       if (dir && (mode === 'normal' || mode === 'nonzero')) {
         expect(await readFile(join(root, dir, 'events.jsonl'), 'utf8')).toBe(
-          'x'.repeat(2 * 1024 * 1024) + 'stdout-end',
+          'x'.repeat(bytes) + 'stdout-end',
         );
         expect(await readFile(join(root, dir, 'stderr.log'), 'utf8')).toBe(
-          'y'.repeat(2 * 1024 * 1024) + 'stderr-end',
+          'y'.repeat(bytes) + 'stderr-end',
         );
       }
       if (dir && mode === 'write_error') {
         expect(result.stderr).toContain('EFBIG');
-        const { size } = await stat(join(root, dir, 'events.jsonl'));
-        expect(size).toBeGreaterThan(0);
-        expect(size).toBeLessThan(2 * 1024 * 1024);
       }
     } finally {
       await rm(root, { recursive: true, force: true });

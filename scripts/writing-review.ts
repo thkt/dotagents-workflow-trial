@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile, lstat, realpath, rename, rm } from 'node:fs
 import { resolve, join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { WritingRunner } from './writing.ts';
-import { reviewWriting, writingCommand, writingHash } from './writing.ts';
+import { reviewWriting, writingCommand, writingHash, writingHostTimeoutMs } from './writing.ts';
 import { isRecord } from './input.ts';
 import { command, withInterrupts } from './correction.ts';
 
@@ -195,7 +195,7 @@ if (import.meta.main) {
           [process.execPath, import.meta.path, '--worker', ...process.argv.slice(2)],
           process.cwd(),
           '',
-          660000,
+          writingHostTimeoutMs,
         ),
       );
       assert(result.code === 0 && !result.timedOut, result.stderr || 'Writing review stopped');

@@ -109,7 +109,23 @@ SIGKILLやOS停止は捕捉できません。CLIだけが強制終了すると�
 ## 検証
 
 現在の共通checkの順序、制御TSと商品アプリJSの検証範囲は[README](../README.md#セットアップと検証)、書式・型情報を使うlint・テスト実行完了の方針は[DEVELOPMENT.md](../DEVELOPMENT.md#typescriptの書き方)を参照してください。
-制御テストの実装は[correction.test.ts](tests/correction.test.ts)と[test-runner.test.ts](tests/test-runner.test.ts)です。SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
+制御テストは `scripts/tests/` に置き、対象の責務に合わせて分けています。
+
+| 対象 | テスト |
+| --- | --- |
+| 修正フローの結果・上限・入力・保存状態 | [correction.test.ts](tests/correction.test.ts) |
+| 制御プロセスの中断・timeout・ログ | [correction-process.test.ts](tests/correction-process.test.ts) |
+| 撮影・媒体の保持と再利用 | [correction-capture.test.ts](tests/correction-capture.test.ts) |
+| 文章候補の検証・忠実性評価・採用判断 | [writing.test.ts](tests/writing.test.ts) |
+| 作業ツリーへの文書反映・再評価・中断時の保全 | [writing-review.test.ts](tests/writing-review.test.ts) |
+| 文書レビュープロセスの失敗分類・停止・ログ | [writing-process.test.ts](tests/writing-process.test.ts) |
+| テスト実行完了の判定 | [test-runner.test.ts](tests/test-runner.test.ts) |
+
+開発入口・要求整理・PR公開・Codex実行は、それぞれ `development.test.ts`・`discovery.test.ts`・`publish.test.ts`・`codex-actor.test.ts` で確認します。共有する試験環境とモデル応答データの組み立ては `tests/support/` に置き、テストケースと期待値は各テストファイルに置きます。
+
+画面テストでは一覧・該当なしのレイアウト確認と、検索・並べ替え・保存の振る舞い確認を分けます。`@storage`を付けたStorage境界のケースはdesktopで一度実行し、mobileのprojectでは収集対象から除きます。検索・クリアの操作とレイアウトは両projectで確認します。`@mobile-select`を付けた標準selectのキー操作はmobileで一度実行します。テスト内のskipは使いません。
+
+SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
 
 制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象、未検証範囲は[検証記録](../trial/evidence/README.md)を参照してください。
 

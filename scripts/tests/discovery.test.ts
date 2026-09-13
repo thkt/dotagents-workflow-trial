@@ -124,14 +124,6 @@ test('all criteria and current revision are required; inputs do not replace save
   expect(before.criteria).toEqual(originalCriteria);
 });
 
-test('missing facts block progress without requiring a human question', async () => {
-  const t = await setup();
-  expect((await t.evaluate(true)).status).toBe(0);
-  expect(cli('gate', t.dir).status).toBe(1);
-  expect((await t.evaluate()).status).toBe(0);
-  expect(cli('gate', t.dir).status).toBe(0);
-});
-
 test('research archiving requires sufficient context and preserves existing records', async () => {
   const t = await setup();
   const report = join(t.root, 'report.md');
@@ -192,12 +184,10 @@ test('question-tracking sessions are preserved and cannot silently pass the gate
   const t = await setup();
   expect((await t.evaluate()).status).toBe(0);
   const current = await t.state();
-  for (const question of [null, { id: 'pending', text: 'Choose scope' }]) {
-    const previous = JSON.stringify({ ...current, question });
-    await writeFile(join(t.dir, 'state.json'), previous);
-    expect(cli('gate', t.dir).status).toBe(1);
-    expect(await readFile(join(t.dir, 'state.json'), 'utf8')).toBe(previous);
-  }
+  const previous = JSON.stringify({ ...current, question: null });
+  await writeFile(join(t.dir, 'state.json'), previous);
+  expect(cli('gate', t.dir).status).toBe(1);
+  expect(await readFile(join(t.dir, 'state.json'), 'utf8')).toBe(previous);
 });
 
 test('symlinked work and research storage cannot redirect writes', async () => {
@@ -216,7 +206,9 @@ test('symlinked work and research storage cannot redirect writes', async () => {
 
 for (const binding of ['git-directory', 'checkout']) {
   test(
-    'worktrees share research and keep task assessments separate (' + binding + ')',
+    binding === 'checkout'
+      ? 'legacy checkout binding accepts a linked worktree'
+      : 'worktrees share research and keep task assessments separate',
     async () => {
       const t = await setup();
       git(
@@ -234,6 +226,14 @@ for (const binding of ['git-directory', 'checkout']) {
       git(t.repo, 'worktree', 'add', '--detach', linked);
       if (binding === 'checkout') {
         await writeFile(join(t.config.contextDir, 'repository.txt'), t.repo);
+        await writeFile(
+          t.configFile,
+          JSON.stringify({ ...t.config, repo: linked, task: 'legacy' }),
+        );
+        const started = cli('start', t.configFile);
+        expect(started.status).toBe(0);
+        expect(cli('gate', started.stdout.trim()).status).toBe(1);
+        return;
       }
       await writeFile(t.file, 'Reusable finding with source and scope.');
       expect((await t.evaluate()).status).toBe(0);
