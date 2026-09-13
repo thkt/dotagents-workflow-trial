@@ -1,0 +1,72 @@
+{
+  "issue": 101,
+  "status": "verified",
+  "policy": "skip_confirmed_antigravity_unavailability_only",
+  "validation": {
+    "control_tests": 141,
+    "e2e_tests": 102,
+    "static_checks": "passed",
+    "skill_validation": "passed",
+    "control_assertions": 1024
+  },
+  "missing_cli_smoke": {
+    "status": "skipped",
+    "model": "gemini-3.8-flash-high",
+    "reason": "cli_missing",
+    "inputHash": "1b3cebaebcef0431d7eb10a9d5a27f436c8fc5d2f6acb488f46648d886f9a0d4"
+  },
+  "process_regressions": [
+    "wrong_model_with_503_stderr_stops",
+    "malformed_output_with_503_stderr_stops",
+    "unknown_status_with_503_stops",
+    "structured_service_error_nonzero_exit_skips",
+    "timeout_with_inherited_pipes_skips_and_cleans_descendants",
+    "success_envelope_with_nonzero_exit_stops",
+    "natural_service_error_exit_with_inherited_pipes_skips_and_cleans_descendants",
+    "unrelated_stack_location_numbers_do_not_skip"
+  ],
+  "independent_review": {
+    "results": [
+      {
+        "status": "needs_changes",
+        "findings": "1. [P1] scripts/writing.ts:99–102 classifies nonzero exits before validating stdout. A wrong-model or malformed response accompanied by recognized stderr (e.g. “503”) becomes a persisted skip instead of stopping. Likewise, lines 128–137 accept a result with missing/unknown status and error=\"503\" as unavailable. Validate supplied output and recognized failure schemas before allowing skips.\n\n2. [P2] scripts/writing.ts:105 rejects nonzero exits before geminiResponse can inspect structured errors. A valid result reporting “service unavailable” on stdout, with exit 1 and empty stderr, stops instead of recording the authorized skip. Structured availability errors need handling across exit codes.\n\n3. [P2] scripts/correction.ts:107–109 performs cleanup only after close. If an agy descendant inherits its output pipes, killing agy at the model timeout leaves runWritingCommand waiting for close. The host eventually kills the worker at 11 minutes, producing writing_failed without a skip receipt. Descendants must be terminated before waiting for pipe closure.\n\nThe new tests inject GeminiUnavailable directly; existing process tests use ignored descendant stdio and expect failure. They do not cover these paths. Original preservation and separate skip caching otherwise appear sound. Review was static; tests were not run."
+      },
+      {
+        "status": "needs_changes",
+        "findings": "1. [P1] scripts/writing.ts:106–112 validates only the event envelope before allowing a skip. A correct-model SUCCESS result with response=\"not JSON\", exit code 1, and stderr=\"503 service unavailable\" becomes a persisted skip; writingCandidate never validates the malformed payload. Protected-content changes can bypass validation similarly. Validate supplied candidate content before permitting availability fallback, and add regression tests combining invalid candidates with recognized availability diagnostics.\n\n2. [P2] scripts/writing.ts:97–104 releases inherited output pipes only when child.killed is true. If agy emits a recognized service error, spawns a descendant inheriting stdout/stderr, then exits 1 naturally, the worker waits indefinitely for close. The cleanup in correction.ts cannot run until that worker exits; the host eventually times out without recording the authorized skip. Handle natural child exit with inherited pipes and test a service-error exit with a persistent descendant.\n\nOriginal preservation, separate skip caching, input invalidation, and stopping on Codex fidelity failures otherwise appear sound. Static review only; no edits or tests run."
+      },
+      {
+        "status": "needs_changes",
+        "findings": "[P1] scripts/writing.ts:39–52 — Bare numeric matches classify unknown crashes as authorized unavailability. For example, an agy exit 1 with empty stdout and stderr `TypeError: unexpected value at /cli.js:503:12` matches `503`, writes skipped.json, and proceeds; documents mode then caches that skip. Stack locations containing 401 or 429 cause the same problem. Require recognizable availability diagnostics or structured status codes, and add regressions proving unrelated numbers in unknown errors still stop.\n\nTest gap: scripts/tests/writing-process.test.ts:97 makes malformed_candidate and changed_candidate exit 1. Both stop at writing.ts:113 before candidate validation, so these cases do not exercise their intended guards. Use exit 0 and assert the specific validation failure.\n\nOriginal preservation, separate skip caching, Codex fidelity failure handling, and worker process-group cleanup otherwise appear sound by inspection. Read-only review; no tests or full checks run."
+      },
+      {
+        "status": "accepted",
+        "findings": "No material regressions found. Bare numeric matches are removed while HTTP diagnostics remain recognized. Tests cover unrelated 401/429/503 stack locations, empty-output numeric crashes, and SUCCESS envelopes with nonzero exits; existing tests separately cover candidate validation. Read-only review of the final diff and tests; no tests or full check run."
+      }
+    ]
+  },
+  "documents_review": {
+    "initial_failure": {
+      "status": "needs_changes",
+      "findings": "DEVELOPMENT.md「Issue・PR・文書の日本語確認」で、原文の「失敗記録を消して繰り返したりしません」が「失敗記録を消して無断で再試行したりしません」に変更されています。「無断で」という条件の追加により、記録を削除して繰り返すことの禁止が、無断の再試行に限定されています。原文の禁止範囲を保持してください。執筆指示の本文への混入は見当たりません。"
+    },
+    "correction": "Restored original prohibition on deleting failure records and repeating; preserved failed run.",
+    "final": {
+      "status": "accepted",
+      "findings": "4文書を原文・事実情報と照合しました。変更は表現の整理にとどまり、事実、範囲、権限、断定の強さ、未確認事項、数量、条件、否定、参照先の追加・欠落・変更は認められません。執筆指示の本文への混入もありません。 underlying requirementsの承認ではなく、忠実性の確認結果です。"
+    }
+  },
+  "publication": "PR 102; CI results are reported separately by GitHub.",
+  "issue_review": {
+    "model": "gemini-3.8-flash-high",
+    "inputHash": "dba080d651a4b5634b6495b0d9d50ffd843a70c8f22eabc8911ec66cc6117125",
+    "outputHash": "8de510fd4f3da7f97a69b7fcd6d3e0f9808aeec4b46a53d2a2d51c0041d8cb5d",
+    "findings": "変更は文の分割と意味を保った表現調整のみです。事実・合意・範囲・権限・条件・否定・未確認事項・数値・参照先の追加、欠落、変更はなく、執筆指示の本文への混入もありません。"
+  },
+  "pr_review": {
+    "model": "gemini-3.8-flash-high",
+    "inputHash": "401f5c61ae48c1dbc662da8fd899417211cfd8cae934b1545b3c687ecbed216b",
+    "outputHash": "866759322f875d328ddfc13a11819abc754bd5013a34f7479bb0c11369f97f2b",
+    "findings": "変更は表現の明確化のみです。事実、範囲、権限、留保、未実施事項、数値、条件、参照は保持されており、追加・省略・意味の変更や執筆指示の本文混入はありません。"
+  }
+}

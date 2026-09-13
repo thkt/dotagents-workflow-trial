@@ -96,7 +96,13 @@ export async function command(
     timedOut = true;
     killGroup(child.pid);
   }, timeoutMs);
+  const writingWorker = argv[1]?.endsWith('/writing-review.ts') && argv[2] === '--worker';
   const code = await new Promise<number | null>((resolveCode) => {
+    child.on('exit', (code) => {
+      if (code !== 0 || writingWorker) {
+        killGroup(child.pid);
+      }
+    });
     child.on('error', (error) => {
       stderr += `${error.message}\n`;
       resolveCode(null);
@@ -104,9 +110,6 @@ export async function command(
     child.on('close', resolveCode);
   });
   clearTimeout(timer);
-  if (code !== 0 || timedOut) {
-    killGroup(child.pid);
-  }
   activeGroup = undefined;
   if (files) {
     await writeFile(`${files}.stdout`, stdout);

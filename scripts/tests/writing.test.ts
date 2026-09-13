@@ -185,6 +185,76 @@ test('changed documents or facts invalidate a successful review', async () => {
     git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'adopted');
     await rejected(() => reviewDocuments(cwd, facts, dir, runner), 'reconciliation');
     expect(calls).toBe(before);
+    const { GeminiUnavailable } = await import('../writing.ts');
+    const skipDir = join(root, 'skip');
+    await mkdir(skipDir);
+    await writeFile(file, '変更した原文');
+    let skipped = 0;
+    const unavailable = async () => {
+      skipped++;
+      throw new GeminiUnavailable('cli_missing');
+    };
+    await reviewDocuments(cwd, facts, skipDir, unavailable);
+    await reviewDocuments(cwd, facts, skipDir, unavailable);
+    expect(skipped).toBe(1);
+    expect(await readFile(file, 'utf8')).toBe('変更した原文');
+    await rejected(() => readFile(join(skipDir, 'active.json')));
+    await reviewDocuments(cwd, '別の根拠', skipDir, unavailable);
+    expect(skipped).toBe(2);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+for (const reason of ['cli_missing', 'authentication', 'connection', 'timeout']) {
+  test(`unavailable Gemini retains original without accepting it: ${reason}`, async () => {
+    const { GeminiUnavailable } = await import('../writing.ts');
+    const root = await mkdtemp(join(tmpdir(), 'writing-skip-'));
+    try {
+      let calls = 0;
+      const dir = join(root, 'review');
+      expect(
+        await reviewWriting(original, '4件', dir, async () => {
+          calls++;
+          throw new GeminiUnavailable(reason);
+        }),
+      ).toEqual(original);
+      expect(calls).toBe(1);
+      expect(JSON.parse(await readFile(join(dir, 'skipped.json'), 'utf8'))).toMatchObject({
+        status: 'skipped',
+        reason,
+      });
+      await rejected(() => readFile(join(dir, 'accepted.json')));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
+
+test('availability classification does not swallow unknown or malformed failures', async () => {
+  const { availabilityReason } = await import('../writing.ts');
+  expect(availabilityReason('ENOENT', false, '')).toBe('cli_missing');
+  expect(availabilityReason(undefined, true, '')).toBe('timeout');
+  expect(availabilityReason(undefined, false, 'authentication failed: 401')).toBe('authentication');
+  expect(availabilityReason(undefined, false, 'ENOTFOUND')).toBe('connection');
+  expect(availabilityReason(undefined, false, 'unexpected internal failure')).toBeUndefined();
+  for (const code of [401, 429, 503]) {
+    expect(
+      availabilityReason(undefined, false, `TypeError: unexpected value at /cli.js:${code}:12`),
+    ).toBeUndefined();
+  }
+  expect(availabilityReason(undefined, false, 'HTTP status: 503')).toBe('service_unavailable');
+  const root = await mkdtemp(join(tmpdir(), 'writing-invalid-'));
+  try {
+    await rejected(() =>
+      reviewWriting(original, '4件', join(root, 'unknown'), async () => {
+        throw Error('unknown');
+      }),
+    );
+    await rejected(() =>
+      reviewWriting(original, '4件', join(root, 'invalid'), async () => eventStream('not JSON')),
+    );
+    await rejected(() => readFile(join(root, 'invalid', 'skipped.json')));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

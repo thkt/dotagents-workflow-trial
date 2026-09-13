@@ -36,6 +36,22 @@ async function cachedReview(
     isRecord(record) && typeof record.review === 'string' && /^[0-9a-f]{64}$/.test(record.review),
     'Invalid writing receipt',
   );
+  if (record.status === 'skipped') {
+    const skipped: unknown = JSON.parse(
+      await readFile(join(dir, record.review, 'skipped.json'), 'utf8'),
+    );
+    assert(
+      isRecord(skipped) &&
+        skipped.status === 'skipped' &&
+        skipped.inputHash === key &&
+        typeof skipped.reason === 'string',
+      'Invalid writing skip',
+    );
+    console.error(
+      `Gemini確認: 未実施 (${skipped.reason}); 同じ入力のスキップ記録: ${dir}/${record.review}/skipped.json`,
+    );
+    return true;
+  }
   const accepted: unknown = JSON.parse(
     await readFile(join(dir, record.review, 'accepted.json'), 'utf8'),
   );
@@ -102,6 +118,14 @@ export async function reviewDocuments(
       (await readFile(resolve(cwd, doc.name), 'utf8')) === doc.body,
       'Writing target changed during review',
     );
+  }
+  if ((await optionalFile(join(dir, key, 'skipped.json'))) !== undefined) {
+    await writeFile(
+      join(dir, `done-${key}.json`),
+      JSON.stringify({ review: key, status: 'skipped' }),
+    );
+    await rm(active);
+    return;
   }
   await writeFile(active, JSON.stringify({ key, phase: 'adopting' }));
   for (const doc of result) {
@@ -175,6 +199,9 @@ if (import.meta.main) {
         ),
       );
       assert(result.code === 0 && !result.timedOut, result.stderr || 'Writing review stopped');
+      if (result.stderr.trim()) {
+        console.error(result.stderr.trim());
+      }
     }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
