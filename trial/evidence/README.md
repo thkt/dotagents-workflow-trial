@@ -4,6 +4,7 @@
 
 | 記録 | 内容 |
 | --- | --- |
+| [Geminiによる文書再利用性の比較](doc-reuse-99/evaluation.md) | 3.6 Flashでの添削と会話なしの読者確認。改善未確認・条件の脱落・未採用候補と実行記録 |
 | [検索欄のEsc操作](search-escape.md) | 再検証check-1のE2E 102件・capture-1の撮影4件のホスト成功結果、対象差分・実ログとEsc／並び順復元の8媒体のSHA-256照合、人の確認への引き継ぎ |
 | [文書のみのimplement実測](documentation-flow.md) | ホスト撮影による媒体混入の検出・修正と、文書のみの実装・評価の成立 |
 | [開発手順・検証追加の履歴](development-history.md) | 初期整備とIssue #9〜#23の検証追加の経緯 |

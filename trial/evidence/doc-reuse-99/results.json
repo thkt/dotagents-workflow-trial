@@ -1,0 +1,44 @@
+{
+  "reader-before": {
+    "model": "gemini-3.6-flash-high",
+    "status": "SUCCESS",
+    "wall_seconds": 23.92035174369812,
+    "usage": {
+      "input_tokens": 23924,
+      "output_tokens": 9196,
+      "thinking_tokens": 6911,
+      "cache_read_tokens": 0,
+      "total_tokens": 33120
+    },
+    "sha256": "8a9e1e07c6f4e70868fa690718a0cd6cd7f29b3b76962b67b8745012ba38cfa4",
+    "tool_event_count": 0
+  },
+  "edited": {
+    "model": "gemini-3.6-flash-high",
+    "status": "SUCCESS",
+    "wall_seconds": 51.342580795288086,
+    "usage": {
+      "input_tokens": 15743,
+      "output_tokens": 14936,
+      "thinking_tokens": 6760,
+      "cache_read_tokens": 8156,
+      "total_tokens": 30679
+    },
+    "sha256": "22f3e13413fb5702cdaf562df8ceefdcd94a995c446f06cb54a21c4476f2b5f6",
+    "tool_event_count": 0
+  },
+  "reader-after": {
+    "model": "gemini-3.6-flash-high",
+    "status": "SUCCESS",
+    "wall_seconds": 17.965468883514404,
+    "usage": {
+      "input_tokens": 15418,
+      "output_tokens": 7124,
+      "thinking_tokens": 5163,
+      "cache_read_tokens": 8156,
+      "total_tokens": 22542
+    },
+    "sha256": "b79eab257b5f90e274a136eee9e363266d9df742d56fe8d7029e9614b4646bc3",
+    "tool_event_count": 0
+  }
+}
