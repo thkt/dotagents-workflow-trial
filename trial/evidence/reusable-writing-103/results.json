@@ -1,0 +1,496 @@
+{
+  "issue": 103,
+  "base": "a305122934a98707611ae14e3deeb6a92f54e0c1",
+  "status": "blocked_on_gemini_quota",
+  "verified_documents": 11,
+  "pending_documents": 4,
+  "selection": "Current guidance, reusable design decisions and proposal constraints, and scoping references. Historical records are preserved separately.",
+  "documents": [
+    {
+      "path": "README.md",
+      "status": "verified",
+      "input_sha256": "84e5b66459b3e4ba762c465b42a19cd031af525eed553cfdf6ce33d7f5320137",
+      "working_copy_sha256": "77ae3891a1ca168a80e0cb0401d46523f265dd6084c5f0645402fd50747b50f0",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は文の分割、列挙の表記、同義の言い換えに限られます。事実・範囲・正本の位置づけ・限定・未確認事項・数値・条件・参照先は保持されており、追加や欠落、執筆指示の本文混入はありません。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "ERROR",
+            "error": "API error (attempt 1): RESOURCE_EXHAUSTED (code 429): You have exhausted your capacity on this model. Resets in 0s.",
+            "duration_seconds": 68.418556,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 23209,
+              "output_tokens": 24407,
+              "thinking_tokens": 19877,
+              "cache_read_tokens": 0,
+              "total_tokens": 47616
+            }
+          },
+          "skip": null
+        },
+        {
+          "run": "retry-after-capacity-recovery/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 81.400035,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 23214,
+              "output_tokens": 27807,
+              "thinking_tokens": 23252,
+              "cache_read_tokens": 0,
+              "total_tokens": 51021
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "DEVELOPMENT.md",
+      "status": "verified",
+      "input_sha256": "42cc39086dca5fe005f6171429ae6718824eb7e593188ebbfa98ed7df30c73e9",
+      "working_copy_sha256": "42cc39086dca5fe005f6171429ae6718824eb7e593188ebbfa98ed7df30c73e9",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "候補本文は原文と一致しています。掲載情報の事実、範囲、権限、限定、未確認事項、数量、条件、参照先に追加・省略・変更はなく、執筆指示の混入もありません。 underlying要件の承認ではなく、忠実性の確認結果です。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 56.82411,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 23112,
+              "output_tokens": 21725,
+              "thinking_tokens": 17301,
+              "cache_read_tokens": 0,
+              "total_tokens": 44837
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "scripts/README.md",
+      "status": "verified",
+      "input_sha256": "c20ebcfe84c2ea26c94289bc58a4a79154f91bdea5c95cda82b34d1a77d198b9",
+      "working_copy_sha256": "fbf3932a258e202920ccc01f5752db92338e05d7009631de516d086d54171da8",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は句読点、列挙表現、文の分割と意味を保った補足に限られます。事実、範囲、権限、限定、未確認事項、数値、条件、参照の追加・欠落・変更はなく、執筆指示の本文への混入もありません。 underlying要件の承認ではなく、原文・根拠との忠実性についての判定です。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 76.314548,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 24732,
+              "output_tokens": 27917,
+              "thinking_tokens": 22726,
+              "cache_read_tokens": 0,
+              "total_tokens": 52649
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/design/OUTCOME-draft.md",
+      "status": "verified",
+      "input_sha256": "6f013040007377b60df9212225405dee1330cf711fdec3eaf23db65d502b0ee7",
+      "working_copy_sha256": "de9a3261a70ac91545e08522ebcc1707d6d0c65469c5fad075bb0c738f272467",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は文体調整、文の分割、列挙の接続表現のみで、意味は保持されています。事実・範囲・権限・限定・未検証事項・条件・参照の追加、欠落、変更はなく、執筆指示の本文への混入もありません。"
+      },
+      "recovery": "Original conditions restored after rejected Gemini candidate; failed run retained.",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 27.778331,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 16104,
+              "output_tokens": 10255,
+              "thinking_tokens": 9300,
+              "cache_read_tokens": 0,
+              "total_tokens": 26359
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/design/README.md",
+      "status": "verified",
+      "input_sha256": "463a2375d4ba849ae1c8521623bb9e32519934700d90f91481bba73c68022c21",
+      "working_copy_sha256": "381333a814e2063a8edd831e1fdcef84c6948d0e3ddcea41f7689bc7a4226d74",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は句読点、文の分割、同義表現、助詞の補完のみです。事実・範囲・正本の位置づけ・限定・未承認事項・条件・番号・参照先は保持され、追加や欠落、執筆指示の本文混入はありません。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 32.436769,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 15489,
+              "output_tokens": 11933,
+              "thinking_tokens": 11308,
+              "cache_read_tokens": 0,
+              "total_tokens": 27422
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/design/architecture-concepts.md",
+      "status": "verified",
+      "input_sha256": "a24d3aad1c406af75bc57002ddfe4d9a7f2a389a2eb98902c6e8838704aa30a0",
+      "working_copy_sha256": "a0ffd6763dc369dfaf8186082fd6becceef8e3b99bb3bd14b63aa168db2f5101",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は語句・句読点・文の区切りの調整にとどまり、事実、範囲、権威づけ、限定、未確認事項、数値、条件、参照は保持されています。執筆指示の本文への混入もありません。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 43.225179,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 18577,
+              "output_tokens": 16959,
+              "thinking_tokens": 14766,
+              "cache_read_tokens": 0,
+              "total_tokens": 35536
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/design/context-sufficiency.md",
+      "status": "verified",
+      "input_sha256": "00b54caf58bfcc63ad2fb9c59746f6b1b8287eaa5a3d5a4033b8bf42aac40983",
+      "working_copy_sha256": "fe83828e6088a68922e5a4e655863144023a251a9f62b78488bbe0a597c56f71",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "差分は「設計基準。」→「設計基準である。」と「事実不足」→「事実の不足」の表現変更のみで、意味は同一です。事実・範囲・権限・限定・未確認事項・数値・条件・参照の追加、欠落、変更はなく、執筆指示の本文混入もありません。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 37.528552,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 17705,
+              "output_tokens": 13583,
+              "thinking_tokens": 11836,
+              "cache_read_tokens": 0,
+              "total_tokens": 31288
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/design/development-policy-draft.md",
+      "status": "verified",
+      "input_sha256": "5a6ba6cf0c9de8b5b3e90cd77fcb8ccebd640028b199d9c6c499ee89e7634749",
+      "working_copy_sha256": "974a4856c7575f1299332da0c1d0c5bafa36ed58cb14780f6ac7120f8c17e25e",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は文体・句読点・同義表現の調整にとどまり、事実、範囲、権限、限定、未確認事項、数値、条件、参照は保持されています。執筆指示の本文への混入もありません。 underlying requirementsの承認ではなく、原文への忠実性についての判定です。"
+      },
+      "recovery": "Original conditions restored after rejected Gemini candidate; failed run retained.",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 70.199123,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 19675,
+              "output_tokens": 27150,
+              "thinking_tokens": 24394,
+              "cache_read_tokens": 0,
+              "total_tokens": 46825
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/design/information-and-evidence-design.md",
+      "status": "verified",
+      "input_sha256": "67f05e39086f21bc8ed1940af92f266e95255f325b7908fe4de1f577d5c027ca",
+      "working_copy_sha256": "9aeb84cc9419bd4c7665b61fedf8609278963502865752b82a22adc19513fb39",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は文体・表記の言い換えにとどまり、事実、範囲、権限、条件、数値、参照先は保持されています。設計案・仮想例・未決定・未確認の限定も維持され、執筆指示の本文混入はありません。要件自体の承認ではなく、原文への忠実性についての判定です。"
+      },
+      "recovery": "Original conditions restored after rejected Gemini candidate; failed run retained.",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 121.436056,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 27237,
+              "output_tokens": 43294,
+              "thinking_tokens": 36584,
+              "cache_read_tokens": 0,
+              "total_tokens": 70531
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/workflow-refinement/surrounding-flows.md",
+      "status": "verified",
+      "input_sha256": "08bf0373b763c2151ca3fa79e454b5d3f91db9ecd7aff6671068e2d72ae2de7f",
+      "working_copy_sha256": "1d677db63af8512a46401f57b499e0448f756116793c40dff6c0a4514694db23",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は文体・句読点・文の分割と文脈上の明確化にとどまる。事実、範囲、権限、合意済み・提案・過去版の区別、未検証事項、数値、条件、参照は保持されている。執筆指示の本文への混入は認められない。"
+      },
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 87.549183,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 31467,
+              "output_tokens": 30449,
+              "thinking_tokens": 21775,
+              "cache_read_tokens": 0,
+              "total_tokens": 61916
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/workflow-refinement/documentation-flow-plan.md",
+      "status": "verified",
+      "input_sha256": "617a48cb2e4c2f7bad195d19526cd264aea9e7a67ae86728cb1dc5de72410ec4",
+      "working_copy_sha256": "1a870eb4bc21fea0f61343744d3c083b8645d5d11a99587960f51ad93e74c4fd",
+      "model": "gemini-3.8-flash-high",
+      "fidelity": {
+        "status": "accepted",
+        "findings": "変更は表現・句読点の調整に留まり、事実、範囲、権限、限定、未確認事項、数値、条件、参照先は保持されています。執筆指示の本文混入もありません。 underlying要件の妥当性は評価していません。"
+      },
+      "recovery": "Original conditions restored after rejected Gemini candidate; failed run retained.",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": {
+            "status": "SUCCESS",
+            "duration_seconds": 35.089774,
+            "num_turns": 1,
+            "usage": {
+              "input_tokens": 16846,
+              "output_tokens": 15087,
+              "thinking_tokens": 13753,
+              "cache_read_tokens": 0,
+              "total_tokens": 31933
+            }
+          },
+          "skip": null
+        }
+      ]
+    },
+    {
+      "path": "docs/workflow-refinement/agents-migration-plan.md",
+      "status": "pending_gemini_quota_reset",
+      "input_sha256": "faa093275c69c0f571d5af7fa2b6d894e7b9617a9af280c360b47fd5fc5ab2e2",
+      "working_copy_sha256": "faa093275c69c0f571d5af7fa2b6d894e7b9617a9af280c360b47fd5fc5ab2e2",
+      "model": "gemini-3.8-flash-high",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": null,
+          "skip": {
+            "status": "skipped",
+            "model": "gemini-3.8-flash-high",
+            "reason": "timeout",
+            "inputHash": "a6c52876f8fa766d3ac40639b4593fb75bcee821d719b16569271b0b2fea6508"
+          }
+        }
+      ]
+    },
+    {
+      "path": "skills/scoping/references/session.md",
+      "status": "pending_gemini_quota_reset",
+      "input_sha256": "14649cb198c3ba413f1d46f5fd609e4b72d44f7f2958e63b98fdf76723080513",
+      "working_copy_sha256": "14649cb198c3ba413f1d46f5fd609e4b72d44f7f2958e63b98fdf76723080513",
+      "model": "gemini-3.8-flash-high",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": null,
+          "skip": {
+            "status": "skipped",
+            "model": "gemini-3.8-flash-high",
+            "reason": "timeout",
+            "inputHash": "41d240b3c159757b2b95cea73238e421ec85814ca8a8da683f5e7d30602fe397"
+          }
+        }
+      ]
+    },
+    {
+      "path": "skills/scoping/references/sufficiency.md",
+      "status": "pending_gemini_quota_reset",
+      "input_sha256": "40feeb4c714c7edd2d650b18a60040171a8d798db5f091435165039eb303f068",
+      "working_copy_sha256": "40feeb4c714c7edd2d650b18a60040171a8d798db5f091435165039eb303f068",
+      "model": "gemini-3.8-flash-high",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": null,
+          "skip": {
+            "status": "skipped",
+            "model": "gemini-3.8-flash-high",
+            "reason": "timeout",
+            "inputHash": "33e91f261bd80fa98d4a906e351b62b0a76c0a8e71355a84b1cba59aff4b3734"
+          }
+        },
+        {
+          "run": "retry-after-timeout/review",
+          "result": null,
+          "skip": {
+            "status": "skipped",
+            "model": "gemini-3.8-flash-high",
+            "reason": "timeout",
+            "inputHash": "33e91f261bd80fa98d4a906e351b62b0a76c0a8e71355a84b1cba59aff4b3734"
+          }
+        }
+      ]
+    },
+    {
+      "path": "docs/README.md",
+      "status": "pending_gemini_quota_reset",
+      "input_sha256": "dff7665cfcfa5a18b50d5e57f098b2fc454a6e9e48f09eb8f3c0f58de252caff",
+      "working_copy_sha256": "dff7665cfcfa5a18b50d5e57f098b2fc454a6e9e48f09eb8f3c0f58de252caff",
+      "model": "gemini-3.8-flash-high",
+      "attempts": [
+        {
+          "run": "run/review",
+          "result": null,
+          "skip": {
+            "status": "skipped",
+            "model": "gemini-3.8-flash-high",
+            "reason": "timeout",
+            "inputHash": "e628270b48f36763791804eec2f0cd98b19ad9047f183f99c5923c3e375e1cc5"
+          }
+        }
+      ]
+    }
+  ],
+  "excluded_unchanged": [
+    "docs/design/archive/README.md",
+    "docs/design/archive/capability-assessment.md",
+    "docs/design/archive/context-storage-design.md",
+    "docs/design/archive/delivery-plan.md",
+    "docs/design/archive/discovery-trial-plan.md",
+    "docs/design/archive/execution-design.md",
+    "docs/design/archive/trial-bootstrap/README.md",
+    "docs/design/archive/trial-correction-issue-draft.md",
+    "docs/design/archive/trial-documentation-simplification-issue-draft.md",
+    "docs/design/archive/trial-product-issues-draft.md",
+    "docs/design/archive/trial-setup-issue-draft.md",
+    "docs/workflow-refinement/implementation-entry.md",
+    "docs/workflow-refinement/p1-shared-evidence-issue-draft.md",
+    "docs/workflow-refinement/requirements-entry.md",
+    "docs/workflow-refinement/scoping-implement-90.md",
+    "skills/implement/SKILL.md",
+    "skills/scoping/SKILL.md",
+    "trial/evidence/README.md",
+    "trial/evidence/development-history.md",
+    "trial/evidence/documentation-flow.md",
+    "trial/evidence/issue-10/evaluation.md",
+    "trial/evidence/issue-10/video.md",
+    "trial/evidence/issue-13/evaluation.md",
+    "trial/evidence/issue-25/evaluation.md",
+    "trial/evidence/issue-31/evaluation.md",
+    "trial/evidence/issue-42/evaluation.md",
+    "trial/evidence/issue-56/evaluation.md",
+    "trial/evidence/issue-62/evaluation.md",
+    "trial/evidence/issue-63/evaluation.md",
+    "trial/evidence/issue-67/evaluation.md",
+    "trial/evidence/order-persistence.md",
+    "trial/evidence/search-escape.md"
+  ],
+  "checks": {
+    "control_tests": 141,
+    "e2e_tests": 102,
+    "result": "passed",
+    "new_link_errors": 0,
+    "baseline_link_errors": 0
+  },
+  "independent_draft_review": {
+    "status": "accepted",
+    "findings": "No material issues found in the current draft. docs/README.md covers all selected documents, separates current procedures, design proposals, and historical records, and is linked from the root README. Wording changes preserve facts, conditions, authority, stopping/recovery rules, and version/verification qualifiers. Existing headings, code examples, and link destinations are preserved; local link and anchor checks found no errors. Excluded historical documents, code, settings, tests, and skill entrypoints are unchanged. All 11 applied documents match their saved reviewed outputs, including recovery results; DEVELOPMENT.md remains unchanged.\n\nAcceptance applies only to this draft review, not full completion of Issue 103. The migration plan, scoping session/sufficiency references, and docs/README.md still await Gemini recovery; this known pending work is not an additional finding. No edits, full checks, operational/migration validation, live external-source verification, or publication were performed."
+  },
+  "blocking_diagnostic": {
+    "status": "ERROR",
+    "error": "API error (attempt 4): RESOURCE_EXHAUSTED (code 429): Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 151h40m27s.",
+    "duration_seconds": 24.334076,
+    "num_turns": 1,
+    "usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 0,
+      "total_tokens": 0
+    }
+  },
+  "resume": "After the same Gemini model is available, complete the four pending documents, recheck links and changed output, finalize independent review, review the PR body, publish via the dedicated App, and check CI. Do not replay verified documents or discard prior failures.",
+  "publication": "No PR created; Issue remains open."
+}
