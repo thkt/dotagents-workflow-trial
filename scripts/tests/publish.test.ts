@@ -1,52 +1,108 @@
+import assert from 'node:assert/strict';
 import { test, expect } from 'bun:test';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { generateKeyPairSync, createHash } from 'node:crypto';
 import { publish, keyJwt } from '../publish.ts';
+import { initializeTarget, githubTarget, git, testApp } from './support/target.ts';
 
 function option(args: string[], name: string) {
   expect(args).toContain(name);
   return args[args.indexOf(name) + 1];
 }
 
-function assertCommand(args: string[], token: string | undefined, body: string) {
+function publicationResponses(mode: string): Record<string, unknown> {
+  return {
+    '/app': { id: mode === 'wrong_app' ? 0 : 42, slug: 'workflow-app' },
+    '/repos/team/component/pulls/1': {
+      user: {
+        type: mode === 'personal_pr' ? 'User' : 'Bot',
+        login: mode === 'personal_pr' ? 'operator' : 'workflow-app[bot]',
+      },
+    },
+    '/repos/team/component': {
+      id: mode === 'wrong_token_repo' ? 456 : 123,
+      full_name: 'team/component',
+    },
+    '/app/installations/89/access_tokens': { token: 'installation-secret' },
+    '/repos/team/component/installation': {
+      id: mode === 'wrong_installation' ? 90 : 89,
+      app_id: 42,
+      permissions: { pull_requests: mode === 'denied_app' ? 'read' : 'write' },
+    },
+  };
+}
+function publicationReply(args: string[], mode: string) {
+  if (mode === `${args[2]}_failed`) {
+    throw Error(mode);
+  }
+  if (args[2] === 'list') {
+    return ['existing', 'personal_pr'].includes(mode)
+      ? 'https://github.com/team/component/pull/1\n'
+      : '';
+  }
+  return 'https://github.com/team/component/pull/2\n';
+}
+function checkPublicationCommand(args: string[], token: string | undefined, body: string) {
   expect(args.slice(0, 2)).toEqual(['gh', 'pr']);
   expect(token).toBe('installation-secret');
   expect(args.join(' ')).not.toContain('secret');
-  expect(option(args, '--repo')).toBe('thkt/dotagents-workflow-trial');
-  expect(option(args, '--base')).toBe('main');
+  expect(option(args, '--repo')).toBe('team/component');
+  expect(option(args, '--base')).toBe('release');
   expect(option(args, '--head')).toBe('codex/test');
-  if (args[2] === 'list') {
-    expect(option(args, '--state')).toBe('open');
-  } else {
-    expect(option(args, '--title')).toBe('Title with spaces');
+  if (args[2] === 'create') {
     expect(option(args, '--body-file')).toBe(body);
+    expect(option(args, '--title')).toBe('Title with spaces');
+  }
+}
+
+function checkSuccessfulPublication(mode: string, result: string) {
+  if (mode === 'preflight') {
+    expect(JSON.parse(result)).toEqual({
+      repository: 'team/component',
+      base: 'release',
+      app: 42,
+      installation: 89,
+      actor: 'operator',
+    });
+  } else {
+    expect(result).toBe(`https://github.com/team/component/pull/${mode === 'existing' ? 1 : 2}`);
   }
 }
 
 for (const mode of [
   'create',
   'existing',
+  'personal_pr',
+  'preflight',
   'create_failed',
   'list_failed',
   'empty',
   'revoke_failed',
   'wrong_app',
+  'wrong_installation',
+  'denied_app',
+  'wrong_token_repo',
+  'denied_operator',
 ] as const) {
   test(`publisher: ${mode}`, async () => {
     const dir = await mkdtemp(join(tmpdir(), 'publisher-test-'));
     try {
+      const repo = join(dir, 'checkout');
+      await mkdir(repo);
+      await initializeTarget(repo);
+      const config = join(dir, 'app.json');
+      await writeFile(config, JSON.stringify(testApp));
       const body = join(dir, 'body with spaces.md');
       await writeFile(body, mode === 'empty' ? '' : 'Reviewable body');
       const commands: { args: string[]; token: string | undefined }[] = [];
-      const requests: { path: string; token: string; method: string; input: object | undefined }[] =
-        [];
-      const failure = Error(mode);
+      const requests: { path: string; method: string; input: object | undefined }[] = [];
       let authenticated = false;
       const io = {
-        authenticate: () => {
+        authenticate: (value: typeof testApp) => {
+          expect(value).toEqual(testApp);
           authenticated = true;
           return 'jwt-secret';
         },
@@ -56,88 +112,98 @@ for (const mode of [
           method = 'GET',
           input?: object,
         ): Promise<unknown> => {
-          requests.push({ path, token, method, input });
+          requests.push({ path, method, input });
           if (path === '/installation/token') {
+            expect(token).toBe('installation-secret');
             if (mode === 'revoke_failed') {
-              throw failure;
+              throw Error('revoke_failed');
             }
             return null;
           }
-          if (path === '/app') {
-            return { id: mode === 'wrong_app' ? 0 : 4881432 };
-          }
-          if (path.endsWith('access_tokens')) {
-            return { token: 'installation-secret' };
-          }
-          return { account: { login: 'thkt' } };
+          const responses = publicationResponses(mode);
+          expect(token).toBe(
+            ['/repos/team/component', '/repos/team/component/pulls/1'].includes(path)
+              ? 'installation-secret'
+              : 'jwt-secret',
+          );
+          assert(path in responses, `Unexpected API request: ${path}`);
+          return responses[path];
         },
-        command: (args: string[], token?: string) => {
+        command: (args: string[], token?: string, cwd?: string) => {
+          if (args[0] === 'git') {
+            assert(cwd);
+            return git(cwd, ...args.slice(1));
+          }
+          const targetReply = githubTarget(args);
+          if (targetReply !== undefined) {
+            return mode === 'denied_operator'
+              ? targetReply.replace('"push":true', '"push":false')
+              : targetReply;
+          }
           commands.push({ args, token });
-          if (args[2] === 'list') {
-            if (mode === 'list_failed') {
-              throw failure;
-            }
-            return mode === 'existing' ? 'https://example/pr/1\n' : '';
-          }
-          if (mode === 'create_failed') {
-            throw failure;
-          }
-          return 'https://example/pr/2\n';
+          return publicationReply(args, mode);
         },
       };
-      const result = publish(
-        ['--head', 'codex/test', '--title', 'Title with spaces', '--body-file', body],
-        io,
-      );
-      if (mode === 'create' || mode === 'existing') {
-        expect(await result).toBe(`https://example/pr/${mode === 'existing' ? 1 : 2}`);
+      const args = [
+        '--repo',
+        repo,
+        '--app-config',
+        config,
+        ...(mode === 'preflight'
+          ? ['--preflight']
+          : ['--head', 'codex/test', '--title', 'Title with spaces', '--body-file', body]),
+      ];
+      if (['create', 'existing', 'preflight'].includes(mode)) {
+        const result = await publish(args, io);
+        checkSuccessfulPublication(mode, result);
       } else {
-        const error: unknown = await result.then(
-          () => undefined,
-          (reason: unknown) => reason,
-        );
-        if (['empty', 'wrong_app'].includes(mode)) {
-          expect(error).toBeInstanceOf(Error);
-        } else {
-          expect(error).toBe(failure);
-        }
+        const reasons = {
+          personal_pr: /Existing PR was not created by the configured App/,
+          create_failed: /create_failed/,
+          list_failed: /list_failed/,
+          empty: /body must not be empty/,
+          revoke_failed: /revoke_failed/,
+          wrong_app: /Unexpected App/,
+          wrong_installation: /App installation lacks target access/,
+          denied_app: /App installation lacks target access/,
+          wrong_token_repo: /Installation token cannot access target repository/,
+          denied_operator: /push permission required/,
+        };
+        assert(mode !== 'create' && mode !== 'existing' && mode !== 'preflight');
+        await assert.rejects(() => publish(args, io), reasons[mode]);
       }
-      expect(authenticated).toBe(mode !== 'empty');
-      const issued = !['empty', 'wrong_app'].includes(mode);
+      expect(authenticated).toBe(!['empty', 'denied_operator'].includes(mode));
+      const issued = ![
+        'empty',
+        'denied_operator',
+        'wrong_app',
+        'wrong_installation',
+        'denied_app',
+      ].includes(mode);
       expect(requests.filter(({ path }) => path.endsWith('access_tokens'))).toEqual(
         issued
           ? [
               {
-                path: '/app/installations/160237952/access_tokens',
-                token: 'jwt-secret',
+                path: '/app/installations/89/access_tokens',
                 method: 'POST',
                 input: {
-                  repository_ids: [1362242696],
+                  repository_ids: [123],
                   permissions: { pull_requests: 'write', contents: 'read', metadata: 'read' },
                 },
               },
             ]
           : [],
       );
-      expect(requests.filter(({ token }) => token !== 'jwt-secret')).toEqual(
-        issued
-          ? [
-              {
-                path: '/installation/token',
-                token: 'installation-secret',
-                method: 'DELETE',
-                input: undefined,
-              },
-            ]
-          : [],
+      expect(requests.filter(({ path }) => path === '/installation/token')).toEqual(
+        issued ? [{ path: '/installation/token', method: 'DELETE', input: undefined }] : [],
       );
-      const creates = ['create', 'create_failed', 'revoke_failed'].includes(mode);
+      const listed = issued && !['preflight', 'wrong_token_repo'].includes(mode);
       expect(commands.map(({ args }) => args[2])).toEqual([
-        ...(issued ? ['list'] : []),
-        ...(creates ? ['create'] : []),
+        ...(listed ? ['list'] : []),
+        ...(['create', 'create_failed', 'revoke_failed'].includes(mode) ? ['create'] : []),
       ]);
       for (const { args, token } of commands) {
-        assertCommand(args, token, body);
+        checkPublicationCommand(args, token, body);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -145,47 +211,24 @@ for (const mode of [
   });
 }
 
-test('publisher CLI reports the stop reason before touching credentials', () => {
+test('publisher CLI rejects missing target before touching credentials', () => {
   const result = spawnSync(process.execPath, [resolve(import.meta.dir, '../publish.ts')], {
     encoding: 'utf8',
     timeout: 10000,
   });
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain(
-    'Publish failed: Required: --head BRANCH --title TITLE --body-file PATH.',
-  );
+  expect(result.stderr).toContain('Publish failed: Required: --repo CHECKOUT');
 });
 
-test('publisher rejects a different signing key', () => {
-  // Public test fixture only; never used for authentication.
-  const pem = `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDIqyBPA9TwUXSg
-h+o/z/Csr9mjtfP1oQhGGwvzO4nzfiNAvLFiw5MV1OVoaQSfWKHMh35+XHdti7bL
-Ya6FdS77/K8mFGxI+Gs8WmQQ0vtq6LwtjHasCfwZ3QmcbXW/BVRQy/Oh3tMEzMRE
-p9V9vpovQ8vuH2/+4v9eBTM0hisW1RJwPx7B+BbBji0snLx988lEHYwfjvYKXwqB
-vI88b/6yEKYyycIv2ptaPi+qlku8AV4oKSsIIm8PdRpP89Mp9Zd3Rd2o4BqMt3tp
-4sq+Qu3leN5e3iMkRWIJnzQxKbZxKX4Rb/Le79pYRbNrkXqP1CH8N4Lq5SNw0Y9D
-wzKER0tTAgMBAAECggEALfl++ntvQuv2o3zgP2R9yKK1Y1uhnCobwiwaLcz7Sy0g
-GInivjT+subG9IfzBisBTuHQKlU3C4MSC0DDAlKZxCPdYQUW1hUMRJSVDoG4FoNh
-8bGX0syq1KYeuJcfffdTnPtNQ03Q3O2pHe2x7RBJNQD8bP8I4sXRKhJY6/S9VIpu
-xWKLqdInsuRr27XHNHm8NiXjDm4dFR4n/MvpQKngAlJC1304T73L+9GITkZxiRA0
-eDQX2VfKVBwROie4/y5UevkLTA2XuPfa07+UP31PhyTCgT10rP0DpQBAfi4mvPjT
-mWsJoVM4iQaRUo/GQ3x02cBFB6EOvNY05ZWAyPgnaQKBgQDk55K44URihrDfmcjc
-lnPmUko17el9IbSDGp5mVdNL+BgzabMnq4n9sUp5vMH64zVEDtKnquenigzyIry+
-03VniJrq9hF9J2jllhIJ/hSmBRRwpWqL8CJU8Xu9J9/dPiBCzCytmUmtteuhOScL
-OrwtNFSirOSlGIN9DYu4j83pRQKBgQDga+wg7D9mVFWkupxPthubIjXuX5eaKzCN
-3YvScxCOThwqH9GStXM21x0SJ1eMyOCagn2J8BnlceU1y6Qb8ZQXBIQ06uKZzkWJ
-EGLEEv+QhGebF+yTfw7nnnUJ+sSs3kXVSumSXT+Sd6QLHoAKLC3krrOvtCMh0YdY
-aJvKQCiPtwKBgDaFmgMDVQCKyHJZ9OflxjFkBF0YD/dIIfDgVD5Xzv5XV5xXXt7i
-EvokUnLwrNuPZs6RIUfig076qN67u21QfLRua0fv2HaQ/oFA34cVx+FLcHTsUZaH
-WgYVhr2lU8Mk2xZN/45R5qTDoh5CuLQKB2xU/JvKxqM0VY1hvpf1WLxpAoGBAM7O
-hS2dp5r78mQ31x2ZmnzuHLbK/mCCll7VHylTAZmxn0CuS6kfbsnFl7OH76T75AZe
-Y6N+T87hkzBstZFOoIJJli9RmHnV3Lw/DlTTkRCzAuqoNEmDl8+XdRE6No160u2H
-+A/5wECP4eqhM6qsJaqL12f93zYl6MxuscnCL96nAoGAd9ffsobymQ+tCLxRsMqs
-5JzGHQhaE75Dta1U+d+X+GPtFnHg2LQH+7rnAamprSEad+kzwTIR2gsGQHRTrzEu
-aGOepTSrB6f+J6uO53AafZ7ikStUF2Lc3hitfCvt+hGWfxR4zHF4R2xyXCmJkHWo
-thkz0ySsOGLbM1YhyyhO6FQ=
------END PRIVATE KEY-----
-`;
-  expect(() => keyJwt(pem)).toThrow('Unexpected key fingerprint');
+test('publisher binds its signing key and issuer to the configured App', () => {
+  const pair = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const pem = pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  expect(() => keyJwt(pem, testApp)).toThrow('Unexpected key fingerprint');
+  const keyFingerprint = createHash('sha256')
+    .update(pair.publicKey.export({ type: 'spki', format: 'der' }))
+    .digest('base64');
+  const payload = keyJwt(pem, { ...testApp, keyFingerprint }).split('.')[1];
+  assert(payload);
+  const value: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString());
+  expect(value).toMatchObject({ iss: 'configured-client' });
 });

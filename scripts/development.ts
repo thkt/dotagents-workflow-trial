@@ -8,21 +8,12 @@ import { command, run, withInterrupts, parseReply, captureInstructions } from '.
 import { isRecord } from './input.ts';
 import { publish } from './publish.ts';
 import { writingHostTimeoutMs } from './writing.ts';
+import { readTarget, issueNumber, targetCommand } from './target.ts';
 
-const repository = 'thkt/dotagents-workflow-trial';
 const runtime = { command, verify: run, publish };
 const modelTimeMs = 1200000;
 // The full check and the CI run of the same check share one budget.
 const checkTimeMs = 540000;
-
-function issueNumber(input: string | undefined) {
-  const raw = input?.replace(`https://github.com/${repository}/issues/`, '').replace(/^#/, '');
-  assert(
-    raw && /^[1-9]\d*$/.test(raw) && Number.isSafeInteger(Number(raw)),
-    'Supply an Issue number or a URL in the trial repository',
-  );
-  return raw;
-}
 
 async function checked(io: typeof runtime, argv: string[], cwd: string, prefix?: string) {
   const result = await io.command(argv, cwd, '', writingHostTimeoutMs, prefix);
@@ -52,22 +43,23 @@ async function prepare(args: string[], io: typeof runtime) {
       repo: { type: 'string' },
       'run-dir': { type: 'string' },
       'no-publish': { type: 'boolean' },
+      'app-config': { type: 'string' },
     },
   });
   assert(
     parsed.positionals.length === 1,
     'Usage: bun scripts/development.ts ISSUE [--repo CHECKOUT] [--run-dir DIRECTORY]',
   );
-  const number = issueNumber(parsed.positionals[0]);
   const repo = await realpath(parsed.values.repo ?? process.cwd());
   const git = (...argv: string[]) => checked(io, ['git', ...argv], repo);
-  const identity: unknown = JSON.parse(
-    await checked(io, ['gh', 'repo', 'view', '--json', 'nameWithOwner'], repo),
-  );
-  assert(
-    isRecord(identity) && identity.nameWithOwner === repository,
-    'This publisher supports only the trial repository',
-  );
+  const localOnly = parsed.values['no-publish'] ?? false;
+  const target = await readTarget(repo, (argv, cwd) => checked(io, argv, cwd), !localOnly);
+  const { repository } = target.config;
+  const input = parsed.positionals[0];
+  assert(input);
+  const number = issueNumber(input, repository);
+  const appPath = parsed.values['app-config'] ?? process.env.DOTAGENTS_APP_CONFIG;
+  const appArgs = appPath ? ['--app-config', appPath] : [];
   assert(
     (await git('status', '--porcelain')).length === 0,
     'Commit or preserve pending work before development; the entry uses committed HEAD',
@@ -83,6 +75,9 @@ async function prepare(args: string[], io: typeof runtime) {
     'title,body,state,updatedAt',
   ];
   const original = await checked(io, issue, repo);
+  if (!localOnly) {
+    await io.publish(['--repo', repo, ...appArgs, '--preflight']);
+  }
   const requirements = issueValue(original);
   const common = await realpath(
     await git('rev-parse', '--path-format=absolute', '--git-common-dir'),
@@ -107,10 +102,11 @@ async function prepare(args: string[], io: typeof runtime) {
     'Run directory resolves inside repository storage',
   );
   const base = await git('rev-parse', 'HEAD');
-  const remote = await git('remote', 'get-url', 'origin');
+  const remote = await git('remote', 'get-url', target.config.remote);
   const cwd = join(dir, 'checkout');
   const branch = `codex/development-${number}`;
   await writeFile(join(dir, 'issue.json'), original);
+  await writeFile(join(dir, 'target.json'), JSON.stringify(target, null, 2));
   await git('worktree', 'add', '-b', branch, cwd, 'HEAD');
   return {
     number,
@@ -123,26 +119,45 @@ async function prepare(args: string[], io: typeof runtime) {
     branch,
     base,
     remote,
-    localOnly: parsed.values['no-publish'] ?? false,
+    localOnly,
+    target,
+    appArgs,
   };
 }
 type Context = Awaited<ReturnType<typeof prepare>>;
 
+async function unchangedTarget(context: Context, io: typeof runtime, head = context.base) {
+  assert(
+    (await checked(io, ['git', 'rev-parse', 'HEAD'], context.cwd)) === head &&
+      (await checked(io, ['git', 'branch', '--show-current'], context.cwd)) === context.branch,
+    'Actor changed branch or HEAD',
+  );
+  const current = await readTarget(
+    context.cwd,
+    (argv, cwd) => checked(io, argv, cwd),
+    !context.localOnly,
+  );
+  assert(
+    current.text === context.target.text &&
+      current.repositoryId === context.target.repositoryId &&
+      current.actor === context.target.actor,
+    'Target configuration or GitHub actor changed',
+  );
+}
+
 async function implement(context: Context, io: typeof runtime) {
   const { cwd, dir, original } = context;
-  await checked(
-    io,
-    ['bun', 'install', '--frozen-lockfile', '--ignore-scripts'],
-    cwd,
-    join(dir, 'install'),
-  );
-  await checked(io, ['bun', 'run', 'setup:e2e'], cwd, join(dir, 'browser'));
+  for (const [index, argv] of context.target.config.setup.entries()) {
+    await checked(io, targetCommand(argv), cwd, join(dir, `setup-${index + 1}`));
+  }
+  await unchangedTarget(context, io);
   const prompt = [
-    'Implement the complete agreed Issue using existing code and verification assets. Read README.md, DEVELOPMENT.md and applicable repository instructions.',
+    'Implement the complete agreed Issue using existing code and verification assets. Read the target README, development policy and applicable repository instructions when present.',
     'Prepare meaningful tests, current documentation and capture definitions. The host runs browser tests and capture; do not launch browsers or servers in your sandbox.',
-    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理". Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
-    'Documentation-only Issues use the same flow. Apply the documentation update policy in DEVELOPMENT.md; add tests or code only when the agreed requirements need them.',
-    captureInstructions,
+    'Before creating or updating tests, apply the target test policy when present and these common test criteria. Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
+    'Documentation-only Issues use the same flow. Apply the target documentation policy when present; keep current operating instructions accurate and place historical results in evidence; add tests or code only when the agreed requirements need them.',
+    captureInstructions(context.target.config.capture),
+    `Target setup/check/capture contract (do not weaken or replace): ${JSON.stringify(context.target.config)}`,
     'Do not commit, push, publish, change the Issue or weaken acceptance criteria. Do not run the full check; the host will do it after implementation.',
     'Do not edit control scripts or credentials outside this checkout. If scope or authorization must change, return needs_human. Otherwise return repaired with a concrete summary.',
     `Requirements:\n${original}`,
@@ -179,7 +194,7 @@ async function implement(context: Context, io: typeof runtime) {
     cwd,
     runDir: join(dir, 'verification'),
     issue: context.issue,
-    check: ['bun', 'run', 'check'],
+    check: targetCommand(context.target.config.check),
     writing: [
       process.execPath,
       resolve(import.meta.dir, 'writing-review.ts'),
@@ -190,7 +205,13 @@ async function implement(context: Context, io: typeof runtime) {
       '--run-dir',
       join(dir, 'writing-documents'),
     ],
-    capture: [process.execPath, resolve(import.meta.dir, 'capture.ts')],
+    ...(context.target.config.capture
+      ? {
+          capture: targetCommand(context.target.config.capture.command),
+          captureDestination: context.target.config.capture.destination,
+          captureRequired: context.target.config.capture.required,
+        }
+      : {}),
     repair: actor,
     review: [process.execPath, resolve(import.meta.dir, 'codex-actor.ts'), 'review', dir],
     repairLimit: 2,
@@ -217,11 +238,13 @@ async function ship(
   io: typeof runtime,
 ) {
   const { cwd, dir, number, branch, requirements } = context;
+  const { repository, remote: remoteName, baseBranch } = context.target.config;
+  await unchangedTarget(context, io);
   const git = (...args: string[]) => checked(io, ['git', ...args], cwd);
   assert(
     (await git('rev-parse', 'HEAD')) === context.base &&
       (await git('branch', '--show-current')) === branch &&
-      (await git('remote', 'get-url', 'origin')) === context.remote,
+      (await git('remote', 'get-url', remoteName)) === context.remote,
     'Actor changed branch, HEAD or remote',
   );
   const changed = await git('status', '--porcelain');
@@ -237,8 +260,12 @@ async function ship(
   const files = (
     await git('diff-tree', '--no-commit-id', '--name-only', '--diff-filter=AM', '-z', '-r', 'HEAD')
   ).split('\0');
-  const media = files.filter((file) =>
-    /^trial\/evidence\/.*\.(png|jpg|jpeg|webp|mp4|webm)$/i.test(file),
+  const destination = context.target.config.capture?.destination;
+  const media = files.filter(
+    (file) =>
+      destination &&
+      file.startsWith(`${destination}/`) &&
+      /\.(png|jpe?g|webp|mp4|webm)$/i.test(file),
   );
   const body = join(dir, 'pr.md');
   const summary = await readFile(join(dir, 'verification-summary.md'), 'utf8');
@@ -274,8 +301,22 @@ async function ship(
     (await io.verify(config)).result === 'ready_for_human_review',
     'Target changed before push',
   );
-  await git('push', '-u', 'origin', branch);
+  await unchangedTarget(context, io, commit);
+  await io.publish(['--repo', cwd, ...context.appArgs, '--preflight']);
+  await git(
+    '-c',
+    'credential.helper=',
+    '-c',
+    'credential.helper=!gh auth git-credential',
+    'push',
+    '-u',
+    `https://github.com/${repository}.git`,
+    branch,
+  );
   const url = await io.publish([
+    '--repo',
+    cwd,
+    ...context.appArgs,
     '--head',
     branch,
     '--title',
@@ -319,7 +360,7 @@ async function ship(
     isRecord(pr) &&
       pr.url === url &&
       pr.headRefOid === commit &&
-      pr.baseRefName === 'main' &&
+      pr.baseRefName === baseBranch &&
       pr.state === 'OPEN' &&
       typeof pr.body === 'string' &&
       pr.body.includes(`Closes #${number}`),
@@ -332,6 +373,20 @@ async function ship(
     '',
     checkTimeMs,
     join(dir, 'ci'),
+  );
+  const latest: unknown = JSON.parse(
+    await checked(
+      io,
+      ['gh', 'pr', 'view', url, '--repo', repository, '--json', 'headRefOid,baseRefName,state'],
+      cwd,
+    ),
+  );
+  assert(
+    isRecord(latest) &&
+      latest.headRefOid === commit &&
+      latest.baseRefName === baseBranch &&
+      latest.state === 'OPEN',
+    'PR target changed during CI',
   );
   const result = {
     url,
@@ -353,6 +408,7 @@ export async function develop(args: string[], io = runtime) {
   try {
     console.error('Implementing, checking and independently reviewing the Issue');
     const config = await implement(context, io);
+    await unchangedTarget(context, io);
     if (context.localOnly) {
       return { status: 'verified_local', evidence: context.dir, checkout: context.cwd };
     }

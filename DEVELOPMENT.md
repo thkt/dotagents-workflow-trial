@@ -66,9 +66,11 @@ Antigravity CLIの未導入、認証・接続・サービスの障害、タイ�
 
 独立評価では、共通checkの成功だけでテストが要求を守ると判断しません。上記に反する具体的な見逃しや、保証の価値に見合わないテストがあれば、対象と理由を示して修正へ戻します。削除・統合による件数やカバレッジ数値の低下だけを差し戻し理由にしません。「テストを弱めない」とは、合意した振る舞いの必要な保証を失わせないことです。不要なテストの削除・統合を禁止する意味ではありません。今回の変更と無関係な全テストの監査や専用の帳票は求めず、判断と未確認事項は既存の実装報告・評価結果・PR説明へ含めます。
 
-試験実装のコード・固定データ・E2Eテスト・設定・検証記録は `trial/` 配下にまとめます。ハーネスの実装と制御テストは `scripts/`、要求整理のスキルは `skills/` に配置します。
+試験実装のコード・固定データ・E2Eテスト・設定・検証記録は `trial/` 配下にまとめます。対象repoにはそのrepoで合意したセットアップ・検証・必要媒体を `.dotagents.json` で指定します。検証の未設定や必要媒体の欠落は成功扱いせず、設定変更が要求や権限に影響する場合は合意へ戻します。共通ハーネスのBun実行と対象repoの技術構成は別です。
 
-試験実装には必ず `playwright.config`（現在は `trial/playwright.config.js`）を作成し、E2Eテストの対象、ブラウザーと画面条件、専用サーバーの起動・接続先、生成物の保存先を明示します。共通の `test:e2e` からその設定を指定して実行します。
+ハーネスの実装と制御テストは `scripts/`、`scoping`・`implement`のスキルは `skills/` に配置します。
+
+このrepoの試行商品には必ず `playwright.config`（現在は `trial/playwright.config.js`）を作成し、E2Eテストの対象、ブラウザーと画面条件、専用サーバーの起動・接続先、生成物の保存先を明示します。共通の `test:e2e` からその設定を指定して実行します。
 
 商品アプリのE2Eレポート・画像・traceは `trial/artifacts/`、共有する試行の検証記録は `trial/evidence/` に保存します。ハーネスの制御テストレポートはOSの一時ディレクトリに作成し、成功・失敗にかかわらず実行後に削除します。`artifacts/` はGit管理対象外、`evidence/` は対象commitと実行条件を添えてGit管理する記録です。
 
@@ -148,9 +150,9 @@ Oxlintの`typeAware`を有効にし、TSには`no-floating-promises`（`ignoreVo
 
 ## テストの実行完了
 
-`bun run test:control`と`bun run test:e2e`は、`scripts/test.ts`からBunとPlaywrightを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件になります。
+`bun run test:control`・`bun run test:trial-control`・`bun run test:e2e`は、`scripts/test.ts`からBunとPlaywrightを実行します。`only`はBunの`CI=true`とPlaywrightの`--forbid-only`で拒否します。ローカルの共通checkでも同じ条件になります。
 
-runnerが正常終了した後、BunのJUnitルート集計とPlaywrightのJSON statsを確認します。テスト0件、未実行件数が0以外、必要な集計の欠落は失敗です。skip/todo/条件付きskip/fixmeの指定方法をソースから列挙せず、実行結果で判断します。毎回、制御テストはOSの一時ディレクトリ、E2Eは `trial/artifacts/` 内に新しい保存先を作り、過去のレポートを再利用しません。runnerの失敗時にはレポート判定へ進みません。
+runnerが正常終了した後、BunのJUnitルート集計とPlaywrightのJSON statsを確認します。テスト0件、未実行件数が0以外、必要な集計の欠落は失敗です。skip/todo/条件付きskip/fixmeの指定方法をソースから列挙せず、実行結果で判断します。毎回、Bunによる制御・Playwright runner契約テストはOSの一時ディレクトリ、E2Eは `trial/artifacts/` 内に新しい保存先を作り、過去のレポートを再利用しません。runnerの失敗時にはレポート判定へ進みません。
 
 Bun 1.4.2の固定されたJUnit集計形式だけを読み取り、汎用XML解析は行いません。Playwright 1.63.0は標準JSON出力を使います。runnerの更新時は形式と判定の回帰テストを確認します。
 

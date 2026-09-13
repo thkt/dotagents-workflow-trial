@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { assertConfig, assertState } from './input.ts';
 import type { Config, State, ActorRole, StopReason } from './input.ts';
 import { writingHostTimeoutMs } from './writing.ts';
@@ -15,7 +16,7 @@ import {
   cp,
   realpath,
 } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, sep } from 'node:path';
+import { resolve, relative, isAbsolute, sep, dirname } from 'node:path';
 
 interface CommandResult {
   code: number | null;
@@ -153,16 +154,16 @@ export async function command(
 
 // Plain documentation and saved verification records do not change the rendered app.
 // Keep media, executable files and symlinks in the capture identity.
-function isCaptureRecord(name: string) {
+function isCaptureRecord(name: string, destination: string) {
   return (
     name.endsWith('.md') ||
-    (name.startsWith('trial/evidence/') &&
-      !name.startsWith('trial/evidence/generated/') &&
+    (name.startsWith(`${dirname(destination)}/`) &&
+      !name.startsWith(`${destination}/`) &&
       /\.(json|txt|log|stdout|stderr|diff)$/.test(name))
   );
 }
 
-async function snapshot(cwd: string, captureOnly = false) {
+async function snapshot(cwd: string, captureOnly = false, destination = '') {
   const list = await command(
     ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
     cwd,
@@ -177,7 +178,12 @@ async function snapshot(cwd: string, captureOnly = false) {
     const path = resolve(cwd, name);
     try {
       const stat = await lstat(path);
-      if (captureOnly && stat.isFile() && !(stat.mode & 0o111) && isCaptureRecord(name)) {
+      if (
+        captureOnly &&
+        stat.isFile() &&
+        !(stat.mode & 0o111) &&
+        isCaptureRecord(name, destination)
+      ) {
         continue;
       }
       const bytes = stat.isSymbolicLink() ? await readlink(path) : await readFile(path);
@@ -284,8 +290,15 @@ async function runModel(
   return result;
 }
 
-export const captureInstructions =
-  'For required media, prepare trial/capture.spec.js using Playwright and the existing trial/playwright.config.js projects and webServer. The host runs this separately from normal tests. Save only PNG/JPEG/WebP/MP4/WebM files directly under process.env.CAPTURE_OUTPUT (required absolute output directory). Close video contexts and save video there. Do not write media or reports into the checkout during capture. Reference final media at trial/evidence/generated/. No capture.spec.js is needed when the Issue requires no media. Return repaired when implementation and these test/capture definitions are ready; pending host execution alone is not needs_human. Actual requirement or authorization decisions still require needs_human.';
+export function captureInstructions(capture: { destination: string } | null) {
+  return [
+    capture
+      ? `Prepare the configured capture command and required media for this Issue. Reference final media at ${capture.destination}/.`
+      : 'This target declares no capture. If the agreed Issue needs media, return needs_human to configure required capture before execution.',
+    'The host runs capture separately from normal tests. Its command receives the absolute output directory as the final argument. Save only PNG/JPEG/WebP/MP4/WebM files directly under that directory (CAPTURE_OUTPUT for browser definitions). Close video contexts and save video there. Do not write media or reports into the checkout during capture.',
+    'Return repaired when implementation and test/capture definitions are ready; pending host execution alone is not needs_human. Actual requirement or authorization decisions still require needs_human.',
+  ].join(' ');
+}
 
 async function hostCommand(
   config: Config,
@@ -331,21 +344,29 @@ async function installMedia(config: Config, output: string) {
       throw Error(`Invalid capture output: ${name}`);
     }
   }
-  const parent = resolve(config.cwd, 'trial/evidence');
+  if (!names.length) {
+    throw Error('Capture succeeded without required media');
+  }
+  assert(config.captureDestination);
+  const destination = resolve(config.cwd, config.captureDestination);
+  const parent = dirname(destination);
   await mkdir(parent, { recursive: true });
-  if ((await realpath(parent)) !== resolve(await realpath(config.cwd), 'trial/evidence')) {
+  if ((await realpath(parent)) !== parent) {
     throw Error('Capture destination must not resolve through a symlink');
   }
-  const destination = resolve(parent, 'generated');
   await rm(destination, { recursive: true, force: true });
-  if (names.length) {
-    await cp(output, destination, { recursive: true });
-  }
+  await cp(output, destination, { recursive: true });
 }
 
-async function needsCapture(cwd: string, previousSource?: string) {
+async function needsCapture(config: Config, previousSource?: string) {
+  const { cwd } = config;
   if (previousSource !== undefined) {
-    return previousSource !== (await snapshot(cwd, true));
+    return (
+      previousSource !== (await snapshot(cwd, !config.captureRequired, config.captureDestination))
+    );
+  }
+  if (config.captureRequired) {
+    return true;
   }
   const tracked = await command(['git', 'diff', '--name-only', '-z', 'HEAD'], cwd, '', 10000);
   const untracked = await command(
@@ -383,7 +404,7 @@ async function verifyHost(
     return { stop: writingStop };
   }
   state.source = await snapshot(config.cwd);
-  if (config.capture && (await needsCapture(config.cwd, state.captureSource))) {
+  if (config.capture && (await needsCapture(config, state.captureSource))) {
     state.captureSource = undefined;
     const output = resolve(
       config.runDir,
@@ -413,7 +434,11 @@ async function verifyHost(
     }
     await installMedia(config, output);
     state.source = await snapshot(config.cwd);
-    state.captureSource = await snapshot(config.cwd, true);
+    state.captureSource = await snapshot(
+      config.cwd,
+      !config.captureRequired,
+      config.captureDestination,
+    );
     await persist();
   }
   return verifyCheck(config, state, persist);
@@ -447,8 +472,8 @@ async function evaluate(
 ): Promise<{ stop?: StopReason; findings?: string }> {
   const prompt = [
     'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
-    'Read DEVELOPMENT.md section "実装とテストの整理" and evaluate the tests relevant to this change against it. Ask what realistic bug deleting each relevant test would miss and weigh its additional assurance against runtime, flakiness and maintenance cost. Passing checks alone do not establish behavioral assurance. Return needs_changes for concrete missed behavior or unjustified tests, identifying the affected tests and reasons; do not reject justified deletion or consolidation merely because test counts or coverage metrics decrease.',
-    'Apply the documentation update policy in DEVELOPMENT.md, including documentation-only changes; assess required updates and their evidence rather than requiring code or new tests for every Issue.',
+    'Read the target test policy when present and evaluate the tests relevant to this change against it. Ask what realistic bug deleting each relevant test would miss and weigh its additional assurance against runtime, flakiness and maintenance cost. Passing checks alone do not establish behavioral assurance. Return needs_changes for concrete missed behavior or unjustified tests, identifying the affected tests and reasons; do not reject justified deletion or consolidation merely because test counts or coverage metrics decrease.',
+    'Apply the target documentation policy when present, including documentation-only changes; assess required updates and their evidence rather than requiring code or new tests for every Issue.',
     'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
     'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
     'The publisher owns PR creation, attachment upload and rendered-media checks; humans own review and approval. Their pending actions alone are not implementation defects.',
@@ -500,12 +525,14 @@ async function cycle(
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
-    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理". Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
-    'Apply the documentation update policy in DEVELOPMENT.md to documentation-only changes and updates accompanying implementation.',
+    'Before creating or updating tests, apply the target test policy when present and these common test criteria. Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
+    'Apply the target documentation policy when present to documentation-only changes and accompanying updates; keep current operating instructions accurate and historical results in evidence.',
     'Preserve agreed acceptance criteria and the verification needed to protect required behavior. Removing or consolidating unnecessary tests is allowed; making checks pass by hiding a realistic regression is not. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
     'The host runs full check, browser tests and capture after your changes; do not launch browsers or servers in the actor sandbox.',
-    ...(config.capture ? [captureInstructions] : []),
+    captureInstructions(
+      config.captureDestination ? { destination: config.captureDestination } : null,
+    ),
     'Return JSON with status repaired or needs_human, and findings explaining your changes or the necessary human decision.',
     'If requirements, permissions or execution limits must change, report needs_human without changing them.',
     `Requirements:\n${issue}\nFailure evidence:\n${findings}`,
@@ -537,6 +564,7 @@ async function targetChange(config: Config, state: State): Promise<StopReason | 
 }
 
 export async function run(config: Config) {
+  assertConfig(config);
   await validate(config);
   const lock = resolve(config.runDir, 'lock');
   await mkdir(lock); // Existing lock requires reconciliation, never an automatic takeover.

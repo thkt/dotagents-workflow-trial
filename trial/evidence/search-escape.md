@@ -2,7 +2,7 @@
 
 対象はIssue「検索欄のEscクリア操作を仕様とE2Eで保証する」（2026-09-12合意）です。`type="search"` と既存のinputイベントによる検索・件数更新、並べ替えを再利用し、独自のキー処理は追加しません。利用者が操作対象と対応範囲を判断できるよう、[README](../../README.md#セットアップと検証)にEscと空欄時の動作、フォーカス・並び順の保持、mobile検証の限界を記載しています。
 
-[既存E2E](../tests/product-search.spec.js)に、検索結果あり（`note`）・該当なし（`missing`）・空欄と3種類の並び順を組み合わせた9ケースを追加しました。既存のChromium desktop・mobileで計18件を追加実行する定義です。Esc前の状態、Esc後の空文字・全4商品の名前とコードと表示順・件数・該当なし表示の解除・選択値・フォーカスを確認し、再フォーカスせずキーボードから`note`を入力して再検索と順序保持を検証します。既存ケース・検証設定は維持し、失う検出条件はありません。
+現在の[商品E2E](../tests/product-search.spec.js)と[撮影定義](../capture.spec.js)がEsc後の検索欄・全件復帰・並び順・フォーカスと再検索を検証します。9月12日のE2E追加件数と当時のホストcheck結果は[履歴](search-escape-20260912.md)に保存しています。今回の来歴修正ではテスト・撮影定義を変更していません。
 
 ## 撮影と確認する内容
 
@@ -24,42 +24,52 @@
 
 ## ホスト実行・対象差分と媒体の照合
 
-現在の8媒体は、2026-09-12のホスト実行 `development/d3d15c767753bba6/90-revalidation-after-92/verification/capture-1` に対応します。以前の `90/verification/capture-2` とは別の実行です。対象はHEAD `7bebfd3b8828873fd176b8a97a9497637d1affdc` に[対象ファイルの未commit差分](search-escape-run/revalidation/captured-source.diff)を加えたものです。差分はREADME、検索E2E、撮影定義を含み、商品実装はHEADと同じです。[引き継ぎ記録](search-escape-run/revalidation/handoff.json)に今回の基準版と以前の実行との対応を保存しています。
+現在の8媒体は、2026-09-13のホスト実行 `108/resume-20260913/verification-108-content-fixed/capture-2` に対応します。capture-1からWebM 4点とdesktopのEsc画像1点が変わりました。Esc画像は43046 bytesから43044 bytesとなり、残るPNG 3点は同じバイト列でした。9月12日の `90-revalidation-after-92/verification/capture-1` のハッシュは現在の動画の根拠には使いません。
 
-- 撮影は4件成功（Esc・並び順復元 × desktop・mobile）、skipped / unexpected / flakyはすべて0、errorsなし。開始 `2026-09-12T08:35:43.287Z`（17:35:43.287 JST）、所要38.962秒。[標準出力のCAPTURE_PROVENANCE 4件](search-escape-run/revalidation/capture-1.stdout)、[JSONレポート](search-escape-run/revalidation/capture-1-media.report.json)、[標準エラー出力](search-escape-run/revalidation/capture-1.stderr)を保存しました。
-- 同じホストの `check-1` は `bun run check` がexit 0、タイムアウトなし。制御118件・E2E 102件成功で、E2EはEsc追加18件を含み、skipped / unexpected / flakyはすべて0、errorsなし。[標準出力](search-escape-run/revalidation/check-1.stdout)、[標準エラー出力](search-escape-run/revalidation/check-1.stderr)、[E2Eレポート](search-escape-run/revalidation/check-1-e2e.report.json)、[ホストの終了コード記録](search-escape-run/revalidation/host-state.json)を保存しました。これは修正前の保存済みホスト結果であり、今回のsandbox内での再実行ではありません。
-- `CAPTURE_PROVENANCE` の対象11ファイルすべてについて、現在のバイト数・SHA-256がログと一致しました。媒体8点もすべてログのバイト数・SHA-256、およびホスト出力ファイルとバイト単位で一致しました。[照合記録](search-escape-run/provenance.json)にcheckout基準のパス、完全なハッシュ、実行結果、保存した原ログと差分のハッシュを記載しています。原ログのsourceFiles.pathは `sourcePathBase: "trial/"` から解決します。
+対象はHEAD `28642977a02518f79c6729af550ddf8c191b0fc5` に[撮影対象の保存差分](search-escape-run/generalization-108/captured-source.diff)を加えたものです。この差分はログに列挙された11ファイルを再現するもので、Issue全体の差分ではありません。[現行の照合記録](search-escape-run/provenance.json)に対象ファイル・媒体・保存ログのバイト数とSHA-256、撮影結果、ホストの実行識別値を記載しています。原ログのsourceFiles.pathは `sourcePathBase: "trial/"` から解決します。
 
-ホストは `scripts/capture.ts` からPlaywright CLIの `test --config …/90-revalidation-after-92/verification/capture-1-media.config.js` を実行しました。[実際の生成設定](search-escape-run/revalidation/capture-1-media.config.txt)は既存 `trial/playwright.config.js` のprojects・webServerを再利用します。READMEの `trial/capture.config.js` を直接指定した実行とは区別します。
+- [標準出力のCAPTURE_PROVENANCE 4件](search-escape-run/generalization-108/capture-2.stdout)と[JSONレポート](search-escape-run/generalization-108/capture-2-media.report.json)は、Esc・並び順復元 × desktop・mobileの4件成功、skipped / unexpected / flakyすべて0、errorsなしを記録しています。開始 `2026-09-13T13:55:55.416Z`（22:55:55.416 JST）、所要36.541秒です。
+- [保存したホストstate](search-escape-run/generalization-108/host-state-after-check-3.json)のcaptureイベントはexit 0、タイムアウトなしです。[標準エラー出力](search-escape-run/generalization-108/capture-2.stderr)は空です。stateは修正後の共通check成功後、独立評価2回の上限で停止した記録であり、最終受入の記録ではありません。
+- 対象11ファイルすべてと媒体8点の現在のバイト数・SHA-256がログと一致しました。媒体8点はホスト出力ともバイト単位で一致しました。この修正では媒体を再生成していません。
 
-Playwright 1.63.0、Chromium 153.0.8010.12、headless、workers 1、retries 0。desktopは1280×800・isMobile=false・hasTouch=false、mobileは375×812・isMobile=true・hasTouch=trueです。webServerは `trial/` から `bun server.js` をPORT=4173で起動し、URLは `http://127.0.0.1:4173`、既存サーバーの再利用はありません。`PLAYWRIGHT_BROWSERS_PATH=0`、`CAPTURE_OUTPUT=…/90-revalidation-after-92/verification/capture-1-media`（完全な絶対パスは原ログに記録）で、媒体はその直下、レポートはcheckout外の `verification/` に出力されました。動画contextを閉じて保存後、ホストが最終媒体を `trial/evidence/generated/` へ収集しています。
+## 撮影コマンドと設定
 
-両画面幅で、上記3状態からEscで空文字・全4件・降順・件数表示・該当なし非表示・検索欄フォーカスを確認し、再フォーカスせず `note` を入力して2件へ再検索するassertionが成功しました。同じ撮影実行で並び順復元も成功し、降順選択→`note`検索→再読み込み→空の検索欄・全4件・降順を確認しています。
+[対象設定](../../.dotagents.json)のcapture.commandは次のとおりです。ホストは対象checkoutを作業ディレクトリとし、`{harness}` をハーネスの絶対パスに解決して、作成済みのcheckout外の絶対出力ディレクトリを最後の引数に追加します。
+
+```text
+bun {harness}/scripts/capture.ts trial/capture.spec.js trial/playwright.config.js ABSOLUTE_OUTPUT
+```
+
+今回の[生成設定](search-escape-run/generalization-108/capture-2-media.config.txt)は `trial/playwright.config.js` のprojects・webServerを再利用します。`trial/capture.config.js` を直接指定した実行とは区別します。実際のPlaywright CLI引数はJSONレポートのconfig.argvにあります。
+
+Playwright 1.63.0、Chromium 153.0.8010.12、headless、workers 1、retries 0。desktopは1280×800・isMobile=false・hasTouch=false、mobileは375×812・isMobile=true・hasTouch=trueです。webServerは `trial/` から `bun server.js` をPORT=4173で起動し、URLは `http://127.0.0.1:4173`、既存サーバーの再利用はありません。`PLAYWRIGHT_BROWSERS_PATH=0`、`CAPTURE_OUTPUT=…/108/resume-20260913/verification-108-content-fixed/capture-2-media`（完全な絶対パスは原ログに記録）です。
+
+媒体はその直下にPNG/WebMだけを保存し、動画contextを閉じて確定します。生成設定・レポート・runner出力はcheckout外の `verification-108-content-fixed/` に出力されました。ホストが収集した最終媒体は `trial/evidence/generated/` にあります。
+
+両画面幅で、結果あり・該当なし・空欄からEscで空文字・全4件・降順・件数表示・該当なし非表示・検索欄フォーカスを確認し、再フォーカスせず `note` を入力して2件へ再検索するassertionが成功しました。同じ撮影実行で並び順復元も成功し、降順選択→`note`検索→再読み込み→空の検索欄・全4件・降順を確認しています。
 
 | 撮影 | desktop（UTC） | mobile（UTC） |
 | --- | --- | --- |
-| Esc・画像と動画 | 08:35:46.300–08:36:00.477 | 08:36:04.551–08:36:18.591 |
-| 並び順復元・画像と動画 | 08:36:00.482–08:36:04.217 | 08:36:18.597–08:36:22.222 |
+| Esc・画像と動画 | 13:55:55.819–13:56:10.074 | 13:56:14.155–13:56:28.245 |
+| 並び順復元・画像と動画 | 13:56:10.079–13:56:13.873 | 13:56:28.249–13:56:31.924 |
 
-並び順復元の[desktop動画](generated/product-order-restore-desktop.webm)・[mobile動画](generated/product-order-restore-mobile.webm)と[desktop画像](generated/product-order-restored-desktop.png)・[mobile画像](generated/product-order-restored-mobile.png)も同じ実行の媒体です。[以前の並び順復元記録](order-persistence.md)のハッシュは当時の実行に限定します。
+並び順復元の[desktop動画](generated/product-order-restore-desktop.webm)・[mobile動画](generated/product-order-restore-mobile.webm)と[desktop画像](generated/product-order-restored-desktop.png)・[mobile画像](generated/product-order-restored-mobile.png)も同じ実行の媒体です。[以前の並び順復元記録](order-persistence.md)の結果は当時の実行に限定します。
 
 | 今回照合した動画 | bytes | SHA-256 |
 | --- | --- | --- |
-| product-order-restore-desktop.webm | 133533 | `0123591062194090776be0b2ae9c6524dec914d2346f02c15fa0dd808235df5d` |
-| product-order-restore-mobile.webm | 68303 | `3c0d9ee6a99da1bc5aae15c06c8c894095255ce26bef66012a14adf6a45d21d1` |
-| product-search-escape-desktop.webm | 511631 | `bb6463357a99be264a08c3866a5b83fd47453a65088ab8e9598bffcaf7fc002e` |
-| product-search-escape-mobile.webm | 262755 | `98d61b042168a76ce45abefee4d47ffc32ce221326601a2ed8d691a138db011d` |
+| product-order-restore-desktop.webm | 131272 | `4cbbf199b30b226f8716b00709573f98b0bec2588ac0dde5df875f2b7cc4e284` |
+| product-order-restore-mobile.webm | 59280 | `15dda91e0ad91f56c386daa37763a821f7d488e88497b036c91535338efff0cc` |
+| product-search-escape-desktop.webm | 530077 | `6eec6f480d0efc2f6e0a2db53cc29605e51918592100ab440c9a82775ab2edc4` |
+| product-search-escape-mobile.webm | 266195 | `ed84eb557041b3cc05bd13ff2ca53251086dba4a442db2b5421fb3537e70b4ee` |
 
-## 来歴不足の修正と再撮影の扱い
+## 履歴の保持と修正時の確認
 
-再検証でホストが同名の動画4点を更新した一方、文書とprovenance.jsonは以前のcapture-2を参照していました。今回、現物に一致する再検証のログ・設定・結果・対象差分を保存し、照合記録と関連文書を更新しました。以前の[照合記録](search-escape-run/capture-2-provenance.json)とその原ログは過去の結果として保存し、現在の媒体を照合する根拠には使いません。
+再撮影後も旧来歴を現行媒体の根拠としていた参照を修正しました。9月12日の[説明](search-escape-20260912.md)・[照合記録](search-escape-run/revalidation-provenance.json)と、それ以前の[capture-2照合記録](search-escape-run/capture-2-provenance.json)・原ログは履歴として保持しています。共通入口の変更とホスト検証は[汎用化の検証記録](repository-generalization.md)を参照してください。
 
-今回の修正はMarkdownと `trial/evidence/` 内の保存記録だけです。現行ホストの[撮影再利用条件](../../scripts/README.md)に従い、コード・撮影定義・媒体などのファイル内容・モード・パスから算出する識別値が、成功済みcapture-1の収集時と同じ `38e3c9565fdb22d09edce5e5e529c1b96e8fffd6b400114adc8fb092c7d187a9` であることを確認しました。この条件ではホストが撮影を再利用するため、記録修正だけで再び動画が置き換わることを避けられます。撮影定義・アプリ・媒体などが変わって再撮影される場合は、新しい実ログと収集後の媒体を照合して記録を更新します。この表は将来の媒体を保証しません。
+この最後のホスト来歴更新は文書と保存記録だけです。対象11ファイル・媒体8点・保存ログのSHA-256とバイト数、ホスト出力との一致、HEADと保存差分からの対象再現、関連リンク、`git diff --check`を確認しました。撮影再利用の識別値は保存したホストstateのcaptureSourceと同じ `e4075ba19df66b43f5ca4a7c581a7f24ef0c8a5dd3c9ee71e88eb089c9a712a2` です。現行CLIは通常のMarkdownと保存記録をこの識別値から除き、コード・設定・媒体は含めます。再利用の判定はホストが行い、再撮影された場合は新しい原ログと収集後の媒体へ来歴を更新します。
 
-## 修正時の確認と限界
+テストの追加・削除・統合はなく、失う検出条件はありません。保存済み媒体の取り違えは今回のハッシュ・原ログ照合で確認し、時点固有の値を固定する恒久テストは追加しません。商品E2E、制御テストと撮影assertionは維持します。この記録更新ではブラウザー・サーバー・テストを再実行していません。直前のホスト実行では撮影4件と共通checkが成功しましたが、修正後の独立評価は回数上限により未実施です。
 
-対象を絞り、保存ログの集計・終了コード、対象11ファイルと媒体8点のSHA-256・バイト数、ホスト出力との一致、HEADと保存差分からの対象ファイル再現、関連文書リンク、`git diff --check`、撮影再利用の識別値を確認しました。利用仕様の正本であるREADMEとE2E・撮影定義は要求に一致するため、今回追加の変更はありません。DEVELOPMENT.mdの文書更新方針に従い、実行条件と結果はこの検証記録へまとめています。
+mobileは既存のモバイル画面・タッチ設定でのキー入力検証です。実機のソフトウェアキーボード、別ブラウザー、検索欄以外からのショートカットは保証しません。媒体のハッシュ照合は目視・動画再生の確認ではありません。公開担当者によるPR作成・添付・画像表示／動画再生・最新CI確認と、人のレビュー・承認は引き続き必要です。
 
-ブラウザー・サーバー・全check・撮影は起動していません。修正後の全checkとブラウザーテスト、および撮影の再利用判定はホストが実行します。媒体は取得・照合済みですが、目視・動画再生によるレビュー済みとは扱いません。
-
-mobileは既存のモバイル画面・タッチ設定でのキー入力検証です。実機のソフトウェアキーボード、別ブラウザー、検索欄以外からのショートカットは保証しません。人のレビュー・承認、公開担当者によるPR作成・媒体添付と公開先の表示・再生確認は別途必要です。
+直前のcapture-1の[照合記録](search-escape-run/generalization-108-capture-1-provenance.json)と原ログも保持しています。現在の媒体はcapture-2に対応します。

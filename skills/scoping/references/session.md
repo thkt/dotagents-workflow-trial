@@ -11,14 +11,14 @@
   "repo": "/absolute/path/to/repository",
   "contextDir": "/absolute/path/to/private-context/github.com/owner/repository",
   "task": "reset-discovery",
-  "referencePaths": ["README.md", "DEVELOPMENT.md"],
+  "referencePaths": ["README.md", ".dotagents.json"],
   "criteriaFile": "/absolute/path/to/skills/scoping/references/criteria.json",
   "request": "絞り込み後に元の一覧へ戻す操作を分かりやすくしたい"
 }
 ```
 
 ```sh
-bun scripts/discovery.ts start /absolute/path/config.json
+bun /absolute/path/to/trusted/scripts/discovery.ts start /absolute/path/config.json
 ```
 
 出力したSESSIONを以降のコマンドへ渡す。同じtaskの開始は上書きせず失敗する。contextDirはGitの共通管理ディレクトリに紐づき、同じリポジトリのworktree間で共有する。GitとBunが必要。別cloneは同じremoteでも別の保存先を使う。対象worktreeのrepoと新しいtaskを指定して開始し、researchから適用できる調査を選ぶ。セッションごとのcheckout・基準・評価は共有せず、現在のコード・要求に対して再評価する。
@@ -60,7 +60,7 @@ CLIは対象checkout・Git管理ディレクトリ内への保存、別Gitリポ
 
 信頼する担当者が操作する単一ホスト用。悪意ある同一ユーザーによる保存ファイルの改変、外部資料の変更検出、全ディスク障害への耐久性は保証しない。gateは保存時の評価を返すため、外部のコード・要求・資料が変わったら担当者がnoteで変更を記録し再評価する。実装CLIの起動をシステム全体で禁止する機構ではない。
 
-スキル本文は`skills/scoping`に置き、リポジトリ内の`.agents/skills/scoping`から相対symlinkで参照する。呼び出し方は[README](../../../README.md#要求整理とissue作成)を参照する。グローバルインストールは不要。CLIの検証成功と、担当者がスキルを使って要求を精緻化できたかは分けて確認する。
+スキル本文は`skills/scoping`に置き、リポジトリ内の`.agents/skills/scoping`から相対symlinkで参照する。呼び出し方は[README](../../../README.md#要求整理とissue作成)を参照する。別repoから使う場合もスキル実体の相対位置から信頼するCLIを解決し、対象repoのパスを設定する。正規管理先は `thkt/dotagents`、利用先は `~/.agents` とする予定だが、登録切替は後続の移行Issueで行う。CLIの検証成功と、担当者がスキルを使って要求を精緻化できたかは分けて確認する。
 
 repository.txtは共有するGit管理ディレクトリを記録する。checkoutパスが保存されている場合も、そのパスが存在し同じGit管理ディレクトリに解決できれば再利用できる。存在しないパスや保存庫の移転は自動修復しない。
 

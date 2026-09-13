@@ -9,12 +9,12 @@
 | パス | 役割 |
 | --- | --- |
 | `scripts/` | ハーネスの制御CLI、入力検証、公開処理とそのテスト |
-| `skills/` | 要求整理のスキルと参照資料 |
-| `trial/` | 試験実装の商品アプリ、固定データ、E2EテストとPlaywright設定 |
+| `skills/` | 共通入口 `scoping`・`implement` と参照資料 |
+| `trial/` | 試行商品・Playwright依存とlockfile・商品検証・撮影定義 |
 | `trial/evidence/` | この試行で保存した実装・ハーネス評価の検証記録 |
 | `trial/artifacts/` | 商品アプリのE2Eレポート・画像・traceなどの生成物 |
 
-試験実装の追加・変更は `trial/` 配下で行います。ルートの `package.json`、lint・型検査設定、CIは共通の検証入口です。商品アプリの生成物は `trial/artifacts/` に保存し、Git管理から除外します。制御テストの集計レポートはOSの一時ディレクトリに作成し、成功・失敗にかかわらず実行後に削除します。
+試験実装の追加・変更は `trial/` 配下で行います。ルートの `package.json` とlockfileはハーネスのBun・TS開発依存を管理し、Playwright依存は `trial/package.json` と `trial/bun.lock` で管理します。ルートのCIと `check` はハーネス・試行商品の両方を検証するこのrepoの入口です。商品アプリの生成物は `trial/artifacts/` に保存し、Git管理から除外します。制御テストの集計レポートはOSの一時ディレクトリに作成し、成功・失敗にかかわらず実行後に削除します。
 
 ## 読む順序
 
@@ -48,9 +48,17 @@ Bun、Git、対象repoを読み書きできるghの認証が必要です。調�
 $implement 99
 ```
 
-現在のrepoのIssue番号、または試行repoのIssue URLを渡します。[implement](skills/implement/SKILL.md)がCLIを起動し、初回実装、必要な文書や証拠の作成、検証、修正、独立評価、PR作成まで進めます。人の承認・マージは別です。「公開しない」場合はcommit・push・PR作成を省略します。
+現在のrepoのIssue番号、または対象repoのIssue URLを渡します。[implement](skills/implement/SKILL.md)がCLIを起動し、初回実装、必要な文書や証拠の作成、検証、修正、独立評価、PR作成まで進めます。人の承認・マージは別です。「公開しない」場合はcommit・push・PR作成を省略します。
 
-対象は現在の`thkt/dotagents-workflow-trial`です。利用条件・実行上限・停止後の扱いは[CLI手順](scripts/README.md#issueからpr作成)を参照してください。hookを追加せず、スキルはCLIを呼ぶ入口だけを担います。
+対象checkoutの `.dotagents.json` でrepo・remote・base branch・セットアップ・検証・撮影を指定します。[対象repoの設定](scripts/README.md#対象repoの設定)を参照してください。Bunはハーネスの実行環境であり、対象repoへBun・Playwright・`trial/`を要求しません。利用条件・実行上限・停止後の扱いは[CLI手順](scripts/README.md#issueからpr作成)を参照してください。hookを追加せず、スキルはCLIを呼ぶ入口だけを担います。
+
+## 共通ハーネスと試行商品の検証場所
+
+共通ハーネスは `scripts/`、`skills/`、ルートのBun・TS開発依存と基本方針です。`bun run check:harness` は制御コードのlint・書式・複雑度・型検査・制御テストを実行し、Playwrightや商品サーバーを必要としません。スキルやCLIを他repoから使う場合は、この信頼する実体を参照します。
+
+試行商品・固定データ・Playwright依存・撮影定義は `trial/` にあります。`bun run setup:e2e` の後、`bun run check:trial` で商品のlint・複雑度・Playwright runner契約・E2Eを検証します。提出時とCIの `bun run check` は両方の範囲を引き続き検証し、片方だけの成功を共通check成功としません。
+
+既存媒体と履歴は `trial/evidence/`、過去の設計・比較は `docs/design/archive/` と `docs/workflow-refinement/` に保持します。正規repo `thkt/dotagents` への取り込みと `~/.agents` への登録切替は後続Issueです。今回の検証分離・実測の未確認範囲と引き渡し条件は[汎用化の検証記録](trial/evidence/repository-generalization.md)に記載します。
 
 ## 提供する機能
 
@@ -108,13 +116,14 @@ bun run check
 | 3. `complexity` | Biomeの`noExcessiveCognitiveComplexity`、上限15。[設定](biome.json)で他のlintルール・formatter・assistは無効です。 |
 | 4. `typecheck` | `tsc --noEmit`。対象は制御コード・制御テストを含む`scripts/**/*.ts`で、`strict`と`noUncheckedIndexedAccess`が有効（[tsconfig.json](tsconfig.json)）。 |
 | 5. `test:control` | Bunで`scripts/tests`を実行。実際の制御CLI入口と一時Git作業コピーで、模擬コマンドによる修正・評価の遷移、対象変更、不正入力、上限、中断・再実行拒否を確認します。テストrunnerの実行完了判定も検証します。実モデルは呼びません。 |
-| 6. `test:e2e` | Playwrightで商品アプリの表示・検索をChromiumの2画面幅で検証し、画像を保存します。詳細は以下のとおりです。 |
+| 6. `test:trial-control` | Playwright runnerの完了判定をブラウザー不要のテストで検証します。商品側のPlaywright依存を使います。 |
+| 7. `test:e2e` | Playwrightで商品アプリの表示・検索をChromiumの2画面幅で検証し、画像を保存します。詳細は以下のとおりです。 |
 
 商品アプリの[trial/server.js](trial/server.js)と[trial/public/search.js](trial/public/search.js)はJavaScriptです。lint・複雑度検査と商品画面のE2Eで確認し、TSの書式確認や型検査の対象には含めません。BunでTSを実行するだけでは型検査になりません。模擬コマンドの制御テスト成功は、実モデルの判断品質や要求達成を保証するものではありません。
 
-両テストコマンドは[scripts/test.ts](scripts/test.ts)を経由します。`only`の指定、テスト0件、未実行件数が0以外、必要な集計の欠落を失敗と判定します。[実行完了の判定と制約](DEVELOPMENT.md#テストの実行完了)も確認してください。TSの整形やルールは[TypeScriptの書き方](DEVELOPMENT.md#typescriptの書き方)にまとめています。
+`test:control`・`test:trial-control`・`test:e2e`は[scripts/test.ts](scripts/test.ts)を経由します。`only`の指定、テスト0件、未実行件数が0以外、必要な集計の欠落を失敗と判定します。[実行完了の判定と制約](DEVELOPMENT.md#テストの実行完了)も確認してください。TSの整形やルールは[TypeScriptの書き方](DEVELOPMENT.md#typescriptの書き方)にまとめています。
 
-`setup:e2e`はPlaywrightに対応するChromiumを`node_modules`内へインストールします。
+`setup:e2e`は `trial/bun.lock` に従って商品側の依存を導入し、Playwrightに対応するChromiumを `trial/node_modules` 内へインストールします。
 初回はネットワーク接続が必要で、LinuxではOS依存ライブラリのインストール権限も必要です。
 
 E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。このポートは空けてください。
@@ -150,7 +159,7 @@ CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保�
 ホストが通常の `bun run check` とは別に以下を実行します。`CAPTURE_OUTPUT` は必須の絶対パスで、checkout外の出力ディレクトリを指定します。
 
 ```sh
-CAPTURE_OUTPUT=/absolute/path/to/capture-output PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright test --config trial/capture.config.js
+CAPTURE_OUTPUT=/absolute/path/to/capture-output bun run --cwd trial capture
 ```
 
 [trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。[trial/capture.config.js](trial/capture.config.js) は既存のPlaywright設定のprojects・画面幅・webServerを再利用し、通常テストから撮影を分離します。PNGとWebMだけを `CAPTURE_OUTPUT` 直下へ保存し、動画contextを閉じて確定します。runnerの出力先はOSの一時ディレクトリです。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。

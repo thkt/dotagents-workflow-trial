@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import { isRecord } from './input.ts';
 
 export function checkReport(runner: 'bun' | 'playwright', text: string) {
@@ -34,9 +35,15 @@ if (import.meta.main) {
     const runner = process.argv[2];
     assert(
       runner === 'bun' || runner === 'playwright',
-      'Usage: bun scripts/test.ts bun|playwright',
+      'Usage: test.ts bun [TEST_DIRECTORY] | playwright CONFIG REPORT_DIRECTORY',
     );
-    const artifacts = runner === 'bun' ? tmpdir() : resolve('trial/artifacts');
+    const config = process.argv[3];
+    const reportDirectory = process.argv[4];
+    assert(
+      runner === 'bun' || (config && reportDirectory),
+      'Playwright config and report directory required',
+    );
+    const artifacts = runner === 'bun' ? tmpdir() : resolve(reportDirectory ?? '');
     await mkdir(artifacts, { recursive: true });
     const dir = await mkdtemp(resolve(artifacts, `${runner}-report-`));
     if (runner === 'bun') {
@@ -48,15 +55,16 @@ if (import.meta.main) {
         ? [
             process.execPath,
             'test',
-            'scripts/tests',
+            config ?? 'scripts/tests',
             '--reporter=junit',
             '--reporter-outfile',
             report,
           ]
         : [
-            resolve('node_modules/.bin/playwright'),
+            process.execPath,
+            createRequire(resolve(config ?? '')).resolve('@playwright/test/cli'),
             'test',
-            '--config=trial/playwright.config.js',
+            `--config=${resolve(config ?? '')}`,
             '--forbid-only',
             '--reporter=list,json',
           ];

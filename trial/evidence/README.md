@@ -5,7 +5,7 @@
 | 記録 | 内容 |
 | --- | --- |
 | [Geminiによる文書再利用性の比較](doc-reuse-99/evaluation.md) | 3.6 Flashでの添削と会話なしの読者確認。改善未確認・条件の脱落・未採用候補と実行記録 |
-| [検索欄のEsc操作](search-escape.md) | 再検証check-1のE2E 102件・capture-1の撮影4件のホスト成功結果、対象差分・実ログとEsc／並び順復元の8媒体のSHA-256照合、人の確認への引き継ぎ |
+| [検索欄のEsc操作](search-escape.md) | 9月13日のホスト撮影4件と現行8媒体のSHA-256照合、対象差分・設定・実ログ、9月12日の結果への履歴参照、人の確認への引き継ぎ |
 | [文書のみのimplement実測](documentation-flow.md) | ホスト撮影による媒体混入の検出・修正と、文書のみの実装・評価の成立 |
 | [開発手順・検証追加の履歴](development-history.md) | 初期整備とIssue #9〜#23の検証追加の経緯 |
 | [検索・文書修正の試行](issue-10/evaluation.md) | JS版で親タスクが進行した試行、介入と未検証範囲 |
@@ -18,4 +18,6 @@
 | [公開前評価の担当分離](issue-67/evaluation.md) | 実装不足の差し戻しと、公開・人の確認を残した引き継ぎをAstraで確認 |
 | [商品名の並び順とコンテキスト引き継ぎ](issue-62/evaluation.md) | 保存した要求・調査の再利用、読み順と検索の実装、独立評価 |
 
-並び順の再訪時復元については、[検証・撮影記録](order-persistence.md)を参照してください。この修正時の媒体はEsc撮影と同じ `90-revalidation-after-92/verification/capture-1` で取得しており、来歴・照合結果は[Esc操作の記録](search-escape.md#ホスト実行対象差分と媒体の照合)にまとめています。人のレビュー・承認と公開時の確認が残っています。
+並び順の再訪時復元については、[検証・撮影記録](order-persistence.md)を参照してください。現在の媒体はEsc撮影と同じ9月13日の `108/resume-20260913/verification-108-content-fixed/capture-2` で取得しており、来歴・照合結果は[Esc操作の記録](search-escape.md#ホスト実行対象差分と媒体の照合)にまとめています。人のレビュー・承認と公開時の確認が残っています。
+
+共通入口の汎用化・検証分離と、実試行の未確認範囲は[汎用化の検証記録](repository-generalization.md)を参照してください。

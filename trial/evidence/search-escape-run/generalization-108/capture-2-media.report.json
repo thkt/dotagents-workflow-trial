@@ -1,0 +1,259 @@
+{
+  "config": {
+    "argv": [
+      "/Users/thkt/.local/share/mise/installs/bun/1.4.2/bin/bun",
+      "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/checkout/trial/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-2-media.config.js"
+    ],
+    "configFile": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-2-media.config.js",
+    "rootDir": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/checkout/trial",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-2-media.artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "desktop",
+        "name": "desktop",
+        "testDir": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/checkout/trial",
+        "testIgnore": [],
+        "testMatch": [
+          "capture.spec.js"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-2-media.artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile",
+        "name": "mobile",
+        "testDir": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/checkout/trial",
+        "testIgnore": [],
+        "testMatch": [
+          "capture.spec.js"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json",
+        {
+          "outputFile": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/resume-20260913/verification-108-content-fixed/capture-2-media.report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": {
+      "command": "bun server.js",
+      "cwd": "/Users/thkt/.local/share/dotagents/development/d3d15c767753bba6/108/checkout/trial/",
+      "env": {
+        "PORT": "4173"
+      },
+      "url": "http://127.0.0.1:4173",
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "capture.spec.js",
+      "file": "capture.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "検索結果あり・該当なし・空欄からEscと再検索を撮影する",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 14257,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "buffer": "Q0FQVFVSRV9QUk9WRU5BTkNFIHsic3RhcnRlZEF0IjoiMjAyNi0wOS0xM1QxMzo1NTo1NS44MTlaIiwiY29tcGxldGVkQXQiOiIyMDI2LTA5LTEzVDEzOjU2OjEwLjA3NFoiLCJyZXN1bHQiOiJwYXNzZWQiLCJwcm9qZWN0IjoiZGVza3RvcCIsImJhc2VVUkwiOiJodHRwOi8vMTI3LjAuMC4xOjQxNzMiLCJ2aWV3cG9ydCI6eyJ3aWR0aCI6MTI4MCwiaGVpZ2h0Ijo4MDB9LCJpc01vYmlsZSI6ZmFsc2UsImhhc1RvdWNoIjpmYWxzZSwiYnJvd3NlclZlcnNpb24iOiIxNTMuMC44MDEwLjEyIiwib3V0cHV0IjoiL1VzZXJzL3Roa3QvLmxvY2FsL3NoYXJlL2RvdGFnZW50cy9kZXZlbG9wbWVudC9kM2QxNWM3Njc3NTNiYmE2LzEwOC9yZXN1bWUtMjAyNjA5MTMvdmVyaWZpY2F0aW9uLTEwOC1jb250ZW50LWZpeGVkL2NhcHR1cmUtMi1tZWRpYSIsInNvdXJjZVBhdGhCYXNlIjoidHJpYWwvIiwic291cmNlRmlsZXMiOlt7InBhdGgiOiIuLi9SRUFETUUubWQiLCJieXRlcyI6MjA3MDMsInNoYTI1NiI6IjFhY2IyYmMzZjYxZGYzYjY2Mjg3YmRkMDc0ZGU2ZDllZWRjOWY2OWMwYjQxMjI1N2JkODk0MTAyOGE0NzUwN2MifSx7InBhdGgiOiIuLi9wYWNrYWdlLmpzb24iLCJieXRlcyI6MTU4NSwic2hhMjU2IjoiODBhMjY1MzY3MjVhNTQ0MTYwODIwYzc3MmIyMzdlMTQ1MzRmZmE0NjM3MTFjNjZhZDFlMDU3MDQxOGIzYzkxZCJ9LHsicGF0aCI6Ii4uL2J1bi5sb2NrIiwiYnl0ZXMiOjIxNjUwLCJzaGEyNTYiOiI5NDFjOTU3ZDNhZTRlZmVlMDQxMTY3ZTc1NzRiYWUwYmI0YWE0MTRkNDNhYTlhZGMyNzQyZWIyOTg3OTg5MDFlIn0seyJwYXRoIjoicHVibGljL2luZGV4Lmh0bWwiLCJieXRlcyI6MTgyNCwic2hhMjU2IjoiN2ZmZDRhZTk3MWYwOGQwODQ3ZjcwYjYyMjQxNDhmYWI4OWI2ZmRhNWUyNjU5Y2U2MWJhMGZmYzM4M2JjOGU4NyJ9LHsicGF0aCI6InB1YmxpYy9zZWFyY2guanMiLCJieXRlcyI6MTkyMiwic2hhMjU2IjoiY2NkZDM0MmM1NTE5MzFjN2ZlNzhiMDFlNmVkMzgxMGFhZGNjM2I2MjU2MjU1MDQ3NzFlNzAyMThiZTVhMWE0ZCJ9LHsicGF0aCI6InB1YmxpYy9zdHlsZXMuY3NzIiwiYnl0ZXMiOjE1MDAsInNoYTI1NiI6IjEyNzZhNmFkYzUwYmQ3MzcyOGQwMDQzODRiYTVhMTcwYTljYTMwODZhOWYzZjUyMTQ0YmQ2YTVhZWE3NTIzYTAifSx7InBhdGgiOiJzZXJ2ZXIuanMiLCJieXRlcyI6NTYwLCJzaGEyNTYiOiI5MjQ2YWE2OTc0NjUyZmMxYWU3ZGIyZjQ4MTc1NjJkZWI4MDQ0YmVmYmNkMGQ3ODIxNWY2NjdiOTlmYWUyOGZhIn0seyJwYXRoIjoicGxheXdyaWdodC5jb25maWcuanMiLCJieXRlcyI6OTE2LCJzaGEyNTYiOiIyMjBhNmQ2ZjcwYjgyZTZlOTNhMWM2Y2I2NzkzN2QzNmY3MmUyNTNkMzZhNzc4N2Y5ZWJjNDNiNjIwNjZhMzNiIn0seyJwYXRoIjoiY2FwdHVyZS5jb25maWcuanMiLCJieXRlcyI6NjkxLCJzaGEyNTYiOiI4NTMzZTUzYmY2ZDRjNmMzYjk3NjJhZGRlYWRlNTdkNWJhOGFkNzlhOTRmMThiYjEzMjYzMDE2ZGNiOWQzMDE2In0seyJwYXRoIjoiY2FwdHVyZS5zcGVjLmpzIiwiYnl0ZXMiOjcyNDYsInNoYTI1NiI6IjQ5OTA0Y2U0NGYzMzA2OTEzMzgwZDAzMDI1NTcyZGZiZTAxOWY2OWZlYzc5MDJjOWY4NTE2MjdhMmIwMzkzNGEifSx7InBhdGgiOiJ0ZXN0cy9wcm9kdWN0LXNlYXJjaC5zcGVjLmpzIiwiYnl0ZXMiOjgxNzcsInNoYTI1NiI6ImYxZmQ4MTJlNzQwMWY3ODM5YmQzNmI4NDk2NTc2NGU0NzNjZjIwMTBlYTEwMjI0Zjc2YWQ4MDExYzMyNTVmYjEifV0sIm1lZGlhIjpbeyJwYXRoIjoidHJpYWwvZXZpZGVuY2UvZ2VuZXJhdGVkL3Byb2R1Y3Qtc2VhcmNoLWVzY2FwZS1jbGVhcmVkLWRlc2t0b3AucG5nIiwiYnl0ZXMiOjQzMDQ0LCJzaGEyNTYiOiIzZjRjMTc0YmQxMjgwNDJhNGIwZmQ0ZWY0YzE5MDQ1ZjU1NGMwNTZjY2M1YjQ3OGJhY2NmZmNmYWQwYWE1OTExIn0seyJwYXRoIjoidHJpYWwvZXZpZGVuY2UvZ2VuZXJhdGVkL3Byb2R1Y3Qtc2VhcmNoLWVzY2FwZS1kZXNrdG9wLndlYm0iLCJieXRlcyI6NTMwMDc3LCJzaGEyNTYiOiI2ZWVjNmY0ODBkMGVmYzJmNmUwYTJkYjUzY2MyOTYwNWU1MTkxODU5MjEwMGFiNDQwYzlhODI3NzVhYjJlZGM0In1dfQo="
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-13T13:55:55.714Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3fa05d28897c0d4cede-a87756328ee181918f14",
+          "file": "capture.spec.js",
+          "line": 28,
+          "column": 0
+        },
+        {
+          "title": "並び順の選択から再読み込み・復元までを撮影する",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3794,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "buffer": "Q0FQVFVSRV9QUk9WRU5BTkNFIHsic3RhcnRlZEF0IjoiMjAyNi0wOS0xM1QxMzo1NjoxMC4wNzlaIiwiY29tcGxldGVkQXQiOiIyMDI2LTA5LTEzVDEzOjU2OjEzLjg3M1oiLCJyZXN1bHQiOiJwYXNzZWQiLCJwcm9qZWN0IjoiZGVza3RvcCIsImJhc2VVUkwiOiJodHRwOi8vMTI3LjAuMC4xOjQxNzMiLCJ2aWV3cG9ydCI6eyJ3aWR0aCI6MTI4MCwiaGVpZ2h0Ijo4MDB9LCJpc01vYmlsZSI6ZmFsc2UsImhhc1RvdWNoIjpmYWxzZSwiYnJvd3NlclZlcnNpb24iOiIxNTMuMC44MDEwLjEyIiwib3V0cHV0IjoiL1VzZXJzL3Roa3QvLmxvY2FsL3NoYXJlL2RvdGFnZW50cy9kZXZlbG9wbWVudC9kM2QxNWM3Njc3NTNiYmE2LzEwOC9yZXN1bWUtMjAyNjA5MTMvdmVyaWZpY2F0aW9uLTEwOC1jb250ZW50LWZpeGVkL2NhcHR1cmUtMi1tZWRpYSIsInNvdXJjZVBhdGhCYXNlIjoidHJpYWwvIiwic291cmNlRmlsZXMiOlt7InBhdGgiOiIuLi9wYWNrYWdlLmpzb24iLCJieXRlcyI6MTU4NSwic2hhMjU2IjoiODBhMjY1MzY3MjVhNTQ0MTYwODIwYzc3MmIyMzdlMTQ1MzRmZmE0NjM3MTFjNjZhZDFlMDU3MDQxOGIzYzkxZCJ9LHsicGF0aCI6Ii4uL2J1bi5sb2NrIiwiYnl0ZXMiOjIxNjUwLCJzaGEyNTYiOiI5NDFjOTU3ZDNhZTRlZmVlMDQxMTY3ZTc1NzRiYWUwYmI0YWE0MTRkNDNhYTlhZGMyNzQyZWIyOTg3OTg5MDFlIn0seyJwYXRoIjoicHVibGljL2luZGV4Lmh0bWwiLCJieXRlcyI6MTgyNCwic2hhMjU2IjoiN2ZmZDRhZTk3MWYwOGQwODQ3ZjcwYjYyMjQxNDhmYWI4OWI2ZmRhNWUyNjU5Y2U2MWJhMGZmYzM4M2JjOGU4NyJ9LHsicGF0aCI6InB1YmxpYy9zZWFyY2guanMiLCJieXRlcyI6MTkyMiwic2hhMjU2IjoiY2NkZDM0MmM1NTE5MzFjN2ZlNzhiMDFlNmVkMzgxMGFhZGNjM2I2MjU2MjU1MDQ3NzFlNzAyMThiZTVhMWE0ZCJ9LHsicGF0aCI6InB1YmxpYy9zdHlsZXMuY3NzIiwiYnl0ZXMiOjE1MDAsInNoYTI1NiI6IjEyNzZhNmFkYzUwYmQ3MzcyOGQwMDQzODRiYTVhMTcwYTljYTMwODZhOWYzZjUyMTQ0YmQ2YTVhZWE3NTIzYTAifSx7InBhdGgiOiJzZXJ2ZXIuanMiLCJieXRlcyI6NTYwLCJzaGEyNTYiOiI5MjQ2YWE2OTc0NjUyZmMxYWU3ZGIyZjQ4MTc1NjJkZWI4MDQ0YmVmYmNkMGQ3ODIxNWY2NjdiOTlmYWUyOGZhIn0seyJwYXRoIjoicGxheXdyaWdodC5jb25maWcuanMiLCJieXRlcyI6OTE2LCJzaGEyNTYiOiIyMjBhNmQ2ZjcwYjgyZTZlOTNhMWM2Y2I2NzkzN2QzNmY3MmUyNTNkMzZhNzc4N2Y5ZWJjNDNiNjIwNjZhMzNiIn0seyJwYXRoIjoiY2FwdHVyZS5zcGVjLmpzIiwiYnl0ZXMiOjcyNDYsInNoYTI1NiI6IjQ5OTA0Y2U0NGYzMzA2OTEzMzgwZDAzMDI1NTcyZGZiZTAxOWY2OWZlYzc5MDJjOWY4NTE2MjdhMmIwMzkzNGEifV0sIm1lZGlhIjpbeyJwYXRoIjoidHJpYWwvZXZpZGVuY2UvZ2VuZXJhdGVkL3Byb2R1Y3Qtb3JkZXItcmVzdG9yZWQtZGVza3RvcC5wbmciLCJieXRlcyI6NDI1NTgsInNoYTI1NiI6ImI0OWJlZTQyNjkyZDIxYjAzZGM0MWNkZGFkNTc4MmVmMzY1MTNiOTlmODJhYzc5NzlhODg1NGQxNDZiOWIyZjEifSx7InBhdGgiOiJ0cmlhbC9ldmlkZW5jZS9nZW5lcmF0ZWQvcHJvZHVjdC1vcmRlci1yZXN0b3JlLWRlc2t0b3Aud2VibSIsImJ5dGVzIjoxMzEyNzIsInNoYTI1NiI6IjRjYmJmMTk5YjMwYjIyNmY4NzE2YjAwNzA5NTczZjk4YjBiZWMyNTg4YWMwZGRlNWRmODc1ZjJiN2NjNGUyODQifV19Cg=="
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-13T13:56:10.077Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3fa05d28897c0d4cede-095e4e1dc34de4bd6539",
+          "file": "capture.spec.js",
+          "line": 86,
+          "column": 0
+        },
+        {
+          "title": "検索結果あり・該当なし・空欄からEscと再検索を撮影する",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 14093,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "buffer": "Q0FQVFVSRV9QUk9WRU5BTkNFIHsic3RhcnRlZEF0IjoiMjAyNi0wOS0xM1QxMzo1NjoxNC4xNTVaIiwiY29tcGxldGVkQXQiOiIyMDI2LTA5LTEzVDEzOjU2OjI4LjI0NVoiLCJyZXN1bHQiOiJwYXNzZWQiLCJwcm9qZWN0IjoibW9iaWxlIiwiYmFzZVVSTCI6Imh0dHA6Ly8xMjcuMC4wLjE6NDE3MyIsInZpZXdwb3J0Ijp7IndpZHRoIjozNzUsImhlaWdodCI6ODEyfSwiaXNNb2JpbGUiOnRydWUsImhhc1RvdWNoIjp0cnVlLCJicm93c2VyVmVyc2lvbiI6IjE1My4wLjgwMTAuMTIiLCJvdXRwdXQiOiIvVXNlcnMvdGhrdC8ubG9jYWwvc2hhcmUvZG90YWdlbnRzL2RldmVsb3BtZW50L2QzZDE1Yzc2Nzc1M2JiYTYvMTA4L3Jlc3VtZS0yMDI2MDkxMy92ZXJpZmljYXRpb24tMTA4LWNvbnRlbnQtZml4ZWQvY2FwdHVyZS0yLW1lZGlhIiwic291cmNlUGF0aEJhc2UiOiJ0cmlhbC8iLCJzb3VyY2VGaWxlcyI6W3sicGF0aCI6Ii4uL1JFQURNRS5tZCIsImJ5dGVzIjoyMDcwMywic2hhMjU2IjoiMWFjYjJiYzNmNjFkZjNiNjYyODdiZGQwNzRkZTZkOWVlZGM5ZjY5YzBiNDEyMjU3YmQ4OTQxMDI4YTQ3NTA3YyJ9LHsicGF0aCI6Ii4uL3BhY2thZ2UuanNvbiIsImJ5dGVzIjoxNTg1LCJzaGEyNTYiOiI4MGEyNjUzNjcyNWE1NDQxNjA4MjBjNzcyYjIzN2UxNDUzNGZmYTQ2MzcxMWM2NmFkMWUwNTcwNDE4YjNjOTFkIn0seyJwYXRoIjoiLi4vYnVuLmxvY2siLCJieXRlcyI6MjE2NTAsInNoYTI1NiI6Ijk0MWM5NTdkM2FlNGVmZWUwNDExNjdlNzU3NGJhZTBiYjRhYTQxNGQ0M2FhOWFkYzI3NDJlYjI5ODc5ODkwMWUifSx7InBhdGgiOiJwdWJsaWMvaW5kZXguaHRtbCIsImJ5dGVzIjoxODI0LCJzaGEyNTYiOiI3ZmZkNGFlOTcxZjA4ZDA4NDdmNzBiNjIyNDE0OGZhYjg5YjZmZGE1ZTI2NTljZTYxYmEwZmZjMzgzYmM4ZTg3In0seyJwYXRoIjoicHVibGljL3NlYXJjaC5qcyIsImJ5dGVzIjoxOTIyLCJzaGEyNTYiOiJjY2RkMzQyYzU1MTkzMWM3ZmU3OGIwMWU2ZWQzODEwYWFkY2MzYjYyNTYyNTUwNDc3MWU3MDIxOGJlNWExYTRkIn0seyJwYXRoIjoicHVibGljL3N0eWxlcy5jc3MiLCJieXRlcyI6MTUwMCwic2hhMjU2IjoiMTI3NmE2YWRjNTBiZDczNzI4ZDAwNDM4NGJhNWExNzBhOWNhMzA4NmE5ZjNmNTIxNDRiZDZhNWFlYTc1MjNhMCJ9LHsicGF0aCI6InNlcnZlci5qcyIsImJ5dGVzIjo1NjAsInNoYTI1NiI6IjkyNDZhYTY5NzQ2NTJmYzFhZTdkYjJmNDgxNzU2MmRlYjgwNDRiZWZiY2QwZDc4MjE1ZjY2N2I5OWZhZTI4ZmEifSx7InBhdGgiOiJwbGF5d3JpZ2h0LmNvbmZpZy5qcyIsImJ5dGVzIjo5MTYsInNoYTI1NiI6IjIyMGE2ZDZmNzBiODJlNmU5M2ExYzZjYjY3OTM3ZDM2ZjcyZTI1M2QzNmE3Nzg3ZjllYmM0M2I2MjA2NmEzM2IifSx7InBhdGgiOiJjYXB0dXJlLmNvbmZpZy5qcyIsImJ5dGVzIjo2OTEsInNoYTI1NiI6Ijg1MzNlNTNiZjZkNGM2YzNiOTc2MmFkZGVhZGU1N2Q1YmE4YWQ3OWE5NGYxOGJiMTMyNjMwMTZkY2I5ZDMwMTYifSx7InBhdGgiOiJjYXB0dXJlLnNwZWMuanMiLCJieXRlcyI6NzI0Niwic2hhMjU2IjoiNDk5MDRjZTQ0ZjMzMDY5MTMzODBkMDMwMjU1NzJkZmJlMDE5ZjY5ZmVjNzkwMmM5Zjg1MTYyN2EyYjAzOTM0YSJ9LHsicGF0aCI6InRlc3RzL3Byb2R1Y3Qtc2VhcmNoLnNwZWMuanMiLCJieXRlcyI6ODE3Nywic2hhMjU2IjoiZjFmZDgxMmU3NDAxZjc4MzliZDM2Yjg0OTY1NzY0ZTQ3M2NmMjAxMGVhMTAyMjRmNzZhZDgwMTFjMzI1NWZiMSJ9XSwibWVkaWEiOlt7InBhdGgiOiJ0cmlhbC9ldmlkZW5jZS9nZW5lcmF0ZWQvcHJvZHVjdC1zZWFyY2gtZXNjYXBlLWNsZWFyZWQtbW9iaWxlLnBuZyIsImJ5dGVzIjozNzgxNywic2hhMjU2IjoiZmQ4MTZmMmI5YTI0ZDk5NjE1YWNiYTRmYzhmZWMzODM2OGQxNzhiYTIwYjY0YmY3NTg1ODJjM2ViZDgyY2ZkZCJ9LHsicGF0aCI6InRyaWFsL2V2aWRlbmNlL2dlbmVyYXRlZC9wcm9kdWN0LXNlYXJjaC1lc2NhcGUtbW9iaWxlLndlYm0iLCJieXRlcyI6MjY2MTk1LCJzaGEyNTYiOiJlZDg0ZWI1NTcwNDFiM2NjMDViZDEzZmYyY2E1MzI1MTA4NmRiYTRhNDQyZGIyYjU0MjFmYjM1MzdlNzBiNGVlIn1dfQo="
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-13T13:56:14.058Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3fa05d28897c0d4cede-81720560829c2d57e387",
+          "file": "capture.spec.js",
+          "line": 28,
+          "column": 0
+        },
+        {
+          "title": "並び順の選択から再読み込み・復元までを撮影する",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3677,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "buffer": "Q0FQVFVSRV9QUk9WRU5BTkNFIHsic3RhcnRlZEF0IjoiMjAyNi0wOS0xM1QxMzo1NjoyOC4yNDlaIiwiY29tcGxldGVkQXQiOiIyMDI2LTA5LTEzVDEzOjU2OjMxLjkyNFoiLCJyZXN1bHQiOiJwYXNzZWQiLCJwcm9qZWN0IjoibW9iaWxlIiwiYmFzZVVSTCI6Imh0dHA6Ly8xMjcuMC4wLjE6NDE3MyIsInZpZXdwb3J0Ijp7IndpZHRoIjozNzUsImhlaWdodCI6ODEyfSwiaXNNb2JpbGUiOnRydWUsImhhc1RvdWNoIjp0cnVlLCJicm93c2VyVmVyc2lvbiI6IjE1My4wLjgwMTAuMTIiLCJvdXRwdXQiOiIvVXNlcnMvdGhrdC8ubG9jYWwvc2hhcmUvZG90YWdlbnRzL2RldmVsb3BtZW50L2QzZDE1Yzc2Nzc1M2JiYTYvMTA4L3Jlc3VtZS0yMDI2MDkxMy92ZXJpZmljYXRpb24tMTA4LWNvbnRlbnQtZml4ZWQvY2FwdHVyZS0yLW1lZGlhIiwic291cmNlUGF0aEJhc2UiOiJ0cmlhbC8iLCJzb3VyY2VGaWxlcyI6W3sicGF0aCI6Ii4uL3BhY2thZ2UuanNvbiIsImJ5dGVzIjoxNTg1LCJzaGEyNTYiOiI4MGEyNjUzNjcyNWE1NDQxNjA4MjBjNzcyYjIzN2UxNDUzNGZmYTQ2MzcxMWM2NmFkMWUwNTcwNDE4YjNjOTFkIn0seyJwYXRoIjoiLi4vYnVuLmxvY2siLCJieXRlcyI6MjE2NTAsInNoYTI1NiI6Ijk0MWM5NTdkM2FlNGVmZWUwNDExNjdlNzU3NGJhZTBiYjRhYTQxNGQ0M2FhOWFkYzI3NDJlYjI5ODc5ODkwMWUifSx7InBhdGgiOiJwdWJsaWMvaW5kZXguaHRtbCIsImJ5dGVzIjoxODI0LCJzaGEyNTYiOiI3ZmZkNGFlOTcxZjA4ZDA4NDdmNzBiNjIyNDE0OGZhYjg5YjZmZGE1ZTI2NTljZTYxYmEwZmZjMzgzYmM4ZTg3In0seyJwYXRoIjoicHVibGljL3NlYXJjaC5qcyIsImJ5dGVzIjoxOTIyLCJzaGEyNTYiOiJjY2RkMzQyYzU1MTkzMWM3ZmU3OGIwMWU2ZWQzODEwYWFkY2MzYjYyNTYyNTUwNDc3MWU3MDIxOGJlNWExYTRkIn0seyJwYXRoIjoicHVibGljL3N0eWxlcy5jc3MiLCJieXRlcyI6MTUwMCwic2hhMjU2IjoiMTI3NmE2YWRjNTBiZDczNzI4ZDAwNDM4NGJhNWExNzBhOWNhMzA4NmE5ZjNmNTIxNDRiZDZhNWFlYTc1MjNhMCJ9LHsicGF0aCI6InNlcnZlci5qcyIsImJ5dGVzIjo1NjAsInNoYTI1NiI6IjkyNDZhYTY5NzQ2NTJmYzFhZTdkYjJmNDgxNzU2MmRlYjgwNDRiZWZiY2QwZDc4MjE1ZjY2N2I5OWZhZTI4ZmEifSx7InBhdGgiOiJwbGF5d3JpZ2h0LmNvbmZpZy5qcyIsImJ5dGVzIjo5MTYsInNoYTI1NiI6IjIyMGE2ZDZmNzBiODJlNmU5M2ExYzZjYjY3OTM3ZDM2ZjcyZTI1M2QzNmE3Nzg3ZjllYmM0M2I2MjA2NmEzM2IifSx7InBhdGgiOiJjYXB0dXJlLnNwZWMuanMiLCJieXRlcyI6NzI0Niwic2hhMjU2IjoiNDk5MDRjZTQ0ZjMzMDY5MTMzODBkMDMwMjU1NzJkZmJlMDE5ZjY5ZmVjNzkwMmM5Zjg1MTYyN2EyYjAzOTM0YSJ9XSwibWVkaWEiOlt7InBhdGgiOiJ0cmlhbC9ldmlkZW5jZS9nZW5lcmF0ZWQvcHJvZHVjdC1vcmRlci1yZXN0b3JlZC1tb2JpbGUucG5nIiwiYnl0ZXMiOjM3MzE3LCJzaGEyNTYiOiIwNTZmNGM2YjliN2E3OTVlNjk4ZDE1ZTk3YWM0NTFmOGMyNjdlYWJkY2ZiNWYwMTUwNzdjZDg5ZDFkZDdiNGVkIn0seyJwYXRoIjoidHJpYWwvZXZpZGVuY2UvZ2VuZXJhdGVkL3Byb2R1Y3Qtb3JkZXItcmVzdG9yZS1tb2JpbGUud2VibSIsImJ5dGVzIjo1OTI4MCwic2hhMjU2IjoiMTVkZGE5MWUwYWQ5MWY1NmMzODZkYWEzNzc2M2E4MjFmN2Q0ODhlODg0OTdiMDM2YzkxNTM1MzM4ZWZmZjBjYyJ9XX0K"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-13T13:56:28.248Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3fa05d28897c0d4cede-f2610414f61b6c59c080",
+          "file": "capture.spec.js",
+          "line": 86,
+          "column": 0
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-13T13:55:55.416Z",
+    "duration": 36540.966,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
