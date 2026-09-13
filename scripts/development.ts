@@ -22,7 +22,7 @@ function issueNumber(input: string | undefined) {
 }
 
 async function checked(io: typeof runtime, argv: string[], cwd: string, prefix?: string) {
-  const result = await io.command(argv, cwd, '', 540000, prefix);
+  const result = await io.command(argv, cwd, '', 660000, prefix);
   assert(result.code === 0 && !result.timedOut, `Command failed: ${argv[0]}; ${result.stderr}`);
   return result.stdout.trim();
 }
@@ -176,6 +176,16 @@ async function implement(context: Context, io: typeof runtime) {
     runDir: join(dir, 'verification'),
     issue: context.issue,
     check: ['bun', 'run', 'check'],
+    writing: [
+      process.execPath,
+      resolve(import.meta.dir, 'writing-review.ts'),
+      '--worker',
+      'documents',
+      '--facts',
+      join(dir, 'issue.json'),
+      '--run-dir',
+      join(dir, 'writing-documents'),
+    ],
     capture: [process.execPath, resolve(import.meta.dir, 'capture.ts')],
     repair: actor,
     review: [process.execPath, resolve(import.meta.dir, 'codex-actor.ts'), 'review', dir],
@@ -232,6 +242,30 @@ async function ship(
     body,
     `Closes #${number}\n\n${summary}\n\n対象commit: ${commit}\n\nローカルcheckと独立評価を完了。最新CI、人のレビュー・承認は別途確認する。\n`,
   );
+  const reviewedBody = join(dir, 'pr-reviewed.md');
+  await checked(
+    io,
+    [
+      process.execPath,
+      resolve(import.meta.dir, 'writing-review.ts'),
+      '--worker',
+      'file',
+      '--input',
+      body,
+      '--facts',
+      join(dir, 'issue.json'),
+      '--output',
+      reviewedBody,
+      '--run-dir',
+      join(dir, 'writing-pr'),
+    ],
+    cwd,
+    join(dir, 'writing-pr-command'),
+  );
+  assert(
+    (await readFile(reviewedBody, 'utf8')).includes(`Closes #${number}`),
+    'Reviewed PR lost Issue reference',
+  );
   assert(
     (await io.verify(config)).result === 'ready_for_human_review',
     'Target changed before push',
@@ -243,7 +277,7 @@ async function ship(
     '--title',
     requirements.title,
     '--body-file',
-    body,
+    reviewedBody,
   ]);
   await writeFile(join(dir, 'pr-url.txt'), url);
   if (media.length) {

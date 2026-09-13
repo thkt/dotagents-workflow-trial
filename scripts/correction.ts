@@ -96,7 +96,13 @@ export async function command(
     timedOut = true;
     killGroup(child.pid);
   }, timeoutMs);
+  const writingWorker = argv[1]?.endsWith('/writing-review.ts') && argv[2] === '--worker';
   const code = await new Promise<number | null>((resolveCode) => {
+    child.on('exit', (code) => {
+      if (code !== 0 || writingWorker) {
+        killGroup(child.pid);
+      }
+    });
     child.on('error', (error) => {
       stderr += `${error.message}\n`;
       resolveCode(null);
@@ -244,24 +250,31 @@ export const captureInstructions =
 async function hostCommand(
   config: Config,
   state: State,
-  role: 'capture' | 'check',
+  role: 'capture' | 'check' | 'writing',
   argv: string[],
   persist: Persist,
 ) {
   const attempt =
-    role === 'capture'
-      ? state.events.filter((event) => event.role === 'capture').length + 1
+    role !== 'check'
+      ? state.events.filter((event) => event.role === role).length + 1
       : state.checks;
   const prefix = resolve(config.runDir, `${role}-${attempt}`);
   state.active = { role, prefix };
   await persist();
-  const result = await command(argv, config.cwd, '', config.checkTimeMs, prefix);
+  const result = await command(
+    argv,
+    config.cwd,
+    '',
+    role === 'writing' ? 660000 : config.checkTimeMs,
+    prefix,
+  );
   state.active = null;
   state.events.push({
     role,
     source: state.source,
     code: result.code,
     timedOut: result.timedOut,
+    ms: result.ms,
     prefix,
   });
   await persist();
@@ -308,11 +321,27 @@ async function needsCapture(cwd: string, previousSource?: string) {
   return !(paths.length > 0 && paths.every((path) => path.endsWith('.md')));
 }
 
+async function verifyWriting(config: Config, state: State, persist: Persist) {
+  if (!config.writing) {
+    return undefined;
+  }
+  const writing = await hostCommand(config, state, 'writing', config.writing, persist);
+  state.findings = `Writing logs: ${writing.prefix}.stdout and ${writing.prefix}.stderr`;
+  if (digest(await readIssue(config)) !== state.issueHash) {
+    return 'requirements_changed' as const;
+  }
+  return writing.code !== 0 || writing.timedOut ? ('writing_failed' as const) : undefined;
+}
+
 async function verifyHost(
   config: Config,
   state: State,
   persist: Persist,
 ): Promise<{ stop?: StopReason; findings?: string }> {
+  const writingStop = await verifyWriting(config, state, persist);
+  if (writingStop) {
+    return { stop: writingStop };
+  }
   state.source = await snapshot(config.cwd);
   if (config.capture && (await needsCapture(config.cwd, state.captureSource))) {
     state.captureSource = undefined;
@@ -347,6 +376,14 @@ async function verifyHost(
     state.captureSource = await snapshot(config.cwd, true);
     await persist();
   }
+  return verifyCheck(config, state, persist);
+}
+
+async function verifyCheck(
+  config: Config,
+  state: State,
+  persist: Persist,
+): Promise<{ stop?: StopReason; findings?: string }> {
   state.checks++;
   const checked = await hostCommand(config, state, 'check', config.check, persist);
   const changed = await targetChange(config, state);
