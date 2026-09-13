@@ -3,6 +3,8 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateKeyPairSync } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import { publish, keyJwt } from '../publish.ts';
 
 function option(args: string[], name: string) {
@@ -143,6 +145,17 @@ for (const mode of [
     }
   });
 }
+
+test('publisher CLI reports the stop reason before touching credentials', () => {
+  const result = spawnSync(process.execPath, [resolve(import.meta.dir, '../publish.ts')], {
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain(
+    'Publish failed: Required: --head BRANCH --title TITLE --body-file PATH.',
+  );
+});
 
 test('publisher rejects a different signing key', () => {
   const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });

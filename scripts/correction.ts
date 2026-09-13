@@ -1,5 +1,6 @@
 import { assertConfig, assertState } from './input.ts';
 import type { Config, State, ActorRole, StopReason } from './input.ts';
+import { writingHostTimeoutMs } from './writing.ts';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -97,11 +98,42 @@ export async function command(
     killGroup(child.pid);
   }, timeoutMs);
   const writingWorker = argv[1]?.endsWith('/writing-review.ts') && argv[2] === '--worker';
-  const code = await new Promise<number | null>((resolveCode) => {
+  const code = await new Promise<number | null>((done) => {
+    // Bun 1.4.2 can drop 'close', or the whole exit notification, for a child that
+    // the timeout or an interrupt killed. Finish on exit plus ended pipes as well,
+    // and poll for the kill until the runtime reports it.
+    const poll = setInterval(() => {
+      if ((timedOut || interrupted) && child.pid !== undefined) {
+        try {
+          process.kill(child.pid, 0);
+        } catch {
+          resolveCode(null);
+        }
+      }
+    }, 50);
+    const resolveCode = (code: number | null) => {
+      clearInterval(poll);
+      done(code);
+    };
+    let exitCode: number | null | undefined;
+    let openPipes = 2;
+    const settle = () => {
+      if (exitCode !== undefined && openPipes === 0) {
+        resolveCode(exitCode);
+      }
+    };
+    for (const pipe of [child.stdout, child.stderr]) {
+      pipe.once('end', () => {
+        openPipes--;
+        settle();
+      });
+    }
     child.on('exit', (code) => {
       if (code !== 0 || writingWorker) {
         killGroup(child.pid);
       }
+      exitCode = code;
+      settle();
     });
     child.on('error', (error) => {
       stderr += `${error.message}\n`;
@@ -162,10 +194,18 @@ async function snapshot(cwd: string, captureOnly = false) {
   return digest(JSON.stringify(entries));
 }
 
-function validate(config: Config) {
-  const relation = relative(resolve(config.cwd), resolve(config.runDir));
-  if (relation !== '..' && !relation.startsWith(`..${sep}`) && !isAbsolute(relation)) {
+function outside(parent: string, child: string) {
+  const relation = relative(parent, child);
+  return relation === '..' || relation.startsWith(`..${sep}`) || isAbsolute(relation);
+}
+
+async function validate(config: Config) {
+  if (!outside(resolve(config.cwd), resolve(config.runDir))) {
     throw Error('Evidence must be outside the worktree');
+  }
+  await mkdir(config.runDir, { recursive: true });
+  if (!outside(await realpath(config.cwd), await realpath(config.runDir))) {
+    throw Error('Evidence must not resolve inside the worktree');
   }
 }
 
@@ -265,7 +305,7 @@ async function hostCommand(
     argv,
     config.cwd,
     '',
-    role === 'writing' ? 660000 : config.checkTimeMs,
+    role === 'writing' ? writingHostTimeoutMs : config.checkTimeMs,
     prefix,
   );
   state.active = null;
@@ -497,8 +537,7 @@ async function targetChange(config: Config, state: State): Promise<StopReason | 
 }
 
 export async function run(config: Config) {
-  validate(config);
-  await mkdir(config.runDir, { recursive: true });
+  await validate(config);
   const lock = resolve(config.runDir, 'lock');
   await mkdir(lock); // Existing lock requires reconciliation, never an automatic takeover.
   try {

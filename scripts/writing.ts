@@ -7,6 +7,9 @@ import { createHash } from 'node:crypto';
 import { isRecord, isArray } from './input.ts';
 
 export const writingModel = 'gemini-3.8-flash-high';
+const writingTimeoutMs = 300000;
+// A host wrapper covers the model call, the fidelity review and startup.
+export const writingHostTimeoutMs = 2 * writingTimeoutMs + 60000;
 export const writingHash = (text: string) => createHash('sha256').update(text).digest('hex');
 export interface WritingDocument {
   name: string;
@@ -25,15 +28,12 @@ export class GeminiUnavailable extends Error {
   }
 }
 
-export function availabilityReason(code: string | undefined, timedOut: boolean, stderr: string) {
+export function availabilityReason(code: string | undefined, stderr: string) {
   if (code === 'ENOENT') {
     return 'cli_missing';
   }
   if (code === 'EACCES') {
     return 'permission_denied';
-  }
-  if (timedOut) {
-    return 'timeout';
   }
   if (
     /unauthenticated|unauthorized|not logged in|authentication (failed|required)|invalid (access )?token|login required|\bHTTP(?: status)?[: ]+401\b/i.test(
@@ -63,7 +63,7 @@ export async function runWritingCommand(
   cwd: string,
   input: string,
   prefix: string,
-  timeout = 300000,
+  timeout = writingTimeoutMs,
 ) {
   const [executable, ...args] = argv;
   assert(executable);
@@ -110,22 +110,29 @@ export async function runWritingCommand(
       done(code);
     });
   });
+  if (executable === 'agy' && child.killed) {
+    // The timeout can cut the output mid-line, so classify it before parsing.
+    throw new GeminiUnavailable('timeout');
+  }
   if (executable === 'agy' && stdout.trim()) {
-    geminiResponse(stdout, child.killed);
+    geminiResponse(stdout);
     assert(code === 0, `Writing model failed after a success response; inspect ${prefix}`);
   }
   if (executable === 'agy' && (code !== 0 || !stdout.trim())) {
-    const reason = availabilityReason(spawnCode, child.killed, stderr);
+    const reason = availabilityReason(spawnCode, stderr);
     if (reason) {
       throw new GeminiUnavailable(reason);
     }
   }
-  assert(code === 0, `Writing model failed; inspect ${prefix}`);
+  assert(
+    code === 0,
+    `${executable === 'agy' ? 'Writing model' : executable} failed; inspect ${prefix}`,
+  );
   return stdout;
 }
 export const writingCommand: WritingRunner = runWritingCommand;
 
-export function geminiResponse(stdout: string, timedOut = false) {
+export function geminiResponse(stdout: string) {
   const events: unknown[] = stdout
     .split('\n')
     .filter((line) => line.trim())
@@ -142,9 +149,6 @@ export function geminiResponse(stdout: string, timedOut = false) {
       .some((event) => typeof event.event === 'string' && /tool/i.test(event.event)),
     'Writing model used tools',
   );
-  if (timedOut && results.length === 0) {
-    throw new GeminiUnavailable('timeout');
-  }
   const result = results[0]?.result;
   if (results.length === 1 && isRecord(result) && result.status === 'ERROR') {
     const error =
@@ -153,7 +157,7 @@ export function geminiResponse(stdout: string, timedOut = false) {
         : isRecord(result.error) && typeof result.error.message === 'string'
           ? result.error.message
           : '';
-    const reason = availabilityReason(undefined, false, error);
+    const reason = availabilityReason(undefined, error);
     if (reason) {
       throw new GeminiUnavailable(reason);
     }

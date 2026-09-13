@@ -1,5 +1,5 @@
 import { test, expect, afterEach } from 'bun:test';
-import { writeFile, readFile } from 'node:fs/promises';
+import { mkdir, symlink, writeFile, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { correctionFixture, controller, object } from './support/correction.ts';
@@ -128,6 +128,20 @@ for (const path of ['.', 'evidence', '..evidence', '../..external']) {
     }
   });
 }
+
+test('evidence directory boundary: symlink resolving into the worktree', async () => {
+  const t = await trial('boundary');
+  const inside = join(t.config.cwd, 'inside');
+  await mkdir(inside);
+  const runDir = join(t.root, 'linked-evidence');
+  await symlink(inside, runDir);
+  await writeFile(t.configFile, JSON.stringify({ ...t.config, runDir }));
+  const result = t.execute();
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('Evidence must not resolve inside the worktree');
+  expect(await Bun.file(join(inside, 'state.json')).exists()).toBe(false);
+  expect(await readFile(join(t.config.cwd, 'source.txt'), 'utf8')).toBe('broken');
+});
 
 for (const mode of ['writing_success', 'writing_failure']) {
   test(`writing before check and after repair: ${mode}`, async () => {

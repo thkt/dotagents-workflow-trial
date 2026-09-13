@@ -7,10 +7,13 @@ import { parseArgs } from 'node:util';
 import { command, run, withInterrupts, parseReply, captureInstructions } from './correction.ts';
 import { isRecord } from './input.ts';
 import { publish } from './publish.ts';
+import { writingHostTimeoutMs } from './writing.ts';
 
 const repository = 'thkt/dotagents-workflow-trial';
 const runtime = { command, verify: run, publish };
 const modelTimeMs = 1200000;
+// The full check and the CI run of the same check share one budget.
+const checkTimeMs = 540000;
 
 function issueNumber(input: string | undefined) {
   const raw = input?.replace(`https://github.com/${repository}/issues/`, '').replace(/^#/, '');
@@ -22,7 +25,7 @@ function issueNumber(input: string | undefined) {
 }
 
 async function checked(io: typeof runtime, argv: string[], cwd: string, prefix?: string) {
-  const result = await io.command(argv, cwd, '', 660000, prefix);
+  const result = await io.command(argv, cwd, '', writingHostTimeoutMs, prefix);
   assert(result.code === 0 && !result.timedOut, `Command failed: ${argv[0]}; ${result.stderr}`);
   return result.stdout.trim();
 }
@@ -193,7 +196,7 @@ async function implement(context: Context, io: typeof runtime) {
     repairLimit: 2,
     reviewLimit: 2,
     modelTimeMs: remaining,
-    checkTimeMs: 540000,
+    checkTimeMs,
   };
   await writeFile(join(dir, 'verification-config.json'), JSON.stringify(config, null, 2));
   const resultState = await io.verify(config);
@@ -327,7 +330,7 @@ async function ship(
     ['gh', 'pr', 'checks', url, '--repo', repository, '--watch', '--interval', '10'],
     cwd,
     '',
-    540000,
+    checkTimeMs,
     join(dir, 'ci'),
   );
   const result = {

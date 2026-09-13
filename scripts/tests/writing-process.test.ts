@@ -82,7 +82,9 @@ function modelOutput(scenario: { name: string; status: string; response?: string
     ? 'not json'
     : scenario.name === 'timeout'
       ? init
-      : `${init}\n${result}`;
+      : scenario.name === 'partial_timeout'
+        ? `${init}\n${result.slice(0, 40)}`
+        : `${init}\n${result}`;
 }
 
 for (const scenario of [
@@ -103,11 +105,13 @@ for (const scenario of [
   { name: 'service_error', status: 'ERROR', skip: true },
   { name: 'service_error_child', status: 'ERROR', skip: true, descendant: true },
   { name: 'timeout', status: 'ERROR', skip: true, descendant: true },
+  // The timeout can cut a result line in the middle; that is still a timeout, not invalid output.
+  { name: 'partial_timeout', status: 'SUCCESS', skip: true, response: 'not JSON' },
 ]) {
   test(`writing process classifies ${scenario.name} without hiding invalid output`, async () => {
     const dir = await mkdtemp(join(tmpdir(), 'writing-availability-'));
     const worker = join(dir, 'writing-review.ts');
-    const timedOut = scenario.name === 'timeout';
+    const timedOut = scenario.name === 'timeout' || scenario.name === 'partial_timeout';
     const descendant = `const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'inherit'}); writeFileSync(${JSON.stringify(join(dir, 'pid'))},String(child.pid));`;
     await writeFile(
       join(dir, 'agy'),

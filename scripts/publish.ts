@@ -156,8 +156,11 @@ if (import.meta.main) {
   try {
     console.log(await publish(process.argv.slice(2)));
     console.log('Temporary installation token revoked.');
-  } catch {
-    console.error('Publish failed. Check arguments, App access and the PR state before retrying.');
+  } catch (error) {
+    // Stop reasons name the failed step, never the JWT or the installation token.
+    console.error(
+      `Publish failed: ${error instanceof Error ? error.message : String(error)}. Check arguments, App access and the PR state before retrying.`,
+    );
     process.exitCode = 1;
   }
 }

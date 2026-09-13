@@ -106,17 +106,16 @@ test('unavailable Gemini retains original without accepting it', async () => {
 });
 
 test('availability classification does not swallow unknown or malformed failures', async () => {
-  expect(availabilityReason('ENOENT', false, '')).toBe('cli_missing');
-  expect(availabilityReason(undefined, true, '')).toBe('timeout');
-  expect(availabilityReason(undefined, false, 'authentication failed: 401')).toBe('authentication');
-  expect(availabilityReason(undefined, false, 'ENOTFOUND')).toBe('connection');
-  expect(availabilityReason(undefined, false, 'unexpected internal failure')).toBeUndefined();
+  expect(availabilityReason('ENOENT', '')).toBe('cli_missing');
+  expect(availabilityReason(undefined, 'authentication failed: 401')).toBe('authentication');
+  expect(availabilityReason(undefined, 'ENOTFOUND')).toBe('connection');
+  expect(availabilityReason(undefined, 'unexpected internal failure')).toBeUndefined();
   for (const code of [401, 429, 503]) {
     expect(
-      availabilityReason(undefined, false, `TypeError: unexpected value at /cli.js:${code}:12`),
+      availabilityReason(undefined, `TypeError: unexpected value at /cli.js:${code}:12`),
     ).toBeUndefined();
   }
-  expect(availabilityReason(undefined, false, 'HTTP status: 503')).toBe('service_unavailable');
+  expect(availabilityReason(undefined, 'HTTP status: 503')).toBe('service_unavailable');
   const root = await mkdtemp(join(tmpdir(), 'writing-invalid-'));
   try {
     const failure = Error('unknown');

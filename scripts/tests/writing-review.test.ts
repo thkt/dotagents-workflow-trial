@@ -13,7 +13,7 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-async function documentTrial() {
+async function documentTrial(committed = true) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'writing-cache-')));
   roots.push(root);
   const cwd = join(root, 'repo'),
@@ -28,7 +28,9 @@ async function documentTrial() {
   git('init', '-q');
   git('config', 'user.name', 'Test');
   git('config', 'user.email', 'test@example.com');
-  git('commit', '--allow-empty', '-m', 'base');
+  if (committed) {
+    git('commit', '--allow-empty', '-m', 'base');
+  }
   const file = join(cwd, 'README.md');
   await writeFile(file, '長い文章。4件です。');
   return { cwd, dir, file, git };
@@ -140,6 +142,18 @@ test('unfinished adoption blocks review even with no uncommitted documents', asy
   t.git('add', '.');
   t.git('commit', '-m', 'adopted');
   await assert.rejects(() => reviewDocuments(t.cwd, '4件', t.dir, mustNotRun), /reconciliation/);
+  expect(await readFile(t.file, 'utf8')).toBe('長い文章。4件です。');
+});
+
+test('a checkout without commits stops as a git failure before any model runs', async () => {
+  const t = await documentTrial(false);
+  const mustNotRun = async () => {
+    throw Error('A failed git listing must not start a model');
+  };
+  await assert.rejects(
+    () => reviewDocuments(t.cwd, '4件', t.dir, mustNotRun),
+    /git failed; inspect/,
+  );
   expect(await readFile(t.file, 'utf8')).toBe('長い文章。4件です。');
 });
 
