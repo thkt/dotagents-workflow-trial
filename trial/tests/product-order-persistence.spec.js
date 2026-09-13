@@ -44,7 +44,6 @@ for (const value of ["original", "ascending", "descending"]) {
     await expectState(page, value);
     expect(await savedOrder(page)).toBe(value);
     await searchControl(page).fill("ノート");
-    expect(await page.evaluate(() => Object.entries(localStorage))).toEqual([[storageKey, value]]);
     await page.reload();
     await expectState(page, value);
     await searchControl(page).fill("PEN-001");

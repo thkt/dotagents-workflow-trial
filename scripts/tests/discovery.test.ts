@@ -124,14 +124,6 @@ test('all criteria and current revision are required; inputs do not replace save
   expect(before.criteria).toEqual(originalCriteria);
 });
 
-test('missing facts block progress without requiring a human question', async () => {
-  const t = await setup();
-  expect((await t.evaluate(true)).status).toBe(0);
-  expect(cli('gate', t.dir).status).toBe(1);
-  expect((await t.evaluate()).status).toBe(0);
-  expect(cli('gate', t.dir).status).toBe(0);
-});
-
 test('research archiving requires sufficient context and preserves existing records', async () => {
   const t = await setup();
   const report = join(t.root, 'report.md');

@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { test, expect } from 'bun:test';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -30,7 +31,8 @@ await runWritingCommand([process.execPath,${JSON.stringify(wrapper)}],${JSON.str
         stop === 'host_timeout' ? 700 : 3000,
       );
       pid = Number(await readFile(join(dir, 'pid'), 'utf8'));
-      expect(result.code === 0 && !result.timedOut).toBe(false);
+      expect(result.timedOut).toBe(stop === 'host_timeout');
+      expect(result.code).not.toBe(0);
       expect(await readFile(join(dir, 'model.stdout'), 'utf8')).toContain('partial output');
       expect(await readFile(join(dir, 'model.stderr'), 'utf8')).toContain('partial diagnostic');
       let alive = true;
@@ -55,11 +57,43 @@ await runWritingCommand([process.execPath,${JSON.stringify(wrapper)}],${JSON.str
   });
 }
 
+const failureReasons: Record<string, RegExp> = {
+  wrong_model: /Unexpected writing model/,
+  malformed: /JSON/,
+  unknown_status: /Invalid Gemini result/,
+  success_response_nonzero_exit: /Writing model failed after a success response/,
+  numeric_crash: /Writing model failed;/,
+};
+
+function modelOutput(scenario: { name: string; status: string; response?: string }) {
+  const init = JSON.stringify({
+    event: 'init',
+    init: { model: scenario.name === 'wrong_model' ? 'wrong' : 'gemini-3.8-flash-high' },
+  });
+  const result = JSON.stringify({
+    event: 'result',
+    result: {
+      status: scenario.status,
+      error: '503 service unavailable',
+      response: scenario.response,
+    },
+  });
+  return scenario.name === 'malformed'
+    ? 'not json'
+    : scenario.name === 'timeout'
+      ? init
+      : `${init}\n${result}`;
+}
+
 for (const scenario of [
   { name: 'wrong_model', status: 'ERROR' },
   { name: 'malformed', status: 'ERROR' },
   { name: 'unknown_status', status: 'UNKNOWN' },
-  { name: 'success_response_nonzero_exit', status: 'SUCCESS', response: 'not JSON' },
+  {
+    name: 'success_response_nonzero_exit',
+    status: 'SUCCESS',
+    response: JSON.stringify({ documents: [{ name: 'test.md', body: 'rewritten' }] }),
+  },
   {
     name: 'numeric_crash',
     status: 'ERROR',
@@ -74,25 +108,11 @@ for (const scenario of [
     const dir = await mkdtemp(join(tmpdir(), 'writing-availability-'));
     const worker = join(dir, 'writing-review.ts');
     const timedOut = scenario.name === 'timeout';
-    const init = JSON.stringify({
-      event: 'init',
-      init: { model: scenario.name === 'wrong_model' ? 'wrong' : 'gemini-3.8-flash-high' },
-    });
-    const result = JSON.stringify({
-      event: 'result',
-      result: {
-        status: scenario.status,
-        error: '503 service unavailable',
-        response: scenario.response,
-      },
-    });
-    const output =
-      scenario.name === 'malformed' ? 'not json' : timedOut ? init : `${init}\n${result}`;
     const descendant = `const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'inherit'}); writeFileSync(${JSON.stringify(join(dir, 'pid'))},String(child.pid));`;
     await writeFile(
       join(dir, 'agy'),
       `#!${process.execPath}\nimport {spawn} from 'node:child_process'; import {writeFileSync} from 'node:fs';
-console.log(${JSON.stringify(scenario.output ?? output)});
+console.log(${JSON.stringify(scenario.output ?? modelOutput(scenario))});
 ${scenario.skip ? '' : `console.error(${JSON.stringify(scenario.stderr ?? '503 service unavailable')});`}
 ${scenario.descendant ? descendant : ''}
 ${timedOut ? 'setInterval(()=>{},1000);' : 'process.exit(1);'}
@@ -103,16 +123,30 @@ ${timedOut ? 'setInterval(()=>{},1000);' : 'process.exit(1);'}
       worker,
       `import {runWritingCommand, reviewWriting} from ${JSON.stringify(resolve(import.meta.dir, '../writing.ts'))};
 process.env.PATH=${JSON.stringify(dir)};
-await reviewWriting([{name:'test.md',body:'original'}],'facts',${JSON.stringify(join(dir, 'review'))},(argv,cwd,input,prefix)=>runWritingCommand(argv,cwd,input,prefix,${timedOut ? 1500 : 5000}));`,
+console.log(JSON.stringify(await reviewWriting([{name:'test.md',body:'original'}],'facts',${JSON.stringify(join(dir, 'review'))},(argv,cwd,input,prefix)=>runWritingCommand(argv,cwd,input,prefix,${timedOut ? 1500 : 5000}))));`,
     );
     try {
       const result = await command([process.execPath, worker, '--worker'], dir, '', 10000);
       expect(result.timedOut).toBe(false);
       expect(result.code === 0).toBe(Boolean(scenario.skip));
-      const receipt = await readFile(join(dir, 'review/skipped.json'), 'utf8').catch(() => null);
+      const receipt = await readFile(join(dir, 'review/skipped.json'), 'utf8').catch(
+        (error: unknown) => {
+          assert(error instanceof Error && 'code' in error && error.code === 'ENOENT');
+          return null;
+        },
+      );
       expect(receipt !== null).toBe(Boolean(scenario.skip));
       if (scenario.skip) {
-        expect(receipt).toContain(`"reason":"${timedOut ? 'timeout' : 'service_unavailable'}"`);
+        assert(receipt !== null);
+        expect(JSON.parse(receipt)).toMatchObject({
+          status: 'skipped',
+          reason: timedOut ? 'timeout' : 'service_unavailable',
+        });
+        expect(JSON.parse(result.stdout)).toEqual([{ name: 'test.md', body: 'original' }]);
+      } else {
+        const reason = failureReasons[scenario.name];
+        assert(reason);
+        expect(result.stderr).toMatch(reason);
       }
       if (scenario.descendant) {
         const pid = Number(await readFile(join(dir, 'pid'), 'utf8'));

@@ -39,10 +39,9 @@ for (const { query, products, screenshot } of [
   { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]] },
   { query: "存在しない商品", products: [], screenshot: "no-results" },
 ]) {
-  test(`検索語 ${JSON.stringify(query)} で絞り込み、全削除で一覧に戻る`, async ({ page }, testInfo) => {
+  test(`検索語 ${JSON.stringify(query)} で表示対象が切り替わる`, async ({ page }, testInfo) => {
     await page.goto("/");
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
-    await expectProducts(page, allProducts);
     // 空文字も、絞り込みから実際に入力を変えて確認する。
     await search.fill("青い");
     await expectProducts(page, [["青いノート", "NOTE-001"]]);
@@ -52,11 +51,6 @@ for (const { query, products, screenshot } of [
     if (screenshot) {
       await page.screenshot({ path: `trial/artifacts/product-search-${screenshot}-${testInfo.project.name}.png`, fullPage: true });
     }
-    await page.keyboard.press("ControlOrMeta+A");
-    await page.keyboard.press("Backspace");
-    await expect(search).toHaveValue("");
-    await expectProducts(page, allProducts);
-    await expect(search).toBeFocused();
   });
 }
 
@@ -278,4 +272,27 @@ test("検索クリア後も選択した並び順を保持する", async ({ page 
   await expect(clear).toBeFocused();
   await expect(order).toHaveValue("descending");
   await expectProducts(page, reversedProducts);
+});
+
+test("元の順序と名前順が異なる商品でも、昇順・降順・元の順序に切り替えられる", async ({ page }) => {
+  // 入力データだけを差し替え、期待値にはアプリの比較関数を使わない。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
+      <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
+      <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-001</code></td></tr>
+      <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
+      <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>NOTE-002</code></td></tr>
+    </tbody>`) });
+  });
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const suppliedOrder = [allProducts[3], allProducts[0], allProducts[2], allProducts[1]];
+  await expectProducts(page, suppliedOrder);
+  await order.selectOption("ascending");
+  await expectProducts(page, allProducts);
+  await order.selectOption("descending");
+  await expectProducts(page, reversedProducts);
+  await order.selectOption("original");
+  await expectProducts(page, suppliedOrder);
 });

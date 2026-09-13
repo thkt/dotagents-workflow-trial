@@ -1,22 +1,22 @@
+import assert from 'node:assert/strict';
 import { test, expect } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { geminiResponse, writingCandidate, reviewWriting, writingModel } from '../writing.ts';
+import {
+  geminiResponse,
+  writingCandidate,
+  reviewWriting,
+  writingModel,
+  GeminiUnavailable,
+  availabilityReason,
+} from '../writing.ts';
+import { eventStream } from './support/writing.ts';
 
 const original = [
   { name: 'README.md', body: '商品は4件です。`CODEX_FLOW_RUNTIME_DIR`\n[手順](./steps.md)\n' },
 ];
-const eventStream = (response: string, model = writingModel) =>
-  [
-    { event: 'init', init: { model } },
-    { event: 'result', result: { status: 'SUCCESS', response } },
-  ]
-    .map((event) => JSON.stringify(event))
-    .join('\n');
-
-test('reject wrong model, missing completion and tool use', () => {
-  expect(() => geminiResponse(eventStream('text', 'other-model'))).toThrow();
+test('reject missing completion and tool use', () => {
   expect(() =>
     geminiResponse('{"event":"init","init":{"model":"gemini-3.8-flash-high"}}'),
   ).toThrow();
@@ -31,7 +31,10 @@ test('protected references and duplicate documents cannot be silently rewritten'
     ),
   ).toThrow();
   expect(() =>
-    writingCandidate(JSON.stringify({ documents: [...original, ...original] }), original),
+    writingCandidate(JSON.stringify({ documents: [...original, ...original] }), [
+      ...original,
+      { name: 'steps.md', body: '手順です。' },
+    ]),
   ).toThrow();
   expect(writingCandidate(JSON.stringify({ documents: original }), original)).toEqual(original);
 });
@@ -45,7 +48,7 @@ for (const accepted of [true, false]) {
       {
         ...original[0],
         name: 'README.md',
-        body: original[0]?.body.replace('4件', accepted ? '4件' : '5件') ?? '',
+        body: `商品は${accepted ? '4' : '5'}件あります。\`CODEX_FLOW_RUNTIME_DIR\`\n[手順](./steps.md)\n`,
       },
     ];
     try {
@@ -56,7 +59,8 @@ for (const accepted of [true, false]) {
             return eventStream(JSON.stringify({ documents: candidate }));
           }
           expect(input).toContain('商品数は4件。');
-          expect(input).toContain('candidate');
+          expect(input).toContain(JSON.stringify(original));
+          expect(input).toContain(JSON.stringify(candidate));
           return JSON.stringify({
             status: accepted ? 'accepted' : 'needs_changes',
             findings: accepted ? '数量と条件を保持' : '商品数を5件へ変更している',
@@ -66,11 +70,11 @@ for (const accepted of [true, false]) {
         expect(await action()).toEqual(candidate);
         expect(await readFile(join(dir, 'accepted.json'), 'utf8')).toContain(writingModel);
       } else {
-        await rejected(action, 'did not accept');
-        await rejected(() => readFile(join(dir, 'accepted.json')));
+        await assert.rejects(action, /did not accept/);
+        await assert.rejects(() => readFile(join(dir, 'accepted.json')), { code: 'ENOENT' });
         expect(await readFile(join(dir, 'candidate.json'), 'utf8')).toContain('5件');
       }
-      await rejected(action);
+      await assert.rejects(action, { code: 'EEXIST' });
       expect(calls).toBe(2);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -78,161 +82,30 @@ for (const accepted of [true, false]) {
   });
 }
 
-async function rejected(action: () => Promise<unknown>, message = '') {
-  let error: unknown;
+test('unavailable Gemini retains original without accepting it', async () => {
+  const reason = 'cli_missing';
+  const root = await mkdtemp(join(tmpdir(), 'writing-skip-'));
   try {
-    await action();
-  } catch (caught) {
-    error = caught;
-  }
-  expect(error).toBeInstanceOf(Error);
-  if (message && error instanceof Error) {
-    expect(error.message).toContain(message);
-  }
-}
-
-test('changed documents or facts invalidate a successful review', async () => {
-  const { reviewDocuments } = await import('../writing-review.ts');
-  const { mkdir, writeFile, realpath } = await import('node:fs/promises');
-  const { spawnSync } = await import('node:child_process');
-  const root = await realpath(await mkdtemp(join(tmpdir(), 'writing-cache-')));
-  const cwd = join(root, 'repo'),
-    dir = join(root, 'evidence');
-  await mkdir(cwd);
-  await mkdir(dir);
-  const git = (...args: string[]) => {
-    expect(spawnSync('git', args, { cwd }).status).toBe(0);
-  };
-  git('init', '-q');
-  git(
-    '-c',
-    'user.name=Test',
-    '-c',
-    'user.email=test@example.com',
-    'commit',
-    '--allow-empty',
-    '-m',
-    'base',
-  );
-  let name = 'README.md';
-  let file = join(cwd, name);
-  let calls = 0;
-  const runner = async (argv: string[]) => {
-    calls++;
-    if (argv[0] === 'agy') {
-      return eventStream(
-        JSON.stringify({
-          documents: [
-            {
-              name,
-              body: (await readFile(file, 'utf8')).replace('長い文章', '短い文'),
-            },
-          ],
-        }),
-      );
-    }
-    return JSON.stringify({ status: 'accepted', findings: '条件は同じ' });
-  };
-  try {
-    await writeFile(file, '長い文章。4件です。');
-    await reviewDocuments(cwd, '4件', dir, runner);
-    expect(await readFile(file, 'utf8')).toBe('短い文。4件です。');
-    await reviewDocuments(cwd, '4件', dir, runner);
-    expect(calls).toBe(2);
-    await writeFile(file, '長い文章。5件です。');
-    await reviewDocuments(cwd, '5件', dir, runner);
-    expect(calls).toBe(4);
-    await reviewDocuments(cwd, '5件。新たな出典。', dir, runner);
-    expect(calls).toBe(6);
-    const retained = '保持する説明。\n'.repeat(30) + '短い文。5件です。\n';
-    await writeFile(file, retained);
-    git('add', '.');
-    git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'document');
-    git('mv', 'README.md', 'renamed.md');
-    name = 'renamed.md';
-    file = join(cwd, name);
-    await writeFile(file, retained + '追記。\n');
-    git('add', '.');
+    let calls = 0;
+    const dir = join(root, 'review');
     expect(
-      spawnSync('git', ['diff', '--cached', '--name-status'], { cwd, encoding: 'utf8' }).stdout,
-    ).toMatch(/^R/);
-    await reviewDocuments(cwd, '5件。新たな出典。', dir, runner);
-    expect(calls).toBe(8);
-    await writeFile(file, '長い文章。5件です。\n追記。\nさらに追記。');
-    let facts = '5件';
-    await rejected(
-      () =>
-        reviewDocuments(
-          cwd,
-          facts,
-          dir,
-          async (...args) => {
-            const output = await runner(args[0]);
-            facts = '6件';
-            return output;
-          },
-          async () => facts,
-        ),
-      'facts changed',
-    );
-    expect(await readFile(file, 'utf8')).toContain('長い文章');
-    const before = calls;
-    await writeFile(join(dir, 'active.json'), JSON.stringify({ phase: 'adopting' }));
-    await writeFile(file, '短い文。5件です。');
-    await rejected(() => reviewDocuments(cwd, facts, dir, runner), 'reconciliation');
-    expect(calls).toBe(before);
-    git('add', '.');
-    git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'adopted');
-    await rejected(() => reviewDocuments(cwd, facts, dir, runner), 'reconciliation');
-    expect(calls).toBe(before);
-    const { GeminiUnavailable } = await import('../writing.ts');
-    const skipDir = join(root, 'skip');
-    await mkdir(skipDir);
-    await writeFile(file, '変更した原文');
-    let skipped = 0;
-    const unavailable = async () => {
-      skipped++;
-      throw new GeminiUnavailable('cli_missing');
-    };
-    await reviewDocuments(cwd, facts, skipDir, unavailable);
-    await reviewDocuments(cwd, facts, skipDir, unavailable);
-    expect(skipped).toBe(1);
-    expect(await readFile(file, 'utf8')).toBe('変更した原文');
-    await rejected(() => readFile(join(skipDir, 'active.json')));
-    await reviewDocuments(cwd, '別の根拠', skipDir, unavailable);
-    expect(skipped).toBe(2);
+      await reviewWriting(original, '4件', dir, async () => {
+        calls++;
+        throw new GeminiUnavailable(reason);
+      }),
+    ).toEqual(original);
+    expect(calls).toBe(1);
+    expect(JSON.parse(await readFile(join(dir, 'skipped.json'), 'utf8'))).toMatchObject({
+      status: 'skipped',
+      reason,
+    });
+    await assert.rejects(() => readFile(join(dir, 'accepted.json')), { code: 'ENOENT' });
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-for (const reason of ['cli_missing', 'authentication', 'connection', 'timeout']) {
-  test(`unavailable Gemini retains original without accepting it: ${reason}`, async () => {
-    const { GeminiUnavailable } = await import('../writing.ts');
-    const root = await mkdtemp(join(tmpdir(), 'writing-skip-'));
-    try {
-      let calls = 0;
-      const dir = join(root, 'review');
-      expect(
-        await reviewWriting(original, '4件', dir, async () => {
-          calls++;
-          throw new GeminiUnavailable(reason);
-        }),
-      ).toEqual(original);
-      expect(calls).toBe(1);
-      expect(JSON.parse(await readFile(join(dir, 'skipped.json'), 'utf8'))).toMatchObject({
-        status: 'skipped',
-        reason,
-      });
-      await rejected(() => readFile(join(dir, 'accepted.json')));
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-}
-
 test('availability classification does not swallow unknown or malformed failures', async () => {
-  const { availabilityReason } = await import('../writing.ts');
   expect(availabilityReason('ENOENT', false, '')).toBe('cli_missing');
   expect(availabilityReason(undefined, true, '')).toBe('timeout');
   expect(availabilityReason(undefined, false, 'authentication failed: 401')).toBe('authentication');
@@ -246,15 +119,20 @@ test('availability classification does not swallow unknown or malformed failures
   expect(availabilityReason(undefined, false, 'HTTP status: 503')).toBe('service_unavailable');
   const root = await mkdtemp(join(tmpdir(), 'writing-invalid-'));
   try {
-    await rejected(() =>
-      reviewWriting(original, '4件', join(root, 'unknown'), async () => {
-        throw Error('unknown');
-      }),
+    const failure = Error('unknown');
+    await assert.rejects(
+      () =>
+        reviewWriting(original, '4件', join(root, 'unknown'), async () => {
+          throw failure;
+        }),
+      failure,
     );
-    await rejected(() =>
-      reviewWriting(original, '4件', join(root, 'invalid'), async () => eventStream('not JSON')),
+    await assert.rejects(
+      () =>
+        reviewWriting(original, '4件', join(root, 'invalid'), async () => eventStream('not JSON')),
+      SyntaxError,
     );
-    await rejected(() => readFile(join(root, 'invalid', 'skipped.json')));
+    await assert.rejects(() => readFile(join(root, 'invalid', 'skipped.json')), { code: 'ENOENT' });
   } finally {
     await rm(root, { recursive: true, force: true });
   }

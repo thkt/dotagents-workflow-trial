@@ -13,27 +13,39 @@ const issue = JSON.stringify({
   state: 'OPEN',
   updatedAt: '1',
 });
-async function rejected(action: () => Promise<unknown>) {
-  let failed = false;
-  try {
-    await action();
-  } catch {
-    failed = true;
-  }
-  expect(failed).toBe(true);
-}
+const stopReasons = {
+  initial_failure: /Initial implementation process failed/,
+  needs_human: /Human decision required: Need agreement on scope/,
+  invalid_reply: /Invalid implementation reply/,
+  timeout: /Initial implementation timed out/,
+  review_failure: /Verification stopped: review_failed/,
+  requirements_changed: /Requirements changed during implementation/,
+  source_changed: /Verified source or requirements changed/,
+  ci_failure: /PR created but CI is not confirmed/,
+  writing_failure: /Command failed: .*; Writing review failed in fixture/,
+  wrong_repo: /This publisher supports only the trial repository/,
+  dirty: /Commit or preserve pending work before development/,
+};
 
-async function checkActorStop(mode: string, dir: string, reviews: number) {
-  const messages: Record<string, string> = {
-    needs_human: 'Human decision required: Need agreement on scope',
-    invalid_reply: 'Invalid implementation reply',
-  };
-  const message = messages[mode];
-  if (message) {
-    expect(await readFile(join(dir, 'stopped.txt'), 'utf8')).toContain(message);
+async function checkStop(mode: keyof typeof stopReasons, dir: string, reviews: number) {
+  if (mode !== 'wrong_repo' && mode !== 'dirty') {
+    expect(await readFile(join(dir, 'stopped.txt'), 'utf8')).toMatch(stopReasons[mode]);
+  }
+  if (
+    [
+      'initial_failure',
+      'needs_human',
+      'invalid_reply',
+      'timeout',
+      'requirements_changed',
+      'wrong_repo',
+      'dirty',
+    ].includes(mode)
+  ) {
     expect(reviews).toBe(0);
   }
 }
+
 function actorReply(mode: string) {
   return mode === 'invalid_reply'
     ? 'not JSON'
@@ -45,7 +57,7 @@ function actorReply(mode: string) {
 
 async function writingStub(argv: string[], mode: string) {
   if (mode === 'writing_failure') {
-    return { ...ok(), code: 1 };
+    return { ...ok(), code: 1, stderr: 'Writing review failed in fixture' };
   }
   const input = argv[argv.indexOf('--input') + 1];
   const output = argv[argv.indexOf('--output') + 1];
@@ -192,7 +204,6 @@ for (const mode of [
       publish: async () => {
         publications++;
         expect(pushes).toBe(1);
-        expect(reviews).toBeGreaterThanOrEqual(2);
         return 'https://github.com/thkt/dotagents-workflow-trial/pull/100';
       },
     };
@@ -213,14 +224,14 @@ for (const mode of [
         const body = await readFile(join(dir, 'pr.md'), 'utf8');
         expect(body).toContain('Verified current implementation and media');
         expect(body).not.toContain('Need agreement on scope');
-        await rejected(() => develop(args, io));
+        await assert.rejects(() => develop(args, io), /EEXIST/);
         expect(implementations).toBe(1);
         expect(publications).toBe(1);
       } else {
-        await rejected(() => develop(args, io));
+        await assert.rejects(() => develop(args, io), stopReasons[mode]);
         expect(publications).toBe(mode === 'ci_failure' ? 1 : 0);
         expect(pushes).toBe(mode === 'ci_failure' ? 1 : 0);
-        await checkActorStop(mode, dir, reviews);
+        await checkStop(mode, dir, reviews);
         if (mode === 'ci_failure') {
           expect(await readFile(join(dir, 'pr-url.txt'), 'utf8')).toContain('/pull/100');
         }

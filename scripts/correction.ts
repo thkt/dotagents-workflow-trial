@@ -407,6 +407,7 @@ async function evaluate(
 ): Promise<{ stop?: StopReason; findings?: string }> {
   const prompt = [
     'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
+    'Read DEVELOPMENT.md section "実装とテストの整理" and evaluate the tests relevant to this change against it. Passing checks alone do not establish coverage; return needs_changes for concrete missed behavior or unnecessary duplication, identifying the affected tests and reasons.',
     'Apply the documentation update policy in DEVELOPMENT.md, including documentation-only changes; assess required updates and their evidence rather than requiring code or new tests for every Issue.',
     'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
     'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
@@ -459,6 +460,7 @@ async function cycle(
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
+    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理" to test design, organization and self-review. Reuse sufficient coverage and explain any lost detection conditions when consolidating tests.',
     'Apply the documentation update policy in DEVELOPMENT.md to documentation-only changes and updates accompanying implementation.',
     'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
