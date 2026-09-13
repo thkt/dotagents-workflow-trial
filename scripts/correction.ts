@@ -292,10 +292,14 @@ async function runModel(
 
 export function captureInstructions(capture: { destination: string } | null) {
   return [
-    capture
-      ? `Prepare the configured capture command and required media for this Issue. Reference final media at ${capture.destination}/.`
-      : 'This target declares no capture. If the agreed Issue needs media, return needs_human to configure required capture before execution.',
-    'The host runs capture separately from normal tests. Its command receives the absolute output directory as the final argument. Save only PNG/JPEG/WebP/MP4/WebM files directly under that directory (CAPTURE_OUTPUT for browser definitions). Close video contexts and save video there. Do not write media or reports into the checkout during capture.',
+    ...(capture
+      ? [
+          `Prepare the configured capture command and required media for this Issue. Reference final media at ${capture.destination}/.`,
+          'The host runs capture separately from normal tests. Its command receives the absolute output directory as the final argument. Save only PNG/JPEG/WebP/MP4/WebM files directly under that directory (CAPTURE_OUTPUT for browser definitions). Close video contexts and save video there. Do not write media or reports into the checkout during capture.',
+        ]
+      : [
+          'This target declares no capture. If the agreed Issue needs media, return needs_human to configure required capture before execution.',
+        ]),
     'Return repaired when implementation and test/capture definitions are ready; pending host execution alone is not needs_human. Actual requirement or authorization decisions still require needs_human.',
   ].join(' ');
 }

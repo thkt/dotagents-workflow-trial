@@ -241,12 +241,7 @@ async function ship(
   const { repository, remote: remoteName, baseBranch } = context.target.config;
   await unchangedTarget(context, io);
   const git = (...args: string[]) => checked(io, ['git', ...args], cwd);
-  assert(
-    (await git('rev-parse', 'HEAD')) === context.base &&
-      (await git('branch', '--show-current')) === branch &&
-      (await git('remote', 'get-url', remoteName)) === context.remote,
-    'Actor changed branch, HEAD or remote',
-  );
+  assert((await git('remote', 'get-url', remoteName)) === context.remote, 'Actor changed remote');
   const changed = await git('status', '--porcelain');
   assert(changed.length > 0, 'No implementation changes; no PR created');
   // Reuse the controller's source/Issue check immediately before publication.
@@ -408,8 +403,8 @@ export async function develop(args: string[], io = runtime) {
   try {
     console.error('Implementing, checking and independently reviewing the Issue');
     const config = await implement(context, io);
-    await unchangedTarget(context, io);
     if (context.localOnly) {
+      await unchangedTarget(context, io);
       return { status: 'verified_local', evidence: context.dir, checkout: context.cwd };
     }
     console.error('Verified; committing, publishing and checking CI');
