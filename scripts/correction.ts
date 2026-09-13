@@ -447,7 +447,7 @@ async function evaluate(
 ): Promise<{ stop?: StopReason; findings?: string }> {
   const prompt = [
     'Assess readiness for publication and human review against the full requirements: implementation, meaningful tests, required documentation, and prepared evidence.',
-    'Read DEVELOPMENT.md section "実装とテストの整理" and evaluate the tests relevant to this change against it. Passing checks alone do not establish coverage; return needs_changes for concrete missed behavior or unnecessary duplication, identifying the affected tests and reasons.',
+    'Read DEVELOPMENT.md section "実装とテストの整理" and evaluate the tests relevant to this change against it. Ask what realistic bug deleting each relevant test would miss and weigh its additional assurance against runtime, flakiness and maintenance cost. Passing checks alone do not establish behavioral assurance. Return needs_changes for concrete missed behavior or unjustified tests, identifying the affected tests and reasons; do not reject justified deletion or consolidation merely because test counts or coverage metrics decrease.',
     'Apply the documentation update policy in DEVELOPMENT.md, including documentation-only changes; assess required updates and their evidence rather than requiring code or new tests for every Issue.',
     'Do not edit files or run check; its host-side result is exit 0. Do not trust implementation claims.',
     'Return needs_changes for deficiencies in those deliverables, including missing required media or unclear evidence provenance.',
@@ -500,9 +500,9 @@ async function cycle(
   }
   const prompt = [
     'Repair only within these agreed requirements. Read the current files and fix the root cause.',
-    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理" to test design, organization and self-review. Reuse sufficient coverage and explain any lost detection conditions when consolidating tests.',
+    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理". Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
     'Apply the documentation update policy in DEVELOPMENT.md to documentation-only changes and updates accompanying implementation.',
-    'Do not weaken tests or acceptance criteria. Do not commit, push or publish.',
+    'Preserve agreed acceptance criteria and the verification needed to protect required behavior. Removing or consolidating unnecessary tests is allowed; making checks pass by hiding a realistic regression is not. Do not commit, push or publish.',
     'Run only targeted checks needed to diagnose or validate your repair; leave the full check command to the host.',
     'The host runs full check, browser tests and capture after your changes; do not launch browsers or servers in the actor sandbox.',
     ...(config.capture ? [captureInstructions] : []),

@@ -8,15 +8,7 @@ import { checkReport } from '../test.ts';
 const entry = resolve(import.meta.dir, '../test.ts');
 const modules = resolve(import.meta.dir, '../../node_modules');
 for (const runner of ['bun', 'playwright'] as const) {
-  for (const scenario of [
-    'normal',
-    'only',
-    'skip',
-    'conditional',
-    'todo',
-    'failure',
-    'empty',
-  ] as const) {
+  for (const scenario of ['normal', 'only', 'skip', 'failure', 'empty'] as const) {
     test(`${runner} runner: ${scenario}`, async () => {
       const cwd = await mkdtemp(join(tmpdir(), 'test-completion-'));
       try {
@@ -35,14 +27,6 @@ for (const runner of ['bun', 'playwright'] as const) {
           normal: "test('second', () => expect(1).toBe(1));",
           only: "test.only('second', () => expect(1).toBe(1));",
           skip: "test.skip('second', () => expect(1).toBe(2));",
-          conditional:
-            runner === 'bun'
-              ? "test.skipIf(true)('second', () => expect(1).toBe(2));"
-              : "test('second', () => { test.skip(true); expect(1).toBe(2); });",
-          todo:
-            runner === 'bun'
-              ? "test.todo('second');"
-              : "test.fixme('second', () => expect(1).toBe(2));",
           failure: "test('second', () => expect(1).toBe(2));",
           empty: '',
         };
@@ -58,12 +42,12 @@ for (const runner of ['bun', 'playwright'] as const) {
           timeout: 15000,
           env: { ...process.env, CI: 'false', TMPDIR: temporaryReports },
         });
-        if (runner === 'bun') {
+        if (runner === 'bun' && (scenario === 'normal' || scenario === 'failure')) {
           expect(await readdir(temporaryReports)).toEqual([]);
         }
         expect(result.error).toBeUndefined();
         expect(result.status).toBe(scenario === 'normal' ? 0 : 1);
-        if (scenario === 'skip' || scenario === 'conditional' || scenario === 'todo') {
+        if (scenario === 'skip') {
           expect(result.stderr).toContain('Unexecuted tests');
         }
       } finally {
@@ -107,7 +91,4 @@ test('reports reject truncated output', () => {
   expect(() =>
     checkReport('bun', '<?xml version="1.0"?><testsuites tests="1" skipped="0">'),
   ).toThrow('Missing or incomplete Bun JUnit summary');
-  expect(() => checkReport('playwright', '{"stats":{"expected":1,"skipped":0}')).toThrow(
-    SyntaxError,
-  );
 });

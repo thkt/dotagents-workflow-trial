@@ -140,7 +140,7 @@ async function implement(context: Context, io: typeof runtime) {
   const prompt = [
     'Implement the complete agreed Issue using existing code and verification assets. Read README.md, DEVELOPMENT.md and applicable repository instructions.',
     'Prepare meaningful tests, current documentation and capture definitions. The host runs browser tests and capture; do not launch browsers or servers in your sandbox.',
-    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理" to test design, organization and self-review. Reuse sufficient coverage and explain any lost detection conditions when consolidating tests.',
+    'Before creating or updating tests, read and apply DEVELOPMENT.md section "実装とテストの整理". Ask what realistic bug deleting each relevant test would miss. Compare its additional assurance with runtime, flakiness and maintenance cost; actively remove or consolidate tests that do not justify that cost. Do not retain tests merely for reassurance, test counts or coverage metrics. Explain any lost detection conditions and the remaining verification.',
     'Documentation-only Issues use the same flow. Apply the documentation update policy in DEVELOPMENT.md; add tests or code only when the agreed requirements need them.',
     captureInstructions,
     'Do not commit, push, publish, change the Issue or weaken acceptance criteria. Do not run the full check; the host will do it after implementation.',

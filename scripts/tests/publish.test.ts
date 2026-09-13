@@ -2,7 +2,6 @@ import { test, expect } from 'bun:test';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { generateKeyPairSync } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { publish, keyJwt } from '../publish.ts';
@@ -158,7 +157,35 @@ test('publisher CLI reports the stop reason before touching credentials', () => 
 });
 
 test('publisher rejects a different signing key', () => {
-  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-  const pem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  // Public test fixture only; never used for authentication.
+  const pem = `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDIqyBPA9TwUXSg
+h+o/z/Csr9mjtfP1oQhGGwvzO4nzfiNAvLFiw5MV1OVoaQSfWKHMh35+XHdti7bL
+Ya6FdS77/K8mFGxI+Gs8WmQQ0vtq6LwtjHasCfwZ3QmcbXW/BVRQy/Oh3tMEzMRE
+p9V9vpovQ8vuH2/+4v9eBTM0hisW1RJwPx7B+BbBji0snLx988lEHYwfjvYKXwqB
+vI88b/6yEKYyycIv2ptaPi+qlku8AV4oKSsIIm8PdRpP89Mp9Zd3Rd2o4BqMt3tp
+4sq+Qu3leN5e3iMkRWIJnzQxKbZxKX4Rb/Le79pYRbNrkXqP1CH8N4Lq5SNw0Y9D
+wzKER0tTAgMBAAECggEALfl++ntvQuv2o3zgP2R9yKK1Y1uhnCobwiwaLcz7Sy0g
+GInivjT+subG9IfzBisBTuHQKlU3C4MSC0DDAlKZxCPdYQUW1hUMRJSVDoG4FoNh
+8bGX0syq1KYeuJcfffdTnPtNQ03Q3O2pHe2x7RBJNQD8bP8I4sXRKhJY6/S9VIpu
+xWKLqdInsuRr27XHNHm8NiXjDm4dFR4n/MvpQKngAlJC1304T73L+9GITkZxiRA0
+eDQX2VfKVBwROie4/y5UevkLTA2XuPfa07+UP31PhyTCgT10rP0DpQBAfi4mvPjT
+mWsJoVM4iQaRUo/GQ3x02cBFB6EOvNY05ZWAyPgnaQKBgQDk55K44URihrDfmcjc
+lnPmUko17el9IbSDGp5mVdNL+BgzabMnq4n9sUp5vMH64zVEDtKnquenigzyIry+
+03VniJrq9hF9J2jllhIJ/hSmBRRwpWqL8CJU8Xu9J9/dPiBCzCytmUmtteuhOScL
+OrwtNFSirOSlGIN9DYu4j83pRQKBgQDga+wg7D9mVFWkupxPthubIjXuX5eaKzCN
+3YvScxCOThwqH9GStXM21x0SJ1eMyOCagn2J8BnlceU1y6Qb8ZQXBIQ06uKZzkWJ
+EGLEEv+QhGebF+yTfw7nnnUJ+sSs3kXVSumSXT+Sd6QLHoAKLC3krrOvtCMh0YdY
+aJvKQCiPtwKBgDaFmgMDVQCKyHJZ9OflxjFkBF0YD/dIIfDgVD5Xzv5XV5xXXt7i
+EvokUnLwrNuPZs6RIUfig076qN67u21QfLRua0fv2HaQ/oFA34cVx+FLcHTsUZaH
+WgYVhr2lU8Mk2xZN/45R5qTDoh5CuLQKB2xU/JvKxqM0VY1hvpf1WLxpAoGBAM7O
+hS2dp5r78mQ31x2ZmnzuHLbK/mCCll7VHylTAZmxn0CuS6kfbsnFl7OH76T75AZe
+Y6N+T87hkzBstZFOoIJJli9RmHnV3Lw/DlTTkRCzAuqoNEmDl8+XdRE6No160u2H
++A/5wECP4eqhM6qsJaqL12f93zYl6MxuscnCL96nAoGAd9ffsobymQ+tCLxRsMqs
+5JzGHQhaE75Dta1U+d+X+GPtFnHg2LQH+7rnAamprSEad+kzwTIR2gsGQHRTrzEu
+aGOepTSrB6f+J6uO53AafZ7ikStUF2Lc3hitfCvt+hGWfxR4zHF4R2xyXCmJkHWo
+thkz0ySsOGLbM1YhyyhO6FQ=
+-----END PRIVATE KEY-----
+`;
   expect(() => keyJwt(pem)).toThrow('Unexpected key fingerprint');
 });

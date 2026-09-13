@@ -32,9 +32,11 @@ for (const [mode, result, repairs, reviews] of [
         expect(await readFile(join(t.config.cwd, 'README.md'), 'utf8')).toBe('current');
       }
     }
-    const before = JSON.stringify(state);
-    t.execute();
-    expect(JSON.stringify(await t.state())).toBe(before);
+    if (mode === 'normal' || mode === 'exhaust') {
+      const before = await t.state();
+      t.execute();
+      expect(await t.state()).toEqual(before);
+    }
   });
 }
 

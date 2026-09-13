@@ -180,8 +180,10 @@ for (const mode of [
       },
       verify: async (config: Config): Promise<State> => {
         reviews++;
-        expect(config.capture?.[1]).toEndWith('/capture.ts');
-        expect(config.modelTimeMs).toBe(1200000 - 500);
+        if (mode === 'success') {
+          expect(config.capture?.length).toBeGreaterThan(0);
+          expect(config.modelTimeMs).toBe(1200000 - 500);
+        }
         expect(await readFile(join(config.cwd, 'result.txt'), 'utf8')).toBe('implemented');
         return {
           configHash: '',

@@ -54,7 +54,10 @@ async function waitForFile(path: string) {
 }
 
 for (const role of ['check', 'repair', 'review', 'capture'] as const) {
-  for (const signal of ['SIGINT', 'SIGTERM', 'SIGKILL'] as const) {
+  // Every role checks its reservation; the other signals exercise the shared handler once.
+  for (const signal of role === 'repair'
+    ? (['SIGINT', 'SIGTERM', 'SIGKILL'] as const)
+    : (['SIGTERM'] as const)) {
     test(`${signal} during ${role} preserves reservation and blocks duplicate execution`, async () => {
       const t = await trial('normal', { checkTimeMs: 15000 });
       if (role === 'review') {

@@ -123,6 +123,8 @@ SIGKILLやOS停止は捕捉できません。CLIだけが強制終了すると�
 
 開発入口・要求整理・PR公開・Codex実行は、それぞれ `development.test.ts`・`discovery.test.ts`・`publish.test.ts`・`codex-actor.test.ts` で確認します。共有する試験環境とモデル応答データの組み立ては `tests/support/` に置き、テストケースと期待値は各テストファイルに置きます。
 
+画面テストでは一覧・該当なしのレイアウト確認と、検索・並べ替え・保存の振る舞い確認を分けます。`@storage`を付けたStorage境界のケースはdesktopで一度実行し、mobileのprojectでは収集対象から除きます。検索・クリアの操作とレイアウトは両projectで確認します。`@mobile-select`を付けた標準selectのキー操作はmobileで一度実行します。テスト内のskipは使いません。
+
 SIGKILLのテストでは残存プロセスをテスト側で後片付けしており、CLIの自動停止保証ではありません。
 
 制御テストの成功は実モデルの判断品質の証拠には数えません。実測結果とその対象、未検証範囲は[検証記録](../trial/evidence/README.md)を参照してください。

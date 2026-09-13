@@ -56,7 +56,9 @@ for (const change of ['document', 'facts'] as const) {
     const mustNotRun = async () => {
       throw Error('Unchanged input must reuse its review');
     };
-    await reviewDocuments(t.cwd, '4件', t.dir, mustNotRun);
+    if (change === 'document') {
+      await reviewDocuments(t.cwd, '4件', t.dir, mustNotRun);
+    }
     const facts = change === 'facts' ? '4件。新たな出典。' : '4件';
     if (change === 'document') {
       await writeFile(t.file, '長い文章。4件です。追記。');

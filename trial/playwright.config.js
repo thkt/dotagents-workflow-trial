@@ -14,8 +14,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "desktop", use: { viewport: { width: 1280, height: 800 } } },
-    { name: "mobile", use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true } },
+    { name: "desktop", grepInvert: /@mobile-select/, use: { viewport: { width: 1280, height: 800 } } },
+    // Storage API contracts run once; layout and input run in both projects.
+    { name: "mobile", grepInvert: /@storage/, use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true } },
   ],
   webServer: {
     command: "bun server.js",

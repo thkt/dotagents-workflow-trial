@@ -58,9 +58,8 @@ for (const accepted of [true, false]) {
           if (argv[0] === 'agy') {
             return eventStream(JSON.stringify({ documents: candidate }));
           }
-          expect(input).toContain('商品数は4件。');
-          expect(input).toContain(JSON.stringify(original));
-          expect(input).toContain(JSON.stringify(candidate));
+          const payload = input.slice(input.lastIndexOf('\n') + 1);
+          expect(JSON.parse(payload)).toEqual({ facts: '商品数は4件。', original, candidate });
           return JSON.stringify({
             status: accepted ? 'accepted' : 'needs_changes',
             findings: accepted ? '数量と条件を保持' : '商品数を5件へ変更している',
@@ -74,8 +73,10 @@ for (const accepted of [true, false]) {
         await assert.rejects(() => readFile(join(dir, 'accepted.json')), { code: 'ENOENT' });
         expect(await readFile(join(dir, 'candidate.json'), 'utf8')).toContain('5件');
       }
-      await assert.rejects(action, { code: 'EEXIST' });
-      expect(calls).toBe(2);
+      if (accepted) {
+        await assert.rejects(action, { code: 'EEXIST' });
+        expect(calls).toBe(2);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }

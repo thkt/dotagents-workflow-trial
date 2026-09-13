@@ -29,6 +29,8 @@ for (const [mode, result, captures, reviews] of [
       expect(
         await readFile(join(t.config.cwd, 'trial/evidence/generated/desktop.png'), 'utf8'),
       ).toBe('correct');
+    }
+    if (mode === 'capture_success') {
       const before = JSON.stringify(state);
       expect(t.execute().status).toBe(0);
       expect(JSON.stringify(await t.state())).toBe(before);
@@ -122,15 +124,7 @@ test('documentation repair keeps media unchanged through both checks and reviews
   expect(await readFile(media, 'utf8')).toBe('retained');
 });
 
-for (const change of [
-  'records',
-  'delete-record',
-  'source',
-  'definition',
-  'media',
-  'symlink',
-  'executable',
-]) {
+for (const change of ['records', 'source', 'definition', 'media', 'symlink', 'executable']) {
   test(`successful capture reuse after review repair: ${change}`, async () => {
     const t = await trial('reuse');
     const helper = join(t.root, 'reuse.js');
@@ -151,7 +145,7 @@ if(role==='repair') {
  writeFileSync('README.md','updated explanation');
  writeFileSync(record,JSON.stringify({hash:hash()}));
  writeFileSync('trial/evidence/check.stdout','passed');
- if(change==='delete-record') rmSync('trial/evidence/old.json');
+ if(change==='records') rmSync('trial/evidence/old.json');
  if(change==='source') writeFileSync('app.js','changed app');
  if(change==='definition') writeFileSync('trial/capture.spec.js','changed capture');
  if(change==='media') writeFileSync(media,'altered');
@@ -163,7 +157,7 @@ if(role==='review') {
  const status=existsSync(record)?'accepted':'needs_changes';
  if(status==='accepted') {
   const same=JSON.parse(readFileSync(record,'utf8')).hash===hash();
-  if(same!==['records','delete-record'].includes(change)) process.exit(7);
+  if(same!==(change==='records')) process.exit(7);
  }
  console.log(JSON.stringify({status,findings:'verify media identity'}));
 }
@@ -180,7 +174,7 @@ if(role==='review') {
     expect(state.review).toBe(2);
     expect(state.repair).toBe(1);
     expect(events(state.events).filter((event) => object(event).role === 'capture')).toHaveLength(
-      ['records', 'delete-record'].includes(change) ? 1 : 2,
+      change === 'records' ? 1 : 2,
     );
   });
 }
