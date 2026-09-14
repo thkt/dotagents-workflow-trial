@@ -8,8 +8,8 @@
 
 | パス | 役割 |
 | --- | --- |
-| `scripts/` | ハーネスの制御CLI、入力検証、公開処理とそのテスト |
-| `skills/` | 共通入口 `scoping`・`implement` と参照資料 |
+| `scripts/` | 保持する試行版の制御CLI、入力検証、旧App公開処理とそのテスト |
+| `skills/` | 試行版スキルと参照資料。通常のスキル検出には登録しない |
 | `trial/` | 試行商品・Playwright依存とlockfile・商品検証・撮影定義 |
 | `trial/evidence/` | この試行で保存した実装・ハーネス評価の検証記録 |
 | `trial/artifacts/` | 商品アプリのE2Eレポート・画像・traceなどの生成物 |
@@ -20,15 +20,23 @@
 
 次回の要求整理やチームの作業に使う文書は、[再利用する文書の入口](docs/README.md)から目的別に選べます。現行の手順、設計・検討案、過去の記録を区別しています。
 
-- 通常の商品アプリ開発は、このREADMEの[セットアップと検証](#セットアップと検証)で起動・共通check・画像取得を確認し、[DEVELOPMENT.md](DEVELOPMENT.md)で変更とレビューの方針を確認します。制御CLIや実モデルの起動は不要です。
-- 修正・独立評価の接続を試す実行担当は、上記に続いて[scripts/README.md](scripts/README.md)の設定・実行上限・中断手順を読みます。通常開発とは別に、隔離した作業コピーで実行します。
+- 商品アプリの起動・共通check・画像取得は、このREADMEの[セットアップと検証](#セットアップと検証)、変更とレビューの方針は [DEVELOPMENT.md](DEVELOPMENT.md) で確認します。起動・検証だけなら制御CLIや実モデルの起動は不要です。
+- 要求整理・実装の実行担当は、[共有入口の確認](#共有入口の確認)で採用版と対象checkoutを確認し、共有スキル実体から辿るCLI手順を読みます。
 - 調査・要求整理からIssue作成までは、[要求整理とIssue作成](#要求整理とissue作成)のスキルを呼び出します。
-- 合意済みの文書整理Issueも[implement](skills/implement/SKILL.md)で進めます。実装に伴う更新と同じ[文書更新の方針](DEVELOPMENT.md#ドキュメントの更新)で判断します。
+- 合意済みの文書整理Issueも共有の `implement` で進めます。実装に伴う更新と同じ[文書更新の方針](DEVELOPMENT.md#ドキュメントの更新)で判断します。
 - 検証結果は[検証記録](trial/evidence/README.md)を参照してください。
 
-文書の正本について、セットアップや共通checkの順序と検証範囲はこのREADME、レビューや開発方針はDEVELOPMENT.md、制御CLIの操作と実行制約はscripts/README.mdに定めています。実際のコマンドと対象は[package.json](package.json)と各設定・実行入口で定義します。
+文書の正本について、このrepoのセットアップや共通checkの順序と検証範囲はこのREADME、レビューや開発方針はDEVELOPMENT.mdに定めています。共有ハーネスのCLI操作・実行制約は共有スキル実体から辿る `scripts/README.md` に従います。このrepoの [scripts/README.md](scripts/README.md) は保持する旧App版CLIの試行用です。実際の検証コマンドと対象は[package.json](package.json)と各設定・実行入口で定義します。
 
 設計の目的・判断原則・責任範囲と検討記録は[設計の入口](docs/design/README.md)を参照してください。
+
+## 共有入口の確認
+
+通常入口は `~/.agents/skills/scoping` と `~/.agents/skills/implement` です。要求整理なら `scoping`、合意済みIssueの実装なら `implement` の `SKILL.md` を読み、採用した `thkt/dotagents` の実体からCLI・手順を解決します。このrepoに `.agents/skills/scoping`・`.agents/skills/implement` の重複リンクは置きません。
+
+CLIの操作・対象repo設定・日本語確認・公開・添付手順は、共有スキルのディレクトリから辿る `../../scripts/README.md` を参照します。スキルが見つからない場合は共有登録を確認し、新しいタスクで読み直します。採用版を切り替える際の確認と記録は[移行の開始条件](trial/evidence/shared-entry-migration.md#開始条件)に従います。
+
+Bun、Git、Codex CLIとユーザー `thkt` の既存gh認証を使います。checkout・設定・fetch/push remote・base branch・実効ユーザーとpush権限は、各スキルの手順に従って共有CLIで照合します。公開担当はその結果の実効ユーザーが `thkt` であることを確認し、不一致や権限不足では停止します。環境変数のtokenが保存済み認証より優先される場合にも、別主体へ自動で切り替えません。専用Appの設定・署名鍵・installation tokenは不要です。
 
 ## 要求整理とIssue作成
 
@@ -40,7 +48,7 @@ $scoping 商品一覧の並び順を次回も覚えてほしい。
 
 既存IssueのURLや設計案も一緒に渡せます。スキルは現行コードと関連Issueを調べ、必要な質問への回答を待ち、合意した要求をIssueへ反映してURLを返します。案だけが必要なら「Issue本文案まで。公開しない」と指定してください。商品実装は別の依頼として扱います。
 
-Bun、Git、対象repoを読み書きできるghの認証が必要です。調査の保存には既存のcheckout外contextDirを使います。スキル本文は[scoping](skills/scoping/SKILL.md)を正本とし、`.agents/skills/scoping`はそこへの相対symlinkです。[Codexの標準検出](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)を使い、hookや別の実行CLIは追加しません。スキルが表示されない場合はCodexを再起動してください。
+調査の保存には既存のcheckout外contextDirを使います。`~/.agents/skills/scoping/SKILL.md` と、その実体から辿る保存・評価CLIの手順と十分性の判断に従います。Issueの作成・更新にも、対象と権限を照合したユーザーの既存gh認証を使います。
 
 ## IssueからPR作成
 
@@ -48,17 +56,19 @@ Bun、Git、対象repoを読み書きできるghの認証が必要です。調�
 $implement 99
 ```
 
-現在のrepoのIssue番号、または対象repoのIssue URLを渡します。[implement](skills/implement/SKILL.md)がCLIを起動し、初回実装、必要な文書や証拠の作成、検証、修正、独立評価、PR作成まで進めます。人の承認・マージは別です。「公開しない」場合はcommit・push・PR作成を省略します。
+現在のrepoのIssue番号、または対象repoのIssue URLを渡します。`~/.agents/skills/implement/SKILL.md` がその実体から解決したCLIを起動し、隔離した実装、必要な文書や証拠の作成、検証、修正、独立評価、ユーザーの既存gh認証によるPR作成まで進めます。人の承認・マージは別です。「公開しない」場合は `--no-publish` を渡し、commit・push・PR作成を省略します。
 
-対象checkoutの `.dotagents.json` でrepo・remote・base branch・セットアップ・検証・撮影を指定します。[対象repoの設定](scripts/README.md#対象repoの設定)を参照してください。Bunはハーネスの実行環境であり、対象repoへBun・Playwright・`trial/`を要求しません。利用条件・実行上限・停止後の扱いは[CLI手順](scripts/README.md#issueからpr作成)を参照してください。hookを追加せず、スキルはCLIを呼ぶ入口だけを担います。
+repo・remote・base branch・セットアップ・検証・撮影・CI名の設定値は、対象checkoutの [.dotagents.json](.dotagents.json) を参照してください。
+
+`{harness}` は採用した共有ハーネス実体です。設定の詳細、利用条件・実行上限・停止後の扱いは[共有入口の確認](#共有入口の確認)で解決したCLI手順に従います。公開後は `ciChecks` に指定した全checkが同じPR headで実行成功したことを確認して人へ渡します。Bunはハーネスの実行環境であり、他の対象repoへBun・Playwright・`trial/`を要求しません。
 
 ## 共通ハーネスと試行商品の検証場所
 
-共通ハーネスは `scripts/`、`skills/`、ルートのBun・TS開発依存と基本方針です。`bun run check:harness` は制御コードのlint・書式・複雑度・型検査・制御テストを実行し、Playwrightや商品サーバーを必要としません。スキルやCLIを他repoから使う場合は、この信頼する実体を参照します。
+共有ハーネスの運用は `~/.agents/skills` から参照する採用版が担います。このrepoの `scripts/`・`skills/` とルートのBun・TS開発依存は、試行実装・制御テスト・過去の検証を確認するために保持します。`bun run check:harness` はこのrepoに保持する制御コードのlint・書式・複雑度・型検査・制御テストを実行し、Playwrightや商品サーバーを必要としません。この成功を共有採用版の検証結果とは扱いません。
 
 試行商品・固定データ・Playwright依存・撮影定義は `trial/` にあります。`bun run setup:e2e` の後、`bun run check:trial` で商品のlint・複雑度・Playwright runner契約・E2Eを検証します。提出時とCIの `bun run check` は両方の範囲を引き続き検証し、片方だけの成功を共通check成功としません。
 
-既存媒体と履歴は `trial/evidence/`、過去の設計・比較は `docs/design/archive/` と `docs/workflow-refinement/` に保持します。正規repo `thkt/dotagents` への取り込みと `~/.agents` への登録切替は後続Issueです。今回の検証分離・実測の未確認範囲と引き渡し条件は[汎用化の検証記録](trial/evidence/repository-generalization.md)に記載します。
+このrepoは試行商品・テスト・媒体・履歴を管理します。既存媒体と履歴は `trial/evidence/`、過去の設計・比較は `docs/design/archive/` と `docs/workflow-refinement/` に保持します。共有入口の移行開始条件と過去の実測は[移行受入の記録](trial/evidence/shared-entry-migration.md)、受入全体の状況は[dotagents #54](https://github.com/thkt/dotagents/issues/54)、以前の検証分離・実測は[汎用化の検証記録](trial/evidence/repository-generalization.md)を参照してください。
 
 ## 提供する機能
 
@@ -156,13 +166,15 @@ CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保�
 
 ## レビュー用キャプチャ
 
-ホストが通常の `bun run check` とは別に以下を実行します。`CAPTURE_OUTPUT` は必須の絶対パスで、checkout外の出力ディレクトリを指定します。
+ホストが通常の `bun run check` とは別に、対象checkoutで設定済みcapture commandを実行します。以下は共有スキルの実体から撮影CLIを解決する例です。最後の引数はホストが用意したcheckout外の新しい絶対出力ディレクトリです。
 
 ```sh
-CAPTURE_OUTPUT=/absolute/path/to/capture-output bun run --cwd trial capture
+IMPLEMENT_SKILL=$(realpath "$HOME/.agents/skills/implement/SKILL.md")
+SHARED_HARNESS=$(realpath "$(dirname "$IMPLEMENT_SKILL")/../..")
+bun "$SHARED_HARNESS/scripts/capture.ts" trial/capture.spec.js trial/playwright.config.js /absolute/path/to/capture-output
 ```
 
-[trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。[trial/capture.config.js](trial/capture.config.js) は既存のPlaywright設定のprojects・画面幅・webServerを再利用し、通常テストから撮影を分離します。PNGとWebMだけを `CAPTURE_OUTPUT` 直下へ保存し、動画contextを閉じて確定します。runnerの出力先はOSの一時ディレクトリです。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。
+[trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。共有アダプターは既存の [trial/playwright.config.js](trial/playwright.config.js) のprojects・画面幅・webServerを再利用し、出力先を `CAPTURE_OUTPUT` としてspecへ渡します。PNGとWebMだけをその直下へ保存し、動画contextを閉じて確定します。runnerの設定・レポート・一時生成物もcheckout外へ出力します。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。`trial/capture.config.js` と `trial/package.json` の `capture` は商品側の直接撮影用として保持します。
 
 ホストが収集する最終媒体の参照先（取得状況は各検証記録を参照）:
 
@@ -173,4 +185,4 @@ CAPTURE_OUTPUT=/absolute/path/to/capture-output bun run --cwd trial capture
 | 該当なしからEscで全件復帰（降順・検索欄にフォーカス） | [画像](trial/evidence/generated/product-search-escape-cleared-desktop.png) | [画像](trial/evidence/generated/product-search-escape-cleared-mobile.png) |
 | 検索結果あり・該当なし・空欄からEsc→再検索 | [動画](trial/evidence/generated/product-search-escape-desktop.webm) | [動画](trial/evidence/generated/product-search-escape-mobile.webm) |
 
-対象差分、撮影条件、実行結果、未確認事項は[並び順復元の検証記録](trial/evidence/order-persistence.md)と[Esc操作の検証記録](trial/evidence/search-escape.md)を参照してください。再撮影では上記媒体を更新し、撮影テストの標準出力に対象ファイルと媒体のSHA-256、撮影結果を記録します。撮影の成功だけでは、永続プロファイルによるブラウザー再起動や保存失敗の証拠にはしません。
+操作の確認点と過去の撮影条件・結果は[並び順復元の検証記録](trial/evidence/order-persistence.md)と[Esc操作の検証記録](trial/evidence/search-escape.md)を参照してください。再撮影では上記媒体を更新するため、過去の記録のハッシュが更新後の媒体と一致するとは扱いません。該当する変更のPRで、対象commit、ホスト撮影ログ、媒体のSHA-256、検証結果と未確認事項を確認してください。撮影テストの標準出力には対象ファイルと媒体のSHA-256、撮影結果を記録します。撮影の成功だけでは、永続プロファイルによるブラウザー再起動や保存失敗の証拠にはしません。

@@ -12,11 +12,11 @@
 | [情報・合意・証拠の設計案](information-and-evidence-design.md) | 要求・判断・証拠の配置とレビューの検討 |
 | [コンテキスト十分性](context-sufficiency.md) | 次の判断に必要な情報と不足の扱い |
 | [ドキュメント整備フローの計画](../workflow-refinement/documentation-flow-plan.md) | 文書のみの変更を含むimplementの更新基準・完了条件・検証順序 |
-| [正規agents運用への移行案](../workflow-refinement/agents-migration-plan.md) | 既存 `.agents` と試行repoの責任・保証・保存互換性を比較し、保全・切替・受入・復帰と移行前の残作業を判断する（実際の移行は未承認） |
+| [正規agents運用への移行案](../workflow-refinement/agents-migration-plan.md) | 提案時点の `.agents` と試行repoの責任・保証・保存互換性、保全・切替・受入・復帰の条件を確認する。開始条件と過去の実測は[移行受入の記録](../../trial/evidence/shared-entry-migration.md)を参照 |
 
 ## 現在の運用との関係
 
-現在の操作・検証は[README](../../README.md)を正本とします。採用済みの開発・レビュー方針は[DEVELOPMENT.md](../../DEVELOPMENT.md)、制御CLIは[scripts/README.md](../../scripts/README.md)を正本とします。要求整理の実行方法は[スキル](../../skills/scoping/SKILL.md)に従います。
+現在の操作・検証は[README](../../README.md)を正本とします。採用済みの開発・レビュー方針は[DEVELOPMENT.md](../../DEVELOPMENT.md)を正本とします。要求整理・実装・公開は[共有入口の確認](../../README.md#共有入口の確認)で採用版を確認し、`~/.agents/skills` の共有スキルとその実体から辿るCLI手順に従います。
 
 この試行では、すべての変更でマージ前に人のレビュー・承認が必要です。情報設計にあるレビュー省略の条件は検討案であり、有効な運用ではありません。各変更の採用範囲・完了条件はIssueから、変更と検証結果はPRから確認します。
 

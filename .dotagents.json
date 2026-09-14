@@ -2,11 +2,36 @@
   "repository": "thkt/dotagents-workflow-trial",
   "remote": "origin",
   "baseBranch": "main",
-  "setup": [["bun", "install", "--frozen-lockfile", "--ignore-scripts"], ["bun", "run", "setup:e2e"]],
-  "check": ["bun", "run", "check"],
+  "setup": [
+    [
+      "bun",
+      "install",
+      "--frozen-lockfile",
+      "--ignore-scripts"
+    ],
+    [
+      "bun",
+      "run",
+      "setup:e2e"
+    ]
+  ],
+  "check": [
+    "bun",
+    "run",
+    "check"
+  ],
   "capture": {
-    "command": ["bun", "{harness}/scripts/capture.ts", "trial/capture.spec.js", "trial/playwright.config.js"],
+    "command": [
+      "bun",
+      "{harness}/scripts/capture.ts",
+      "trial/capture.spec.js",
+      "trial/playwright.config.js"
+    ],
     "destination": "trial/evidence/generated",
     "required": false
-  }
+  },
+  "ciChecks": [
+    "checks",
+    "verify"
+  ]
 }
