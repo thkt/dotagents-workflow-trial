@@ -1,6 +1,15 @@
 import { test, expect, afterEach } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, readdir } from 'node:fs/promises';
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  writeFile,
+  rm,
+  symlink,
+  readdir,
+  realpath,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { session } from '../discovery-input.ts';
@@ -19,7 +28,8 @@ function cli(...args: string[]) {
   return spawnSync(process.execPath, [entry, ...args], { encoding: 'utf8', timeout: 10000 });
 }
 async function setup() {
-  const root = await mkdtemp(join(tmpdir(), 'discovery-test-'));
+  // Keep expected worktree paths independent of OS aliases for the temporary directory.
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'discovery-test-')));
   roots.push(root);
   const repo = join(root, 'repo');
   await mkdir(repo);
