@@ -32,25 +32,11 @@
 
 ## 共有入口の確認
 
-通常入口は `~/.agents/skills/scoping` と `~/.agents/skills/implement` です。新しいタスクで両方の `SKILL.md` を読み、実体から相対参照されるCLI・手順を解決します。このrepoに `.agents/skills/scoping`・`.agents/skills/implement` の重複リンクは置きません。
+通常入口は `~/.agents/skills/scoping` と `~/.agents/skills/implement` です。要求整理なら `scoping`、合意済みIssueの実装なら `implement` の `SKILL.md` を読み、採用した `thkt/dotagents` の実体からCLI・手順を解決します。このrepoに `.agents/skills/scoping`・`.agents/skills/implement` の重複リンクは置きません。
 
-実行前の確認例です。`TRIAL_CHECKOUT` は作業対象の絶対パスへ置き換えます。
+CLIの操作・対象repo設定・日本語確認・公開・添付手順は、共有スキルのディレクトリから辿る `../../scripts/README.md` を参照します。スキルが見つからない場合は共有登録を確認し、新しいタスクで読み直します。採用版を切り替える際の確認と記録は[移行の開始条件](trial/evidence/shared-entry-migration.md#開始条件)に従います。
 
-```sh
-TRIAL_CHECKOUT=/absolute/path/to/dotagents-workflow-trial
-SCOPING_SKILL=$(realpath "$HOME/.agents/skills/scoping/SKILL.md")
-IMPLEMENT_SKILL=$(realpath "$HOME/.agents/skills/implement/SKILL.md")
-SHARED_HARNESS=$(realpath "$(dirname "$IMPLEMENT_SKILL")/../..")
-cat "$SCOPING_SKILL" "$IMPLEMENT_SKILL"
-git -C "$SHARED_HARNESS" rev-parse HEAD
-git -C "$SHARED_HARNESS" status --short
-git -C "$TRIAL_CHECKOUT" rev-parse --show-toplevel HEAD
-cat "$TRIAL_CHECKOUT/.dotagents.json"
-```
-
-両スキルが採用した `thkt/dotagents` の実体を参照することを確認し、開始HEAD・設定・共有ハーネス版を実行記録へ残します。共有CLIの操作・対象repo設定・日本語確認・公開・添付手順は `$SHARED_HARNESS/scripts/README.md` を読みます。スキルが見つからない場合は共有登録を確認し、新しいタスクで読み直します。
-
-Bun、Git、Codex CLIとユーザーの既存gh認証を使います。このrepoの公開主体は `thkt` です。公開担当は共有実体の `scripts/target.ts CHECKOUT --write` をBunで実行し、checkout・設定・fetch/push remote・base branch・実効ユーザーとpush権限を照合します。`gh api user --jq .login` の結果も確認し、不一致や権限不足では停止します。環境変数のtokenが保存済み認証より優先される場合にも、別主体へ自動で切り替えません。専用Appの設定・署名鍵・installation tokenは不要です。
+Bun、Git、Codex CLIとユーザー `thkt` の既存gh認証を使います。checkout・設定・fetch/push remote・base branch・実効ユーザーとpush権限は、各スキルの手順に従って共有CLIで照合します。公開担当はその結果の実効ユーザーが `thkt` であることを確認し、不一致や権限不足では停止します。環境変数のtokenが保存済み認証より優先される場合にも、別主体へ自動で切り替えません。専用Appの設定・署名鍵・installation tokenは不要です。
 
 ## 要求整理とIssue作成
 
@@ -72,18 +58,9 @@ $implement 99
 
 現在のrepoのIssue番号、または対象repoのIssue URLを渡します。`~/.agents/skills/implement/SKILL.md` がその実体から解決したCLIを起動し、隔離した実装、必要な文書や証拠の作成、検証、修正、独立評価、ユーザーの既存gh認証によるPR作成まで進めます。人の承認・マージは別です。「公開しない」場合は `--no-publish` を渡し、commit・push・PR作成を省略します。
 
-対象checkoutの [.dotagents.json](.dotagents.json) でrepo・remote・base branch・セットアップ・検証・撮影・CI名を指定します。このrepoの契約は次のとおりです。
+repo・remote・base branch・セットアップ・検証・撮影・CI名の設定値は、対象checkoutの [.dotagents.json](.dotagents.json) を参照してください。
 
-| 設定 | 値 |
-| --- | --- |
-| repository / remote / baseBranch | `thkt/dotagents-workflow-trial` / `origin` / `main` |
-| setup | `bun install --frozen-lockfile --ignore-scripts` → `bun run setup:e2e` |
-| check | `bun run check` |
-| ciChecks | `["checks", "verify"]` |
-| capture.command | `["bun", "{harness}/scripts/capture.ts", "trial/capture.spec.js", "trial/playwright.config.js"]` |
-| capture.destination / required | `trial/evidence/generated` / `false` |
-
-`{harness}` は採用した共有ハーネス実体です。設定の詳細、利用条件・実行上限・停止後の扱いは[共有入口の確認](#共有入口の確認)で解決したCLI手順に従います。公開後は同じPR headで `checks`・`verify` の両方の成功を確認して人へ渡します。Bunはハーネスの実行環境であり、他の対象repoへBun・Playwright・`trial/`を要求しません。
+`{harness}` は採用した共有ハーネス実体です。設定の詳細、利用条件・実行上限・停止後の扱いは[共有入口の確認](#共有入口の確認)で解決したCLI手順に従います。公開後は `ciChecks` に指定した全checkが同じPR headで実行成功したことを確認して人へ渡します。Bunはハーネスの実行環境であり、他の対象repoへBun・Playwright・`trial/`を要求しません。
 
 ## 共通ハーネスと試行商品の検証場所
 
@@ -189,9 +166,11 @@ CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保�
 
 ## レビュー用キャプチャ
 
-ホストが通常の `bun run check` とは別に、対象checkoutで設定済みcapture commandを実行します。`SHARED_HARNESS` は[共有入口の確認](#共有入口の確認)で解決します。最後の引数はホストが用意したcheckout外の新しい絶対出力ディレクトリです。
+ホストが通常の `bun run check` とは別に、対象checkoutで設定済みcapture commandを実行します。以下は共有スキルの実体から撮影CLIを解決する例です。最後の引数はホストが用意したcheckout外の新しい絶対出力ディレクトリです。
 
 ```sh
+IMPLEMENT_SKILL=$(realpath "$HOME/.agents/skills/implement/SKILL.md")
+SHARED_HARNESS=$(realpath "$(dirname "$IMPLEMENT_SKILL")/../..")
 bun "$SHARED_HARNESS/scripts/capture.ts" trial/capture.spec.js trial/playwright.config.js /absolute/path/to/capture-output
 ```
 

@@ -14,6 +14,8 @@
 
 bootstrapは `.dotagents.json` への `ciChecks: ["checks", "verify"]` 追加と、`.agents/skills/scoping`・`.agents/skills/implement` のsymlink削除です。repository・remote・base branch・setup・check・captureは維持します。対応PRにはbootstrapを含めます。試行用のローカル実装・依存・商品・撮影定義と過去の証拠を保持し、通常の実行は共有入口から解決したCLIを使います。
 
+採用版を切り替える際は、新しいタスクで両スキルが意図した共有実体を参照することと対象checkoutを確認し、開始HEAD・設定・共有ハーネス版を実行記録へ残します。
+
 ## 停止した実測と修正
 
 以下はホストに保持した `acceptance-20260914` の結果です。ログ・媒体・原文・失敗状態は上書きせず保存しています。
@@ -23,15 +25,13 @@ bootstrapは `.dotagents.json` への `ciChecks: ["checks", "verify"]` 追加と
 | `development-110` | 最初のcheckは制御144成功・13失敗。fixture修正後のcheckは制御157件・runner契約5件・商品E2E45件が成功し、撮影4件も成功。独立評価で媒体来歴の追記を求められ、その後の文章確認で媒体一覧の古い撮影日が検出され `writing_failed` で停止 |
 | `content-corrected-110` | 媒体一覧を直した後の検証。撮影4件と制御157件・runner契約5件・商品E2E45件は成功。別の検証状態に撮影再利用の基準がなく再撮影され、旧ハッシュ表との不一致を独立評価が検出。追加修正モデルを起動しない設定により `repair_failed` で停止 |
 
-最初の13失敗は、macOSの一時パスの `/var` と `/private/var` の別名差によるものです。通常入口がcheckoutを実パス化する条件に合わせ、`scripts/tests/support/correction.ts` と `scripts/tests/discovery.test.ts` のfixture生成直後に `realpath` を適用しました。本体の経路検査、期待結果、撮影・停止条件は変えていません。該当する73件のテストも成功しました。
-
-テストは追加・削除せず、媒体の更新・再利用、停止・中断、worktree分離と記録保全の検出を維持します。変更内容をそのままなぞる検証は追加しません。fixture修正の独立確認では検出条件の低下は認められませんでしたが、この評価だけでIssue全体の受入完了とはしません。
+最初の13失敗は、macOSの一時パスの `/var` と `/private/var` の別名差によるものです。通常入口がcheckoutを実パス化する条件に合わせ、`scripts/tests/support/correction.ts` と `scripts/tests/discovery.test.ts` のfixture生成直後に `realpath` を適用しました。該当する73件のテストも成功しました。
 
 ホストの原記録は `~/.local/share/dotagents/migrations/54/acceptance-20260914/` にあります。各runの `verification/state.json`、`capture-1.stdout` と出力媒体、check・review・writingのログから、対象source、撮影時刻、ソースと媒体のサイズ・SHA-256、結果を対応づけられます。記録されたsourceはcommit SHAとは異なります。原文と後の訂正も保持しており、過去のハッシュに合う媒体は各runの撮影出力で照合します。ホスト内の保存先であり、公開GitHubから直接閲覧できる資料ではありません。
 
 ## 今回保持する検証
 
-今回のfixture修正でも、既存ケースを削除すると、変更したソースに対する古い媒体の再利用、撮影失敗後の評価への進行、中断後の二重実行、別worktreeへの記録混入を見逃します。それぞれ異なる停止・保全条件を守るため保持し、同じ条件をなぞるテストは追加しません。fixture生成時の実パス化はOS別名による不安定さだけを除き、期待値やassertionは変更しません。一時ディレクトリの別名をそのまま入力する条件はこのfixtureでは扱わなくなりますが、意図的なsymlinkによるcheckout内への書込みや保存先の転送を拒否する既存テストは残ります。OS別名の解決自体を新しい受入条件にはしません。
+fixture修正では本体の経路検査、期待値、撮影・停止条件を変えず、テストの追加・削除も行いません。既存ケースは、変更したソースに対する古い媒体の再利用、撮影失敗後の評価への進行、中断後の二重実行、別worktreeへの記録混入を検出します。一時ディレクトリの別名をそのまま入力する条件はこのfixtureでは扱わなくなりますが、意図的なsymlinkによるcheckout内への書込みや保存先の転送を拒否するテストは保持します。OS別名の解決自体を新しい受入条件にはしません。独立確認では検出条件の低下は認められませんでしたが、この評価だけでIssue全体の受入完了とはしません。
 
 ## 媒体と結果の確認先
 
