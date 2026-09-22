@@ -24,6 +24,11 @@ async function expectProducts(page, products) {
   }
 }
 
+// 絞り込みで隠れた行もDOMに残るため、表ではなくページ全体から<mark>を取って数える。
+async function expectMarks(page, texts) {
+  await expect(page.locator("mark")).toHaveText(texts);
+}
+
 for (const { query, products, screenshot } of [
   { query: "   ", products: allProducts },
   { query: "ノート", products: notes, screenshot: "filtered" },
@@ -45,6 +50,52 @@ for (const { query, products, screenshot } of [
   });
 }
 
+for (const { query, marks } of [
+  { query: "", marks: [] },
+  { query: "   ", marks: [] },
+  { query: "ノート", marks: ["ノート", "ノート"] },
+  { query: "あおいのーと", marks: [] },
+  { query: "青い", marks: ["青い"] },
+  { query: "0", marks: ["0", "0", "0", "0", "0", "0", "0", "0"] },
+  { query: "存在しない商品", marks: [] },
+]) {
+  test(`検索語 ${JSON.stringify(query)} で一致部分だけが<mark>で囲まれる`, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    await expectMarks(page, marks);
+  });
+}
+
+test("検索語 \"note\" で商品コードは<code>を1つ残し、内側のNOTEを元の大文字表記で囲む", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("note");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("cell").locator("code")).toHaveCount(2);
+  await expect(table.getByRole("cell").locator("code > mark")).toHaveText(["NOTE", "NOTE"]);
+  await expect(table.getByRole("cell")).toHaveText(["NOTE-001", "NOTE-002"]);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveCount(0);
+});
+
+test("検索語 \"  pEn-001  \" で商品コード全体が<code>の内側の1つの<mark>になる", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("  pEn-001  ");
+  const code = page.getByRole("table", { name: "商品一覧", exact: true }).getByRole("cell").locator("code");
+  await expect(code).toHaveCount(1);
+  await expect(code.locator("mark")).toHaveText(["PEN-001"]);
+  await expectMarks(page, ["PEN-001"]);
+});
+
+test("件数表示と該当なしメッセージは強調しない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("0");
+  await expect(page.getByText("全4件中4件を表示", { exact: true }).locator("mark")).toHaveCount(0);
+  await expect(page.locator("mark")).toHaveCount(8);
+  await search.fill("存在しない商品");
+  await expect(page.getByText("該当する商品はありません", { exact: true }).locator("mark")).toHaveCount(0);
+  await expectMarks(page, []);
+});
+
 test("キーボードだけで検索欄へ移動し、入力ごとの更新と該当なしからの復帰ができる", async ({ page }) => {
   await page.goto("/");
   const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
@@ -52,18 +103,24 @@ test("キーボードだけで検索欄へ移動し、入力ごとの更新と�
   await expect(search).toBeFocused();
   await page.keyboard.type("n");
   await expectProducts(page, [...notes, ["黒いペン", "PEN-001"]]);
+  await expectMarks(page, ["N", "N", "N"]);
   await page.keyboard.type("ote");
   await expectProducts(page, notes);
+  await expectMarks(page, ["NOTE", "NOTE"]);
   await page.keyboard.type("-001");
   await expectProducts(page, [["青いノート", "NOTE-001"]]);
+  await expectMarks(page, ["NOTE-001"]);
   await page.keyboard.type("x");
   await expectProducts(page, []);
+  await expectMarks(page, []);
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.press("Backspace");
   await expect(search).toHaveValue("");
   await expectProducts(page, allProducts);
+  await expectMarks(page, []);
   await page.keyboard.type("mug");
   await expectProducts(page, [["白いマグ", "MUG-001"]]);
+  await expectMarks(page, ["MUG"]);
   await expect(search).toBeFocused();
 });
 
@@ -92,6 +149,7 @@ for (const operation of ["pointer", "Enter"]) {
     await expect(search).toHaveValue("");
     await expect(order).toHaveValue("descending");
     await expectProducts(page, reversedProducts);
+    await expectMarks(page, []);
     if (operation === "Enter") {
       await page.keyboard.press("Shift+Tab");
       await page.keyboard.type("mug");
@@ -121,12 +179,14 @@ for (const query of ["note", "missing"]) {
     await page.keyboard.press("Escape");
     await expect(search).toHaveValue("");
     await expectProducts(page, reversedProducts);
+    await expectMarks(page, []);
     await expect(order).toHaveValue("descending");
     await expect(search).toBeFocused();
     // locatorのfill/pressで再フォーカスせず、Esc後の入力先を検証する。
     await page.keyboard.type("note");
     await expect(search).toHaveValue("note");
     await expectProducts(page, orderedNotes);
+    await expectMarks(page, ["NOTE", "NOTE"]);
     await expect(order).toHaveValue("descending");
     await expect(search).toBeFocused();
   });
