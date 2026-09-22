@@ -2,6 +2,23 @@
 
 > 保存記録の適用時点: 以下は2026-09-13のホスト実行 `108/resume-20260913/verification-108-content-fixed/capture-2` と、その時点の照合結果です。本文の「現在」「今回」はこの記録時点を指します。`generated/` へのリンク先は後続のホスト撮影で更新されるため、以下の固定ハッシュを最新媒体の根拠には使いません。最新媒体は該当PRのホスト撮影ログ・媒体ハッシュ・検証結果と照合してください。[移行記録](shared-entry-migration.md#媒体と結果の確認先)も参照してください。
 
+## 強調表示の追加後は未再撮影
+
+以下の4媒体は強調表示を加える前の画面です。Issue #113 の強調表示は `note` 入力中の表に `<mark>` を描きますが、これらの動画とPNGにはその `<mark>` が映っていません。再撮影は未実施です。
+
+再撮影できなかった理由は、撮影環境で Chromium を取得できなかったことです。`trial/` の Playwright 1.63.0 は chromium v1243（Chrome for Testing 153.0.8010.12）を要求しますが、`bunx playwright install chromium` が `https://cdn.playwright.dev/builds/cft/153.0.8010.12/mac-arm64/chrome-mac-arm64.zip` に対して `403 Connection blocked by network allowlist` を返しました。手元のキャッシュには chromium-1223 しかなく、Playwright はこれを使いません。
+
+対象commitは `820898819ed0dd513608f0c1b6617cf9e6c1f87b`（`feat: highlight search matches in product cells (#113)`）です。この記録を書いた時点の4媒体のSHA-256は次のとおりで、いずれも変更前の実行で生成したものです。
+
+| 媒体 | SHA-256 |
+| --- | --- |
+| product-search-escape-desktop.webm | `6b5c1a896ddd1805554c5129fd4cad0ff93ea84110718467009afa7e9445a460` |
+| product-search-escape-mobile.webm | `ac95d92327415a6b30470f856bc7013965548bb2e345fd28fdc11f3105874b6f` |
+| product-search-escape-cleared-desktop.png | `80fb652a74fbb7de155969c502acf65f55fbebee4e58cd407e58805a9b12af7a` |
+| product-search-escape-cleared-mobile.png | `fd816f2b9a24d99615acba4fc8fec38368d178ba20b64bf758582c3ebd82cfdd` |
+
+Chromiumを取得できるホストで [READMEの撮影コマンド](../../README.md#レビュー用キャプチャ) を実行し、収集した媒体と対象commit・SHA-256でこの節を置き換えてください。それまで、この4媒体を強調表示の確認の根拠には使いません。Escクリアそのものの振る舞いは [商品E2E](../tests/product-search.spec.js) が検証しており、そちらは強調表示の追加後も `<mark>` が残らないことを含めて確認します。
+
 対象はIssue「検索欄のEscクリア操作を仕様とE2Eで保証する」（2026-09-12合意）です。`type="search"` と既存のinputイベントによる検索・件数更新、並べ替えを再利用し、独自のキー処理は追加しません。利用者が操作対象と対応範囲を判断できるよう、[README](../../README.md#セットアップと検証)にEscと空欄時の動作、フォーカス・並び順の保持、mobile検証の限界を記載しています。
 
 現在の[商品E2E](../tests/product-search.spec.js)と[撮影定義](../capture.spec.js)がEsc後の検索欄・全件復帰・並び順・フォーカスと再検索を検証します。9月12日のE2E追加件数と当時のホストcheck結果は[履歴](search-escape-20260912.md)に保存しています。今回の来歴修正ではテスト・撮影定義を変更していません。
