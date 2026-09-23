@@ -27,6 +27,15 @@ async function expectProducts(page, products) {
   }
 }
 
+async function expectNameHighlighted(row, [name, code], markText) {
+  const nameCell = row.locator('th');
+  await expect(nameCell).toHaveText(name);
+  await expect(nameCell.locator('mark')).toHaveText(markText);
+  const codeCell = row.locator('td');
+  await expect(codeCell).toHaveText(code);
+  await expect(codeCell.locator('mark')).toHaveCount(0);
+}
+
 for (const { query, products, screenshot } of [
   { query: '   ', products: allProducts },
   { query: 'ノート', products: notes, screenshot: 'filtered' },
@@ -202,12 +211,7 @@ test('検索語「ノート」で商品名の一致部分「ノート」だけ�
   for (const [name, code] of notes) {
     const row = page.locator('tbody tr:not([hidden])', { hasText: name });
     await expect(row).toHaveCount(1);
-    const nameCell = row.locator('th');
-    await expect(nameCell).toHaveText(name);
-    await expect(nameCell.locator('mark')).toHaveText('ノート');
-    const codeCell = row.locator('td');
-    await expect(codeCell).toHaveText(code);
-    await expect(codeCell.locator('mark')).toHaveCount(0);
+    await expectNameHighlighted(row, [name, code], 'ノート');
   }
 });
 
@@ -263,13 +267,6 @@ test('強調中に並び順を降順へ切り替えても mark は各行の一�
   await expect(visibleRows).toHaveCount(2);
   const descendingNotes = [...notes].reverse();
   for (let i = 0; i < descendingNotes.length; i += 1) {
-    const [name, code] = descendingNotes[i];
-    const row = visibleRows.nth(i);
-    const nameCell = row.locator('th');
-    await expect(nameCell).toHaveText(name);
-    await expect(nameCell.locator('mark')).toHaveText('ノート');
-    const codeCell = row.locator('td');
-    await expect(codeCell).toHaveText(code);
-    await expect(codeCell.locator('mark')).toHaveCount(0);
+    await expectNameHighlighted(visibleRows.nth(i), descendingNotes[i], 'ノート');
   }
 });

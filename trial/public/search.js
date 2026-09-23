@@ -3,15 +3,18 @@ const rows = Array.from(document.querySelectorAll('tbody tr'));
 const resultCount = document.getElementById('result-count');
 const noResults = document.getElementById('no-results');
 
-// 強調対象の要素ごとに元の文字列を保持する。並び替え後もDOM要素自体は
-// 使い回されるため、読み込み時に一度だけ記録すれば足りる。現在のDOMから
-// 組み立て直すと、前回強調した<mark>が入れ子になってしまう。
+// 行ごとに強調対象セルと元の文字列を保持する。並び替え後もDOM要素自体は
+// 使い回されるため、読み込み時に一度だけ記録すれば、入力のたびに
+// セルを検索し直さずに済む。現在のDOMから組み立て直すと、前回強調した
+// <mark>が入れ子になってしまう。
+const highlightCells = new Map();
 const originalText = new WeakMap();
 for (const row of rows) {
-  const nameCell = row.querySelector('th[scope="row"]');
-  const codeCell = row.querySelector('td code');
-  if (nameCell) originalText.set(nameCell, nameCell.textContent);
-  if (codeCell) originalText.set(codeCell, codeCell.textContent);
+  const cells = [row.querySelector('th[scope="row"]'), row.querySelector('td code')].filter(
+    Boolean,
+  );
+  highlightCells.set(row, cells);
+  for (const cell of cells) originalText.set(cell, cell.textContent);
 }
 
 function highlightElement(element, query) {
@@ -47,10 +50,9 @@ function highlightElement(element, query) {
 }
 
 function highlightRow(row, query) {
-  const nameCell = row.querySelector('th[scope="row"]');
-  const codeCell = row.querySelector('td code');
-  if (nameCell) highlightElement(nameCell, query);
-  if (codeCell) highlightElement(codeCell, query);
+  for (const cell of highlightCells.get(row) ?? []) {
+    highlightElement(cell, query);
+  }
 }
 
 function updateSearch() {
