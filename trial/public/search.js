@@ -35,7 +35,9 @@ const orderStorageKey = 'product-order';
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ['original', 'ascending', 'descending'].includes(saved) ? saved : 'original';
+    // 有効値は#product-orderのoption値との完全一致で判定する（ハードコードした候補一覧は持たない）。
+    const validValues = Array.from(order.options).map((option) => option.value);
+    return validValues.includes(saved) ? saved : 'original';
   } catch {
     return 'original';
   }

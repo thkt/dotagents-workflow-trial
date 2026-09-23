@@ -1,80 +1,99 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from '@playwright/test';
 
-const storageKey = "product-order";
+const storageKey = 'product-order';
 // 合意した固定期待値。アプリの比較関数・HTMLから生成しない。
 const original = [
-  ["青いノート", "NOTE-001"],
-  ["赤いノート", "NOTE-002"],
-  ["黒いペン", "PEN-001"],
-  ["白いマグ", "MUG-001"],
+  ['青いノート', 'NOTE-001'],
+  ['赤いノート', 'NOTE-002'],
+  ['黒いペン', 'PEN-001'],
+  ['白いマグ', 'MUG-001'],
 ];
 const descending = [original[3], original[2], original[1], original[0]];
-const productsFor = (value) => value === "descending" ? descending : original;
-const orderControl = (page) => page.getByLabel("並び順", { exact: true });
-const searchControl = (page) => page.getByLabel("商品名・商品コードで検索", { exact: true });
+const codeAscending = [original[3], original[0], original[1], original[2]];
+// 4値の期待順の対応表。アプリの比較関数からではなく、値ごとに手書きする。
+const productsFor = {
+  original,
+  ascending: original,
+  descending,
+  'code-ascending': codeAscending,
+};
+const orderControl = (page) => page.getByLabel('並び順', { exact: true });
+const searchControl = (page) => page.getByLabel('商品名・商品コードで検索', { exact: true });
 
-async function expectState(page, value, products = productsFor(value), query = "") {
+async function expectState(page, value, products = productsFor[value], query = '') {
   await expect(orderControl(page)).toHaveValue(value);
   await expect(searchControl(page)).toHaveValue(query);
-  const rows = page.getByRole("table").getByRole("row");
+  const rows = page.getByRole('table').getByRole('row');
   await expect(rows).toHaveCount(products.length + 1);
   for (const [index, [name, code]] of products.entries()) {
-    await expect(rows.nth(index + 1).getByRole("rowheader")).toHaveText(name);
-    await expect(rows.nth(index + 1).getByRole("cell")).toHaveText(code);
+    await expect(rows.nth(index + 1).getByRole('rowheader')).toHaveText(name);
+    await expect(rows.nth(index + 1).getByRole('cell')).toHaveText(code);
   }
   await expect(page.getByText(`全4件中${products.length}件を表示`, { exact: true })).toBeVisible();
-  await expect(page.getByText("該当する商品はありません", { exact: true })).toBeVisible({ visible: products.length === 0 });
+  await expect(page.getByText('該当する商品はありません', { exact: true })).toBeVisible({
+    visible: products.length === 0,
+  });
 }
 
 async function savedOrder(page) {
   return page.evaluate((key) => localStorage.getItem(key), storageKey);
 }
 
-test.describe("保存境界", { tag: "@storage" }, () => {
-
-  for (const value of ["original", "ascending", "descending"]) {
+test.describe('保存境界', { tag: '@storage' }, () => {
+  for (const value of ['original', 'ascending', 'descending', 'code-ascending']) {
     test(`${value}を選ぶと直ちに保存し、再読み込みで検索語なしに復元する`, async ({ page }) => {
-      await page.goto("/");
-      await expectState(page, "original");
+      await page.goto('/');
+      await expectState(page, 'original');
       expect(await savedOrder(page)).toBeNull();
-      await orderControl(page).selectOption("descending");
+      await orderControl(page).selectOption('descending');
       await orderControl(page).selectOption(value);
       await expectState(page, value);
       expect(await savedOrder(page)).toBe(value);
-      await searchControl(page).fill("ノート");
+      await searchControl(page).fill('ノート');
       await page.reload();
       await expectState(page, value);
     });
   }
 
-  for (const value of ["unsupported", " descending "]) {
+  for (const value of ['unsupported', ' descending ']) {
     test(`保存値 ${JSON.stringify(value)} は元の順序で開始する`, async ({ page }) => {
-      await page.goto("/");
-      await orderControl(page).selectOption("descending");
-      await page.evaluate(({ key, value }) => {
-        localStorage.setItem(key, value);
-      }, { key: storageKey, value });
+      await page.goto('/');
+      await orderControl(page).selectOption('descending');
+      await page.evaluate(
+        ({ key, value }) => {
+          localStorage.setItem(key, value);
+        },
+        { key: storageKey, value },
+      );
       await page.reload();
-      await expectState(page, "original");
+      await expectState(page, 'original');
     });
   }
 
-  for (const [query, value] of [["見つからない", "ascending"], ["PEN-001", "original"]]) {
+  for (const [query, value] of [
+    ['見つからない', 'ascending'],
+    ['PEN-001', 'original'],
+  ]) {
     test(`${query}の結果で${value}を保存し、クリア・全削除で維持する`, async ({ page }) => {
-      await page.goto("/");
-      await orderControl(page).selectOption("descending");
+      await page.goto('/');
+      await orderControl(page).selectOption('descending');
       await page.reload();
       await searchControl(page).fill(query);
       await orderControl(page).selectOption(value);
-      await expectState(page, value, query === "PEN-001" ? [original[2]] : [], query);
+      await expectState(page, value, query === 'PEN-001' ? [original[2]] : [], query);
       expect(await savedOrder(page)).toBe(value);
-      await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
+      await page.getByRole('button', { name: '検索をクリア', exact: true }).click();
       await expectState(page, value);
       expect(await savedOrder(page)).toBe(value);
-      await searchControl(page).fill("ノート");
-      await expectState(page, value, value === "descending" ? [original[1], original[0]] : [original[0], original[1]], "ノート");
-      await searchControl(page).press("ControlOrMeta+A");
-      await searchControl(page).press("Backspace");
+      await searchControl(page).fill('ノート');
+      await expectState(
+        page,
+        value,
+        value === 'descending' ? [original[1], original[0]] : [original[0], original[1]],
+        'ノート',
+      );
+      await searchControl(page).press('ControlOrMeta+A');
+      await searchControl(page).press('Backspace');
       await expectState(page, value);
       expect(await savedOrder(page)).toBe(value);
       await searchControl(page).fill(query);
@@ -82,109 +101,124 @@ test.describe("保存境界", { tag: "@storage" }, () => {
       await expectState(page, value);
     });
   }
-  for (const failure of ["access", "read", "write"]) {
-    test(`Storage境界の${failure}例外でも初期表示・操作を継続し、保存成功値だけを復元する`, async ({ page, context }) => {
+  for (const failure of ['access', 'read', 'write']) {
+    test(`Storage境界の${failure}例外でも初期表示・操作を継続し、保存成功値だけを復元する`, async ({
+      page,
+      context,
+    }) => {
       const errors = [];
-      page.on("pageerror", (error) => errors.push(error.message));
-      await page.goto("/");
-      await orderControl(page).selectOption("descending");
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.goto('/');
+      await orderControl(page).selectOption('descending');
       // 実ブラウザー内のAPI境界で例外を注入。ブラウザー設定による拒否とは区別する。
       await page.addInitScript((failure) => {
-        if (failure === "access") {
-          Object.defineProperty(window, "localStorage", {
-            get() { throw new DOMException("Storage denied in test", "SecurityError"); },
+        if (failure === 'access') {
+          Object.defineProperty(window, 'localStorage', {
+            get() {
+              throw new DOMException('Storage denied in test', 'SecurityError');
+            },
           });
         } else {
-          const method = failure === "read" ? "getItem" : "setItem";
+          const method = failure === 'read' ? 'getItem' : 'setItem';
           Storage.prototype[method] = () => {
-            throw new DOMException("Storage failure in test", failure === "read" ? "SecurityError" : "QuotaExceededError");
+            throw new DOMException(
+              'Storage failure in test',
+              failure === 'read' ? 'SecurityError' : 'QuotaExceededError',
+            );
           };
         }
       }, failure);
       await page.reload();
-      await expectState(page, failure === "write" ? "descending" : "original");
-      await orderControl(page).selectOption("ascending");
-      await expectState(page, "ascending");
-      await searchControl(page).fill("note");
-      await expectState(page, "ascending", [original[0], original[1]], "note");
+      await expectState(page, failure === 'write' ? 'descending' : 'original');
+      await orderControl(page).selectOption('ascending');
+      await expectState(page, 'ascending');
+      await searchControl(page).fill('note');
+      await expectState(page, 'ascending', [original[0], original[1]], 'note');
       await page.reload();
-      await expectState(page, failure === "write" ? "descending" : "original");
+      await expectState(page, failure === 'write' ? 'descending' : 'original');
       expect(errors).toEqual([]);
       // page限定の例外注入がないタブで、実際に残った値を確認する。
       const healthy = await context.newPage();
-      await healthy.goto("/");
-      await expectState(healthy, failure === "read" ? "ascending" : "descending");
+      await healthy.goto('/');
+      await expectState(healthy, failure === 'read' ? 'ascending' : 'descending');
     });
   }
 
-  test("保存値なしの書込失敗でも選択を適用でき、次回は元の順序になる", async ({ page }) => {
+  test('保存値なしの書込失敗でも選択を適用でき、次回は元の順序になる', async ({ page }) => {
     await page.addInitScript(() => {
-      Storage.prototype.setItem = () => { throw new DOMException("Storage full in test", "QuotaExceededError"); };
+      Storage.prototype.setItem = () => {
+        throw new DOMException('Storage full in test', 'QuotaExceededError');
+      };
     });
-    await page.goto("/");
-    await expectState(page, "original");
-    await orderControl(page).selectOption("descending");
-    await expectState(page, "descending");
+    await page.goto('/');
+    await expectState(page, 'original');
+    await orderControl(page).selectOption('descending');
+    await expectState(page, 'descending');
     expect(await savedOrder(page)).toBeNull();
-    await searchControl(page).fill("note");
+    await searchControl(page).fill('note');
     await page.reload();
-    await expectState(page, "original");
+    await expectState(page, 'original');
   });
 
-  test("複数タブは即時同期せず、次の読み込みで最後の保存成功値を使う", async ({ page, context }) => {
-    await page.goto("/");
+  test('複数タブは即時同期せず、次の読み込みで最後の保存成功値を使う', async ({
+    page,
+    context,
+  }) => {
+    await page.goto('/');
     const other = await context.newPage();
-    await other.goto("/");
+    await other.goto('/');
     // storageイベントが到着してから、即時同期していないことを確認する。
     await other.evaluate(() => {
       window.nextStorageEvent = new Promise((resolve) => {
-        window.addEventListener("storage", () => resolve(), { once: true });
+        window.addEventListener('storage', () => resolve(), { once: true });
       });
     });
-    await orderControl(page).selectOption("descending");
+    await orderControl(page).selectOption('descending');
     await other.evaluate(() => window.nextStorageEvent);
-    await expectState(other, "original");
+    await expectState(other, 'original');
     await other.reload();
-    await expectState(other, "descending");
+    await expectState(other, 'descending');
     await page.evaluate(() => {
       window.nextStorageEvent = new Promise((resolve) => {
-        window.addEventListener("storage", () => resolve(), { once: true });
+        window.addEventListener('storage', () => resolve(), { once: true });
       });
     });
-    await orderControl(other).selectOption("ascending");
+    await orderControl(other).selectOption('ascending');
     await page.evaluate(() => window.nextStorageEvent);
-    await expectState(page, "descending");
-    await orderControl(page).selectOption("original");
-    expect(await savedOrder(page)).toBe("original");
+    await expectState(page, 'descending');
+    await orderControl(page).selectOption('original');
+    expect(await savedOrder(page)).toBe('original');
     await other.reload();
-    await expectState(other, "original");
+    await expectState(other, 'original');
     await page.reload();
-    await expectState(page, "original");
+    await expectState(page, 'original');
   });
 });
 
-test.describe("復元後の標準選択UI", { tag: "@mobile-select" }, () => {
+test.describe('復元後の標準選択UI', { tag: '@mobile-select' }, () => {
   // 既存のモバイルselect操作をmobile projectで一度確認する。
 
-  test("復元後もキーボードでselectを操作でき、遷移とフォーカス移動を加えない", async ({ page }) => {
-    await page.goto("/");
-    await orderControl(page).selectOption("descending");
+  test('復元後もキーボードでselectを操作でき、遷移とフォーカス移動を加えない', async ({ page }) => {
+    await page.goto('/');
+    await orderControl(page).selectOption('descending');
     await page.reload();
-    await expectState(page, "descending");
+    await expectState(page, 'descending');
     let navigations = 0;
-    page.on("framenavigated", () => { navigations += 1; });
-    await page.keyboard.press("Tab");
+    page.on('framenavigated', () => {
+      navigations += 1;
+    });
+    await page.keyboard.press('Tab');
     await expect(searchControl(page)).toBeFocused();
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
     await expect(orderControl(page)).toBeFocused();
     // Chromiumのモバイルselectはポップアップを開いて確定する。
-    await page.keyboard.press("Space");
-    await page.keyboard.press("ArrowUp");
-    await page.keyboard.press("Enter");
-    await expectState(page, "ascending");
+    await page.keyboard.press('Space');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    await expectState(page, 'ascending');
     await expect(orderControl(page)).toBeFocused();
-    expect(await savedOrder(page)).toBe("ascending");
+    expect(await savedOrder(page)).toBe('ascending');
     expect(navigations).toBe(0);
   });
 });
