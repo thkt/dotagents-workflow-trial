@@ -31,21 +31,33 @@ updateSearch();
 const order = document.getElementById("product-order");
 const collator = new Intl.Collator("ja");
 const orderStorageKey = "product-order";
+const compareReadings = (a, b) => collator.compare(a.dataset.reading, b.dataset.reading);
+const productCode = (row) => row.querySelector("code").textContent;
+// 商品コードは正規化せず、UTF-16コード単位の辞書順で比較する（大文字が小文字より前）。
+function compareCodes(a, b) {
+  const [codeA, codeB] = [productCode(a), productCode(b)];
+  if (codeA === codeB) return 0;
+  return codeA < codeB ? -1 : 1;
+}
+const compareByOrder = {
+  ascending: compareReadings,
+  descending: (a, b) => compareReadings(b, a),
+  "code-ascending": compareCodes,
+};
 
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ["original", "ascending", "descending"].includes(saved) ? saved : "original";
+    return ["original", ...Object.keys(compareByOrder)].includes(saved) ? saved : "original";
   } catch {
     return "original";
   }
 }
 
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
+  const compare = compareByOrder[order.value];
+  // 並べ替えは常に配信時の行順から安定ソートし、同順位の行は元の相対順を保つ。
+  const ordered = compare ? rows.toSorted(compare) : rows;
   document.querySelector("tbody").append(...ordered);
 }
 

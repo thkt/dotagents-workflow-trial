@@ -8,13 +8,14 @@ const allProducts = [
   ["白いマグ", "MUG-001"],
 ];
 const notes = [["青いノート", "NOTE-001"], ["赤いノート", "NOTE-002"]];
+const codeOrderedProducts = [allProducts[3], allProducts[0], allProducts[1], allProducts[2]];
 
-async function expectProducts(page, products) {
+async function expectProducts(page, products, total = 4) {
   const table = page.getByRole("table", { name: "商品一覧", exact: true });
   await expect(table.getByRole("row")).toHaveCount(products.length + 1);
   await expect(table.getByRole("rowheader")).toHaveText(products.map(([name]) => name));
   await expect(table.getByRole("cell")).toHaveText(products.map(([, code]) => code));
-  const resultCount = page.getByText(`全4件中${products.length}件を表示`, { exact: true });
+  const resultCount = page.getByText(`全${total}件中${products.length}件を表示`, { exact: true });
   await expect(resultCount).toBeVisible();
   const emptyMessage = page.getByText("該当する商品はありません", { exact: true });
   if (products.length === 0) {
@@ -167,4 +168,61 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await expectProducts(page, reversedProducts);
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
+});
+
+test("並び順は元の順序・商品名の昇順・降順・商品コードの昇順から選べる", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByLabel("並び順", { exact: true }).getByRole("option"))
+    .toHaveText(["元の順序", "商品名：昇順", "商品名：降順", "商品コード：昇順"]);
+});
+
+test("商品コード：昇順では商品コード順に表示し、検索・クリア・全削除後も維持する", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await order.selectOption({ label: "商品コード：昇順" });
+  await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, codeOrderedProducts);
+  await search.fill("-001");
+  await expectProducts(page, [allProducts[3], allProducts[0], allProducts[2]]);
+  await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
+  await expectProducts(page, codeOrderedProducts);
+  await search.fill("-001");
+  await search.press("ControlOrMeta+A");
+  await search.press("Backspace");
+  await expect(search).toHaveValue("");
+  await expectProducts(page, codeOrderedProducts);
+});
+
+test("商品コードは大文字・小文字を区別した文字列として比較し、同じコードは元の相対順を保つ", async ({ page }) => {
+  // 同じPEN-001の2行は隣り合わず、先の行の読みが小さいため、商品名：降順では2行の順が入れ替わる。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
+      <tr data-reading="あおいぺん"><th scope="row">青いペン</th><td><code>PEN-001</code></td></tr>
+      <tr data-reading="しろいふせん"><th scope="row">白い付箋</th><td><code>note-003</code></td></tr>
+      <tr data-reading="きいろいのーと"><th scope="row">黄色いノート</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="みどりのーと"><th scope="row">緑のノート</th><td><code>NOTE-2</code></td></tr>
+      <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
+    </tbody>`) });
+  });
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption({ label: "商品名：降順" });
+  await expectProducts(page, [
+    ["緑のノート", "NOTE-2"],
+    ["白い付箋", "note-003"],
+    ["黒いペン", "PEN-001"],
+    ["黄色いノート", "NOTE-10"],
+    ["青いペン", "PEN-001"],
+  ], 5);
+  await order.selectOption({ label: "商品コード：昇順" });
+  await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, [
+    ["黄色いノート", "NOTE-10"],
+    ["緑のノート", "NOTE-2"],
+    ["青いペン", "PEN-001"],
+    ["黒いペン", "PEN-001"],
+    ["白い付箋", "note-003"],
+  ], 5);
 });
