@@ -156,6 +156,57 @@ test("商品コード：昇順で固定データをコード順に表示し、�
   await expectProducts(page, allProducts);
 });
 
+// 配信するtbodyだけを差し替え、実際の画面と並べ替え処理を通す。
+async function serveProducts(page, products) {
+  const tbody = products.map(([name, code, reading]) =>
+    `<tr data-reading="${reading}"><th scope="row">${name}</th><td><code>${code}</code></td></tr>`,
+  ).join("");
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${tbody}</tbody>`) });
+  });
+}
+
+test("商品コード：昇順では、同じコードの商品が離れていても元の相対順を保つ", async ({ page }) => {
+  // 同じコードの赤・青は、読みの順（青→赤）と逆の順で渡す。
+  await serveProducts(page, [
+    ["赤いノート", "NOTE-001", "あかいのーと"],
+    ["白いマグ", "MUG-001", "しろいまぐ"],
+    ["青いノート", "NOTE-001", "あおいのーと"],
+    ["黒いペン", "PEN-001", "くろいぺん"],
+  ]);
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("code-ascending");
+  await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, [
+    ["白いマグ", "MUG-001"],
+    ["赤いノート", "NOTE-001"],
+    ["青いノート", "NOTE-001"],
+    ["黒いペン", "PEN-001"],
+  ]);
+});
+
+test("商品コード：昇順は数値や大文字・小文字を考慮せず、文字コード単位で比較する", async ({ page }) => {
+  // 読みの順・自然順・localeCompareのいずれとも異なる期待値になるデータ。
+  await serveProducts(page, [
+    ["青いノート", "NOTE-2", "あおいのーと"],
+    ["白いマグ", "mug-002", "しろいまぐ"],
+    ["赤いノート", "NOTE-10", "あかいのーと"],
+    ["黒いペン", "PEN-001", "くろいぺん"],
+  ]);
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("code-ascending");
+  await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, [
+    ["赤いノート", "NOTE-10"],
+    ["青いノート", "NOTE-2"],
+    ["黒いペン", "PEN-001"],
+    ["白いマグ", "mug-002"],
+  ]);
+});
+
 test("元の順序と名前順が異なる商品でも、昇順・降順・元の順序に切り替えられる", async ({ page }) => {
   // 入力データだけを差し替え、期待値にはアプリの比較関数を使わない。
   await page.route("**/", async (route) => {
