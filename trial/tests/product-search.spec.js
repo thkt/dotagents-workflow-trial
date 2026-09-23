@@ -168,3 +168,104 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 強調の期待値。商品名（行見出し）と商品コード（code要素）の中の<mark>を、表示順に並べる。
+async function expectMarks(page, { names = [], codes = [] }) {
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.locator("tbody th mark")).toHaveText(names);
+  await expect(table.locator("tbody td > code > mark")).toHaveText(codes);
+  await expect(page.locator("mark")).toHaveCount(names.length + codes.length);
+}
+
+for (const { query, products, marks } of [
+  { query: "ノート", products: notes, marks: { names: ["ノート", "ノート"] } },
+  { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]], marks: { codes: ["PEN-001"] } },
+  { query: "0", products: allProducts, marks: { codes: Array(8).fill("0") } },
+  { query: "(", products: [], marks: {} },
+  { query: ".", products: [], marks: {} },
+]) {
+  test(`検索語 ${JSON.stringify(query)} に一致した部分を元の表記のまま強調する`, async ({ page }) => {
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error));
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    await expectProducts(page, products);
+    await expectMarks(page, marks);
+    expect(errors).toEqual([]);
+  });
+}
+
+test("1つのセル内で一致した箇所をすべて強調する", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("0");
+  const code = page.getByRole("row", { name: "青いノート NOTE-001", exact: true }).locator("code");
+  await expect(code.locator("mark")).toHaveText(["0", "0"]);
+  await expect(code).toHaveText("NOTE-001");
+});
+
+test("検索語を変えると、前の検索語の強調が残らない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expectMarks(page, { names: ["ノート", "ノート"] });
+  await search.fill("青い");
+  await expectProducts(page, [["青いノート", "NOTE-001"]]);
+  await expectMarks(page, { names: ["青い"] });
+
+  await search.fill("");
+  await search.focus();
+  for (const [typed, codes] of [
+    ["n", ["N", "N", "N"]],
+    ["o", ["NO", "NO"]],
+    ["t", ["NOT", "NOT"]],
+    ["e", ["NOTE", "NOTE"]],
+  ]) {
+    await page.keyboard.type(typed);
+    await expectMarks(page, { codes });
+  }
+  await expect(search).toHaveValue("note");
+});
+
+test("検索語が空の状態では強調を残さない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+  const noteMarks = { names: ["ノート", "ノート"] };
+  await expectMarks(page, {});
+
+  await search.fill("ノート");
+  await expectMarks(page, noteMarks);
+  await search.fill("   ");
+  await expectProducts(page, allProducts);
+  await expectMarks(page, {});
+
+  await search.fill("ノート");
+  await expectMarks(page, noteMarks);
+  await search.press("ControlOrMeta+A");
+  await search.press("Backspace");
+  await expect(search).toHaveValue("");
+  await expectMarks(page, {});
+
+  await search.fill("ノート");
+  await expectMarks(page, noteMarks);
+  await clear.click();
+  await expect(search).toHaveValue("");
+  await expectMarks(page, {});
+
+  await search.fill("ノート");
+  await expectMarks(page, noteMarks);
+  await search.press("Escape");
+  await expect(search).toHaveValue("");
+  await expectProducts(page, allProducts);
+  await expectMarks(page, {});
+});
+
+test("降順を選んだまま検索しても、強調と選択した並び順を両方表示する", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("descending");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ノート");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expectMarks(page, { names: ["ノート", "ノート"] });
+  await expect(order).toHaveValue("descending");
+});
