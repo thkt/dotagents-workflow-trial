@@ -261,15 +261,18 @@ for (const query of ["ノート", "存在しない商品"]) {
   }
 }
 
-test("正規表現の記号を含む検索語でもエラーなく該当なしを表示する", async ({ page }) => {
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error));
-  await page.goto("/");
-  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("(");
-  await expectProducts(page, []);
-  await expectMarks(page, {});
-  expect(errors).toEqual([]);
-});
+// "(" と "*" は正規表現として不正、"." は任意の1文字に一致する。
+for (const query of ["(", ".", "*"]) {
+  test(`正規表現の記号 ${JSON.stringify(query)} を含む検索語でもエラーなく該当なしを表示し、強調しない`, async ({ page }) => {
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error));
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    await expectProducts(page, []);
+    await expectMarks(page, {});
+    expect(errors).toEqual([]);
+  });
+}
 
 test("HTMLの記号を含む検索語と商品名をHTMLとして解釈せず文字のまま強調する", async ({ page }) => {
   // 配信する商品名だけをHTMLの記号を含む文字列に変え、実際の画面処理を通す。
