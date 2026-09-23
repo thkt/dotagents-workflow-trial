@@ -142,6 +142,19 @@ for (const operation of ["pointer", "Enter"]) {
 
 const reversedProducts = [allProducts[3], allProducts[2], allProducts[1], allProducts[0]];
 
+test("検索中に並び順を変えても、一致部分の強調が行とともに残る", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("note");
+  await expectHighlights(page, [["青いノート", "[NOTE]-001"], ["赤いノート", "[NOTE]-002"]]);
+  await order.selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expectHighlights(page, [["赤いノート", "[NOTE]-002"], ["青いノート", "[NOTE]-001"]]);
+  await order.selectOption("original");
+  await expectProducts(page, notes);
+  await expectHighlights(page, [["青いノート", "[NOTE]-001"], ["赤いノート", "[NOTE]-002"]]);
+});
+
 for (const query of ["note", "missing"]) {
   test(`降順・検索語 ${JSON.stringify(query)} からEscでクリアし、フォーカスと並び順を保って再検索できる`, async ({ page }) => {
     await page.goto("/");
