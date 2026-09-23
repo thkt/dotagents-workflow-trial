@@ -149,6 +149,7 @@ test("同じ読みの商品は昇順・降順とも元の相対順を保つ", as
 test("商品コード：昇順で固定データをコード順に表示し、元の順序へ戻せる", async ({ page }) => {
   await page.goto("/");
   const order = page.getByLabel("並び順", { exact: true });
+  await expect(order.locator("option")).toHaveText(["元の順序", "商品名：昇順", "商品名：降順", "商品コード：昇順"]);
   await order.selectOption({ label: "商品コード：昇順" });
   await expect(order).toHaveValue("code-ascending");
   await expectProducts(page, [allProducts[3], allProducts[0], allProducts[1], allProducts[2]]);

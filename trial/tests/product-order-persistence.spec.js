@@ -83,6 +83,7 @@ test.describe("保存境界", { tag: "@storage" }, () => {
       await expectState(page, value);
       expect(await savedOrder(page)).toBe(value);
       await searchControl(page).fill(query);
+      await expectState(page, value, matches, query);
       await page.reload();
       await expectState(page, value);
     });
