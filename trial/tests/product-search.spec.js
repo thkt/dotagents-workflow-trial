@@ -27,6 +27,18 @@ async function expectProducts(page, products) {
   }
 }
 
+// 配信レスポンスのtbodyだけを差し替えて商品データを固定する。期待値にはアプリの比較関数を使わない。
+async function gotoWithTbody(page, tbodyHtml) {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, tbodyHtml),
+    });
+  });
+  await page.goto('/');
+}
+
 for (const { query, products, screenshot } of [
   { query: '   ', products: allProducts },
   { query: 'ノート', products: notes, screenshot: 'filtered' },
@@ -165,23 +177,15 @@ test('同じ読みの商品は昇順・降順とも元の相対順を保つ', as
 });
 
 test('元の順序と名前順が異なる商品でも、昇順・降順・元の順序に切り替えられる', async ({ page }) => {
-  // 入力データだけを差し替え、期待値にはアプリの比較関数を使わない。
-  await page.route('**/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      body: (await response.text()).replace(
-        /<tbody>[\s\S]*?<\/tbody>/,
-        `<tbody>
+  await gotoWithTbody(
+    page,
+    `<tbody>
       <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
       <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-001</code></td></tr>
       <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
       <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>NOTE-002</code></td></tr>
     </tbody>`,
-      ),
-    });
-  });
-  await page.goto('/');
+  );
   const order = page.getByLabel('並び順', { exact: true });
   const suppliedOrder = [allProducts[3], allProducts[0], allProducts[2], allProducts[1]];
   await expectProducts(page, suppliedOrder);
@@ -206,22 +210,15 @@ test('商品コードは前後の空白を除いた文字列として比較し�
   page,
 }) => {
   // コード列の前後に空白を含む配信データへ差し替え、比較前に除去されることを確認する。
-  await page.route('**/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      body: (await response.text()).replace(
-        /<tbody>[\s\S]*?<\/tbody>/,
-        `<tbody>
+  await gotoWithTbody(
+    page,
+    `<tbody>
       <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>  NOTE-10  </code></td></tr>
       <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-9</code></td></tr>
       <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
       <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
     </tbody>`,
-      ),
-    });
-  });
-  await page.goto('/');
+  );
   const order = page.getByLabel('並び順', { exact: true });
   await order.selectOption('code-ascending');
   await expectProducts(page, [
@@ -234,22 +231,15 @@ test('商品コードは前後の空白を除いた文字列として比較し�
 
 test('同じ商品コードの商品は商品コード：昇順で配信時の相対順を保つ', async ({ page }) => {
   // 同一コードを持つ複数行を含む配信データへ差し替え、その相対順が保たれるかを確認する。
-  await page.route('**/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      body: (await response.text()).replace(
-        /<tbody>[\s\S]*?<\/tbody>/,
-        `<tbody>
+  await gotoWithTbody(
+    page,
+    `<tbody>
       <tr data-reading="さいしょのしょうひん"><th scope="row">最初の商品</th><td><code>SAME-001</code></td></tr>
       <tr data-reading="つぎのしょうひん"><th scope="row">次の商品</th><td><code>SAME-001</code></td></tr>
       <tr data-reading="さいごのしょうひん"><th scope="row">最後の商品</th><td><code>SAME-001</code></td></tr>
       <tr data-reading="べつこーどのしょうひん"><th scope="row">別コードの商品</th><td><code>ZZZ-999</code></td></tr>
     </tbody>`,
-      ),
-    });
-  });
-  await page.goto('/');
+  );
   const order = page.getByLabel('並び順', { exact: true });
   await order.selectOption('code-ascending');
   await expectProducts(page, [
