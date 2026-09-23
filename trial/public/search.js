@@ -2,11 +2,34 @@ const search = document.getElementById("product-search");
 const rows = Array.from(document.querySelectorAll("tbody tr"));
 const resultCount = document.getElementById("result-count");
 const noResults = document.getElementById("no-results");
+const highlightTargets = rows.flatMap((row) => [
+  row.querySelector(":scope > th"),
+  row.querySelector(":scope > td > code"),
+]);
+
+// 一致箇所をすべて元の表記のまま <mark> で囲む。空の検索語では強調を外す。
+function highlight(element, query) {
+  const text = element.textContent;
+  const lowerText = text.toLowerCase();
+  const parts = [];
+  let start = 0;
+  if (query) {
+    for (let found = lowerText.indexOf(query); found !== -1; found = lowerText.indexOf(query, start)) {
+      const mark = document.createElement("mark");
+      mark.textContent = text.slice(found, found + query.length);
+      parts.push(text.slice(start, found), mark);
+      start = found + query.length;
+    }
+  }
+  parts.push(text.slice(start));
+  element.replaceChildren(...parts);
+}
 
 function updateSearch() {
   const query = search.value.trim().toLowerCase();
   let matches = 0;
 
+  for (const element of highlightTargets) highlight(element, query);
   for (const row of rows) {
     const matchesQuery = Array.from(row.cells).some((cell) =>
       cell.textContent.toLowerCase().includes(query),
