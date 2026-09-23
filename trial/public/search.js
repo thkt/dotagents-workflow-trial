@@ -35,7 +35,8 @@ const orderStorageKey = 'product-order';
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ['original', 'ascending', 'descending'].includes(saved) ? saved : 'original';
+    const allowed = Array.from(order.options, (option) => option.value);
+    return allowed.includes(saved) ? saved : 'original';
   } catch {
     return 'original';
   }
