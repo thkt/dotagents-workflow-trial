@@ -188,6 +188,7 @@ test("商品コード：昇順では商品コード順に表示し、検索・�
   await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
   await expectProducts(page, codeOrderedProducts);
   await search.fill("-001");
+  await expectProducts(page, [allProducts[3], allProducts[0], allProducts[2]]);
   await search.press("ControlOrMeta+A");
   await search.press("Backspace");
   await expect(search).toHaveValue("");
@@ -195,34 +196,54 @@ test("商品コード：昇順では商品コード順に表示し、検索・�
 });
 
 test("商品コードは大文字・小文字を区別した文字列として比較し、同じコードは元の相対順を保つ", async ({ page }) => {
-  // 同じPEN-001の2行は隣り合わず、先の行の読みが小さいため、商品名：降順では2行の順が入れ替わる。
+  // PEN-001の2行は先の行の読みが小さく、商品名：降順で入れ替わる。
+  // PEN-002の2行は先の行の読みが大きく、商品名：昇順で入れ替わる。どちらも隣り合わない。
   await page.route("**/", async (route) => {
     const response = await route.fetch();
     await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
       <tr data-reading="あおいぺん"><th scope="row">青いペン</th><td><code>PEN-001</code></td></tr>
+      <tr data-reading="むらさきのぺん"><th scope="row">紫のペン</th><td><code>PEN-002</code></td></tr>
       <tr data-reading="しろいふせん"><th scope="row">白い付箋</th><td><code>note-003</code></td></tr>
       <tr data-reading="きいろいのーと"><th scope="row">黄色いノート</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="あかいぺん"><th scope="row">赤いペン</th><td><code>PEN-002</code></td></tr>
       <tr data-reading="みどりのーと"><th scope="row">緑のノート</th><td><code>NOTE-2</code></td></tr>
       <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
     </tbody>`) });
   });
   await page.goto("/");
   const order = page.getByLabel("並び順", { exact: true });
+  const codeOrder = [
+    ["黄色いノート", "NOTE-10"],
+    ["緑のノート", "NOTE-2"],
+    ["青いペン", "PEN-001"],
+    ["黒いペン", "PEN-001"],
+    ["紫のペン", "PEN-002"],
+    ["赤いペン", "PEN-002"],
+    ["白い付箋", "note-003"],
+  ];
   await order.selectOption({ label: "商品名：降順" });
   await expectProducts(page, [
+    ["紫のペン", "PEN-002"],
     ["緑のノート", "NOTE-2"],
     ["白い付箋", "note-003"],
     ["黒いペン", "PEN-001"],
     ["黄色いノート", "NOTE-10"],
+    ["赤いペン", "PEN-002"],
     ["青いペン", "PEN-001"],
-  ], 5);
+  ], 7);
   await order.selectOption({ label: "商品コード：昇順" });
   await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, codeOrder, 7);
+  await order.selectOption({ label: "商品名：昇順" });
   await expectProducts(page, [
-    ["黄色いノート", "NOTE-10"],
-    ["緑のノート", "NOTE-2"],
     ["青いペン", "PEN-001"],
+    ["赤いペン", "PEN-002"],
+    ["黄色いノート", "NOTE-10"],
     ["黒いペン", "PEN-001"],
     ["白い付箋", "note-003"],
-  ], 5);
+    ["緑のノート", "NOTE-2"],
+    ["紫のペン", "PEN-002"],
+  ], 7);
+  await order.selectOption({ label: "商品コード：昇順" });
+  await expectProducts(page, codeOrder, 7);
 });
