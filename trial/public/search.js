@@ -1,7 +1,7 @@
-const search = document.getElementById("product-search");
-const rows = Array.from(document.querySelectorAll("tbody tr"));
-const resultCount = document.getElementById("result-count");
-const noResults = document.getElementById("no-results");
+const search = document.getElementById('product-search');
+const rows = Array.from(document.querySelectorAll('tbody tr'));
+const resultCount = document.getElementById('result-count');
+const noResults = document.getElementById('no-results');
 
 function updateSearch() {
   const query = search.value.trim().toLowerCase();
@@ -19,39 +19,56 @@ function updateSearch() {
   noResults.hidden = matches > 0;
 }
 
-search.addEventListener("input", updateSearch);
-document.getElementById("clear-search").addEventListener("click", () => {
-  search.value = "";
+search.addEventListener('input', updateSearch);
+document.getElementById('clear-search').addEventListener('click', () => {
+  search.value = '';
   updateSearch();
 });
 // 検索語は保存せず、ブラウザーのフォーム復元があっても空で開始する。
-search.value = "";
+search.value = '';
 updateSearch();
 
-const order = document.getElementById("product-order");
-const collator = new Intl.Collator("ja");
-const orderStorageKey = "product-order";
+const order = document.getElementById('product-order');
+const collator = new Intl.Collator('ja');
+const orderStorageKey = 'product-order';
 
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ["original", "ascending", "descending"].includes(saved) ? saved : "original";
+    return ['original', 'ascending', 'descending'].includes(saved) ? saved : 'original';
   } catch {
-    return "original";
+    return 'original';
   }
 }
 
+function rowCode(row) {
+  return row.querySelector('code').textContent.trim();
+}
+
+// コード単位順（<, > によるUTF-16コード単位比較）。ロケール依存のcollatorは使わない。
+function compareCode(a, b) {
+  const codeA = rowCode(a);
+  const codeB = rowCode(b);
+  if (codeA < codeB) return -1;
+  if (codeA > codeB) return 1;
+  return 0;
+}
+
+const orderComparators = {
+  ascending: (a, b) => collator.compare(a.dataset.reading, b.dataset.reading),
+  descending: (a, b) => -collator.compare(a.dataset.reading, b.dataset.reading),
+  'code-ascending': compareCode,
+};
+
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
-  document.querySelector("tbody").append(...ordered);
+  const comparator = orderComparators[order.value];
+  const ordered = comparator ? rows.toSorted(comparator) : rows;
+  document.querySelector('tbody').append(...ordered);
 }
 
 order.value = readOrder();
 updateOrder();
-order.addEventListener("change", () => {
+order.addEventListener('change', () => {
   updateOrder();
   try {
     window.localStorage.setItem(orderStorageKey, order.value);
