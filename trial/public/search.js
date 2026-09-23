@@ -2,6 +2,34 @@ const search = document.getElementById("product-search");
 const rows = Array.from(document.querySelectorAll("tbody tr"));
 const resultCount = document.getElementById("result-count");
 const noResults = document.getElementById("no-results");
+// 商品コードは<code>を保つため、その内側を書き換える。
+const highlightTargets = rows.flatMap((row) =>
+  Array.from(row.cells, (cell) => {
+    const element = cell.querySelector("code") ?? cell;
+    return { element, text: element.textContent };
+  }),
+);
+
+// 検索語はHTMLとして解釈せず、テキストノードと<mark>だけで組み立てる。
+function highlight({ element, text }, query) {
+  if (!query) {
+    element.textContent = text;
+    return;
+  }
+  const lowerText = text.toLowerCase();
+  const nodes = [];
+  let start = 0;
+  let index = lowerText.indexOf(query);
+  while (index !== -1) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    nodes.push(text.slice(start, index), mark);
+    start = index + query.length;
+    index = lowerText.indexOf(query, start);
+  }
+  nodes.push(text.slice(start));
+  element.replaceChildren(...nodes);
+}
 
 function updateSearch() {
   const query = search.value.trim().toLowerCase();
@@ -14,6 +42,7 @@ function updateSearch() {
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
   }
+  for (const target of highlightTargets) highlight(target, query);
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
   noResults.hidden = matches > 0;

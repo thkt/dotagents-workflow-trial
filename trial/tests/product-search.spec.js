@@ -168,3 +168,104 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 一致部分の強調。非表示行に残った<mark>も検出するため、CSSセレクターで数える。
+async function expectMarks(page, { names = [], codes = [] }) {
+  await expect(page.locator("tbody th mark")).toHaveText(names);
+  await expect(page.locator("tbody td code mark")).toHaveText(codes);
+  await expect(page.locator("tbody mark")).toHaveCount(names.length + codes.length);
+  await expect(page.locator("tbody td code")).toHaveCount(4);
+}
+
+for (const { query, products, names, codes } of [
+  { query: "ノート", products: notes, names: ["ノート", "ノート"] },
+  { query: "note", products: notes, codes: ["NOTE", "NOTE"] },
+  { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]], codes: ["PEN-001"] },
+  { query: "0", products: allProducts, codes: Array(8).fill("0") },
+]) {
+  test(`検索語 ${JSON.stringify(query)} の一致部分を元の表記のまま<mark>で強調する`, async ({ page }) => {
+    await page.goto("/");
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    await search.fill(query);
+    await expectProducts(page, products);
+    await expectMarks(page, { names, codes });
+    await expect(search).toBeFocused();
+  });
+}
+
+test("1つのセルの重ならない一致をすべて強調する", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("0");
+  for (const code of await page.locator("tbody td code").all()) {
+    await expect(code.locator("mark")).toHaveText(["0", "0"]);
+  }
+});
+
+test("検索語を変えると前の強調が残らず、並び替えても強調を保つ", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expectMarks(page, { names: ["ノート", "ノート"] });
+  await search.fill("青い");
+  await expectProducts(page, [["青いノート", "NOTE-001"]]);
+  await expectMarks(page, { names: ["青い"] });
+  await expect(page.locator("tbody tr", { hasText: "赤いノート" }).locator("mark")).toHaveCount(0);
+
+  await search.fill("ノート");
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expectMarks(page, { names: ["ノート", "ノート"] });
+});
+
+for (const query of ["", "   ", "存在しない商品"]) {
+  test(`検索語 ${JSON.stringify(query)} では強調しない`, async ({ page }) => {
+    await page.goto("/");
+    await expectMarks(page, {});
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    await search.fill(query);
+    await expect(search).toHaveValue(query);
+    await expectMarks(page, {});
+  });
+}
+
+test("強調中に再読み込みすると強調が残らない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expectMarks(page, { names: ["ノート", "ノート"] });
+  await page.reload();
+  await expect(search).toHaveValue("");
+  await expectProducts(page, allProducts);
+  await expectMarks(page, {});
+});
+
+for (const query of ["ノート", "存在しない商品"]) {
+  for (const operation of ["クリア", "全削除", "Esc"]) {
+    test(`検索語 ${JSON.stringify(query)} から${operation}すると強調が残らない`, async ({ page, hasTouch }) => {
+      await page.goto("/");
+      const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+      await search.fill(query);
+      if (operation === "クリア") {
+        const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+        if (hasTouch) await clear.tap();
+        else await clear.click();
+      } else {
+        await search.press(operation === "Esc" ? "Escape" : "ControlOrMeta+A");
+        if (operation === "全削除") await search.press("Backspace");
+      }
+      await expect(search).toHaveValue("");
+      await expectProducts(page, allProducts);
+      await expectMarks(page, {});
+    });
+  }
+}
+
+test("正規表現の記号を含む検索語でもエラーなく該当なしを表示する", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error));
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("(");
+  await expectProducts(page, []);
+  await expectMarks(page, {});
+  expect(errors).toEqual([]);
+});
