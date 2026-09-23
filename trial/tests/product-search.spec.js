@@ -182,19 +182,22 @@ test("並び順の選択肢の最後に商品コード：昇順があり、検�
 });
 
 test("商品コード：昇順は文字列として比較し、同じコードの商品は元の相対順を保つ", async ({ page }) => {
-  // 数値照合なら NOTE-9 が NOTE-10 より前になり、読みで比べると青いノートが赤いノートより前になる。
+  // 数値照合なら NOTE-9 が NOTE-10 より前になる。同じ NOTE-10 の黒いペンと赤いノートは、
+  // 読み・商品名のどちらで比べても、直前の商品名：昇順の表示順から並べても赤いノートが前になる。
   await page.route("**/", async (route) => {
     const response = await route.fetch();
     await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
       <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>NOTE-9</code></td></tr>
+      <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>PEN-001</code></td></tr>
       <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>NOTE-10</code></td></tr>
-      <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
-      <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-10</code></td></tr>
     </tbody>`) });
   });
   await page.goto("/");
   const order = page.getByLabel("並び順", { exact: true });
-  const supplied = [["白いマグ", "NOTE-9"], ["赤いノート", "NOTE-10"], ["黒いペン", "PEN-001"], ["青いノート", "NOTE-10"]];
+  const supplied = [["白いマグ", "NOTE-9"], ["黒いペン", "NOTE-10"], ["青いノート", "PEN-001"], ["赤いノート", "NOTE-10"]];
+  await order.selectOption("ascending");
+  await expectProducts(page, [supplied[2], supplied[3], supplied[1], supplied[0]]);
   await order.selectOption("code-ascending");
   await expect(order).toHaveValue("code-ascending");
   await expectProducts(page, [supplied[1], supplied[3], supplied[0], supplied[2]]);
