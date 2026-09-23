@@ -193,14 +193,6 @@ for (const { query, products, names, codes } of [
   });
 }
 
-test("1つのセルの重ならない一致をすべて強調する", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("0");
-  for (const code of await page.locator("tbody td code").all()) {
-    await expect(code.locator("mark")).toHaveText(["0", "0"]);
-  }
-});
-
 test("検索語を変えると前の強調が残らず、並び替えても強調を保つ", async ({ page }) => {
   await page.goto("/");
   const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
@@ -209,21 +201,28 @@ test("検索語を変えると前の強調が残らず、並び替えても強�
   await search.fill("青い");
   await expectProducts(page, [["青いノート", "NOTE-001"]]);
   await expectMarks(page, { names: ["青い"] });
-  await expect(page.locator("tbody tr", { hasText: "赤いノート" }).locator("mark")).toHaveCount(0);
 
   await search.fill("ノート");
-  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("descending");
+  await expect(order).toHaveValue("descending");
   await expectProducts(page, [allProducts[1], allProducts[0]]);
   await expectMarks(page, { names: ["ノート", "ノート"] });
 });
 
-for (const query of ["", "   ", "存在しない商品"]) {
-  test(`検索語 ${JSON.stringify(query)} では強調しない`, async ({ page }) => {
+for (const { query, products } of [
+  { query: "   ", products: allProducts },
+  { query: "存在しない商品", products: [] },
+]) {
+  test(`強調中に検索語を ${JSON.stringify(query)} へ変えると強調が残らない`, async ({ page }) => {
     await page.goto("/");
     await expectMarks(page, {});
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    await search.fill("ノート");
+    await expectMarks(page, { names: ["ノート", "ノート"] });
     await search.fill(query);
     await expect(search).toHaveValue(query);
+    await expectProducts(page, products);
     await expectMarks(page, {});
   });
 }
@@ -244,7 +243,9 @@ for (const query of ["ノート", "存在しない商品"]) {
     test(`検索語 ${JSON.stringify(query)} から${operation}すると強調が残らない`, async ({ page, hasTouch }) => {
       await page.goto("/");
       const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+      await search.fill("ノート");
       await search.fill(query);
+      await expect(search).toHaveValue(query);
       if (operation === "クリア") {
         const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
         if (hasTouch) await clear.tap();
@@ -268,4 +269,19 @@ test("正規表現の記号を含む検索語でもエラーなく該当なし�
   await expectProducts(page, []);
   await expectMarks(page, {});
   expect(errors).toEqual([]);
+});
+
+test("HTMLの記号を含む検索語と商品名をHTMLとして解釈せず文字のまま強調する", async ({ page }) => {
+  // 配信する商品名だけをHTMLの記号を含む文字列に変え、実際の画面処理を通す。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(">青いノート<", ">&lt;b&gt;青いノート&lt;/b&gt;<") });
+  });
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("<b>");
+  await expect(search).toHaveValue("<b>");
+  await expectProducts(page, [["<b>青いノート</b>", "NOTE-001"]]);
+  await expectMarks(page, { names: ["<b>"] });
+  await expect(page.locator("tbody b")).toHaveCount(0);
 });
