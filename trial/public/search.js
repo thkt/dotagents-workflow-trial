@@ -41,11 +41,24 @@ function readOrder() {
   }
 }
 
+const productCode = (row) => row.querySelector("code").textContent;
+// 商品コードは照合規則を使わず、UTF-16コード単位の辞書順で比較する。
+const compareCodes = (a, b) => {
+  const codeA = productCode(a);
+  const codeB = productCode(b);
+  if (codeA === codeB) return 0;
+  return codeA < codeB ? -1 : 1;
+};
+const compareReadings = (a, b) => collator.compare(a.dataset.reading, b.dataset.reading);
+const comparators = {
+  ascending: compareReadings,
+  descending: (a, b) => -compareReadings(a, b),
+  "code-ascending": compareCodes,
+};
+
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
+  const compare = comparators[order.value];
+  const ordered = compare ? rows.toSorted(compare) : rows;
   document.querySelector("tbody").append(...ordered);
 }
 
