@@ -157,6 +157,18 @@ test("商品コード：昇順で固定データをコード順に表示し、�
   await expectProducts(page, allProducts);
 });
 
+test("商品コード：昇順を選んで再読み込みすると、検索欄が空の全件表示でコード順を復元する", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await order.selectOption("code-ascending");
+  await search.fill("ノート");
+  await page.reload();
+  await expect(order).toHaveValue("code-ascending");
+  await expect(search).toHaveValue("");
+  await expectProducts(page, [allProducts[3], allProducts[0], allProducts[1], allProducts[2]]);
+});
+
 // 配信するtbodyだけを差し替え、実際の画面と並べ替え処理を通す。
 async function serveProducts(page, products) {
   const tbody = products.map(([name, code, reading]) =>
