@@ -5,6 +5,7 @@
   "packageManager": "bun@1.4.2",
   "scripts": {
     "start": "bun trial/server.js",
+    "start:worktree": "bun run --cwd trial start:worktree",
     "setup:e2e": "bun install --cwd trial --frozen-lockfile --ignore-scripts && bun run --cwd trial setup:e2e",
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 bun scripts/test.ts playwright trial/playwright.config.js trial/artifacts",
     "test:control": "bun scripts/test.ts bun",
