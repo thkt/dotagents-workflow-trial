@@ -168,3 +168,34 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+test("並び順の選択肢の最後に商品コード：昇順があり、検索と組み合わせてもコード順を保つ", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await expect(order.getByRole("option")).toHaveText(["元の順序", "商品名：昇順", "商品名：降順", "商品コード：昇順"]);
+  await order.selectOption({ label: "商品コード：昇順" });
+  await expectProducts(page, [allProducts[3], allProducts[0], allProducts[1], allProducts[2]]);
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("001");
+  await expectProducts(page, [allProducts[3], allProducts[0], allProducts[2]]);
+});
+
+test("商品コード：昇順は文字列として比較し、同じコードの商品は元の相対順を保つ", async ({ page }) => {
+  // 数値照合なら NOTE-9 が NOTE-10 より前になり、読みで比べると青いノートが赤いノートより前になる。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
+      <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>NOTE-9</code></td></tr>
+      <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>PEN-001</code></td></tr>
+      <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-10</code></td></tr>
+    </tbody>`) });
+  });
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  const supplied = [["白いマグ", "NOTE-9"], ["赤いノート", "NOTE-10"], ["黒いペン", "PEN-001"], ["青いノート", "NOTE-10"]];
+  await order.selectOption("code-ascending");
+  await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, [supplied[1], supplied[3], supplied[0], supplied[2]]);
+  await order.selectOption("original");
+  await expectProducts(page, supplied);
+});

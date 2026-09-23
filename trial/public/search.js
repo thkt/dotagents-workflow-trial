@@ -41,11 +41,21 @@ function readOrder() {
   }
 }
 
+const codeOf = (row) => row.cells[1].textContent;
+const compareRows = {
+  ascending: (a, b) => collator.compare(a.dataset.reading, b.dataset.reading),
+  descending: (a, b) => collator.compare(b.dataset.reading, a.dataset.reading),
+  // 商品コードはロケール・数値照合を使わず、文字列の既定の大小比較で並べる。
+  "code-ascending": (a, b) => {
+    const [codeA, codeB] = [codeOf(a), codeOf(b)];
+    if (codeA === codeB) return 0;
+    return codeA < codeB ? -1 : 1;
+  },
+};
+
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
+  const compare = compareRows[order.value];
+  const ordered = compare ? rows.toSorted(compare) : rows;
   document.querySelector("tbody").append(...ordered);
 }
 
