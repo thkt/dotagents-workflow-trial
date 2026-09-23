@@ -199,9 +199,9 @@ test('検索語「ノート」で青いノート・赤いノートの商品名�
   await page.goto('/');
   const search = page.getByLabel('商品名・商品コードで検索', { exact: true });
   await search.fill('ノート');
+  await expectProducts(page, notes);
   const table = page.getByRole('table', { name: '商品一覧', exact: true });
   const headers = table.getByRole('rowheader');
-  await expect(headers).toHaveText(['青いノート', '赤いノート']);
   const headerCount = await headers.count();
   for (let i = 0; i < headerCount; i += 1) {
     const marks = headers.nth(i).locator('mark');
@@ -216,10 +216,9 @@ test('検索語「  pEn-001  」で黒いペンの商品コードの「PEN-001�
   await page.goto('/');
   const search = page.getByLabel('商品名・商品コードで検索', { exact: true });
   await search.fill('  pEn-001  ');
+  await expectProducts(page, [['黒いペン', 'PEN-001']]);
   const table = page.getByRole('table', { name: '商品一覧', exact: true });
-  const cells = table.getByRole('cell');
-  await expect(cells).toHaveText(['PEN-001']);
-  const mark = cells.locator('mark');
+  const mark = table.getByRole('cell').locator('mark');
   await expect(mark).toHaveCount(1);
   await expect(mark).toHaveText('PEN-001');
 });
@@ -263,14 +262,12 @@ test('降順を選んだまま検索語「note」で強調しても並び順・�
   await page.goto('/');
   const order = page.getByLabel('並び順', { exact: true });
   const search = page.getByLabel('商品名・商品コードで検索', { exact: true });
-  const table = page.getByRole('table', { name: '商品一覧', exact: true });
 
   await order.selectOption('descending');
   await search.fill('note');
 
-  await expect(table.getByRole('rowheader')).toHaveText(['赤いノート', '青いノート']);
-  const resultCount = page.getByText('全4件中2件を表示', { exact: true });
-  await expect(resultCount).toBeVisible();
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
   await expect(order).toHaveValue('descending');
+  const table = page.getByRole('table', { name: '商品一覧', exact: true });
   await expect(table.locator('mark')).toHaveCount(2);
 });
