@@ -3,13 +3,20 @@ const rows = Array.from(document.querySelectorAll("tbody tr"));
 const resultCount = document.getElementById("result-count");
 const noResults = document.getElementById("no-results");
 
+function normalizeSearchText(value) {
+  // ASCIIの幅だけを揃え、かなや範囲外の記号は変換しない。
+  return value.replace(/[\uFF01-\uFF5E]/g, (character) =>
+    String.fromCharCode(character.charCodeAt(0) - 0xFEE0),
+  ).toLowerCase();
+}
+
 function updateSearch() {
-  const query = search.value.trim().toLowerCase();
+  const query = normalizeSearchText(search.value.trim());
   let matches = 0;
 
   for (const row of rows) {
     const matchesQuery = Array.from(row.cells).some((cell) =>
-      cell.textContent.toLowerCase().includes(query),
+      normalizeSearchText(cell.textContent).includes(query),
     );
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
