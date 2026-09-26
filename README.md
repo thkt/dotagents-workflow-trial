@@ -171,7 +171,7 @@ CIも共通checkを使います。[CIとmain保護](DEVELOPMENT.md#ciとmain保�
 ```sh
 IMPLEMENT_SKILL=$(realpath "$HOME/.agents/skills/implement/SKILL.md")
 SHARED_HARNESS=$(realpath "$(dirname "$IMPLEMENT_SKILL")/../..")
-bun "$SHARED_HARNESS/scripts/capture.ts" trial/capture.spec.js trial/playwright.config.js /absolute/path/to/capture-output
+bun "$SHARED_HARNESS/scripts/capture/capture.ts" trial/capture.spec.js trial/playwright.config.js /absolute/path/to/capture-output
 ```
 
 [trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。共有アダプターは既存の [trial/playwright.config.js](trial/playwright.config.js) のprojects・画面幅・webServerを再利用し、出力先を `CAPTURE_OUTPUT` としてspecへ渡します。PNGとWebMだけをその直下へ保存し、動画contextを閉じて確定します。runnerの設定・レポート・一時生成物もcheckout外へ出力します。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。`trial/capture.config.js` と `trial/package.json` の `capture` は商品側の直接撮影用として保持します。
