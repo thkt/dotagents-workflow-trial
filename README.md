@@ -72,7 +72,7 @@ repo・remote・base branch・セットアップ・検証・撮影・CI名の設
 
 ## 提供する機能
 
-架空の4商品を一覧表示し、商品名・商品コードで検索できます。CIとmainの保護設定を適用しています。
+架空の4商品を一覧表示し、商品名・商品コードで検索できます。検索語に一致した部分は、商品名・商品コードの中で `<mark>` により強調表示します。CIとmainの保護設定を適用しています。
 
 「並び順」で元の順序・商品名の昇順・降順を選べます。商品の読みを日本語として比較し、同じ読みでは元の相対順を保ちます。検索・クリア・全削除後も選択した順を維持します。選択時に並び順だけをlocalStorageへ保存します。同じ端末・ブラウザー・プロファイルの同一originであれば、再読み込み、タブの開き直し、ブラウザーの終了と再起動の後に復元します。検索語は保存せず、再訪時は検索欄が空で全4件を保存した順に表示します。読みは検索対象に含めません。
 
@@ -93,27 +93,30 @@ bun run start
 画面は静的な HTML/CSS と検索用JavaScript、配信は Bun です。ビルドや外部サービスは不要です。
 固定データは [trial/public/index.html](trial/public/index.html) の `tbody` にあり、青いノート（NOTE-001）、赤いノート（NOTE-002）、黒いペン（PEN-001）、白いマグ（MUG-001）の順です。
 
-「商品名・商品コードで検索」欄に入力すると、入力のたびに商品名または商品コードの部分一致で一覧を絞り込みます。Enterは不要です。検索語の前後空白を除き、英字の大小文字は区別しません。比較時は全角ASCII文字（U+FF01〜U+FF5E）を対応する半角ASCII文字と同一視します。入力欄の文字や商品の名前・コード・元データは書き換えません。検索欄と一覧の間に「全N件中M件を表示」と総数・該当件数を表示し、入力に合わせて更新します。初期表示と全削除後は「全4件中4件を表示」です。
+「商品名・商品コードで検索」欄に入力すると、入力のたびに商品名または商品コードの部分一致で一覧を絞り込みます。Enterは不要です。検索語の前後空白を除き、英字の大小文字は区別しません。比較時は全角ASCII文字（U+FF01〜U+FF5E）を対応する半角ASCII文字と同一視します。入力欄の文字と、元データの商品名・商品コードは書き換えません。検索欄と一覧の間に「全N件中M件を表示」と総数・該当件数を表示し、入力に合わせて更新します。初期表示と全削除後は「全4件中4件を表示」です。
 
-| 入力・操作 | 表示される商品（表示順） |
-| --- | --- |
-| 初期表示、空文字、空白のみ | 全4件 |
-| `ノート` | 青いノート、赤いノート |
-| `青い` | 青いノート |
-| `note` | 青いノート、赤いノート |
-| `  pEn-001  ` | 黒いペン |
-| `ＮＯＴＥ－００１`、`ｎＯｔＥ－００１` | 青いノート（1件） |
-| `　ＰＥＮ－００１　`（前後に全角空白） | 黒いペン（1件） |
-| `ＮＯＴＥ` | 青いノート、赤いノート（2件）。降順選択時は赤いノート、青いノート |
-| `ＮＯＴＥ－９９９`、`ﾉｰﾄ`、`NOTE−001`（U+2212のマイナス記号） | 商品0件と「該当する商品はありません」 |
-| `存在しない商品` | 商品0件と「該当する商品はありません」 |
-| 該当なしの後に入力を全削除 | 全4件に復帰し、該当なしの表示は消える |
+一致した部分は、表示中の元の文字のまま `<mark>` 要素で囲みます。商品コードでは既存の `<code>` 要素の内側に置きます。一致の規則は絞り込みと同じで、1つのセル内で重ならない一致をすべて囲みます。検索語を変えると前の強調は消え、非表示の行には `<mark>` を残しません。初期表示、再読み込み後、空文字・空白のみの入力、「検索をクリア」、全削除、Escの後は強調しません。並び順を切り替えても、現在の検索語に対する強調は残ります。強調中もセルの文字列とアクセシブルネームは元の商品名・商品コードのままです。検索語と商品名はHTMLとして解釈しません。`<mark>` の見た目はブラウザー標準のスタイルです。
+
+| 入力・操作 | 表示される商品（表示順） | `<mark>` で囲む文字 |
+| --- | --- | --- |
+| 初期表示、空文字、空白のみ（半角・全角） | 全4件 | なし |
+| `ノート` | 青いノート、赤いノート | 2件の商品名の「ノート」。商品コードにはなし |
+| `青い` | 青いノート | 商品名の「青い」 |
+| `note` | 青いノート、赤いノート | `NOTE-001`・`NOTE-002` の `NOTE`（大文字の表示のまま） |
+| `  pEn-001  ` | 黒いペン | `PEN-001` 全体 |
+| `ＮＯＴＥ－００１`、`ｎＯｔＥ－００１` | 青いノート（1件） | 半角で表示された `NOTE-001` 全体。検索欄の値は入力のまま |
+| `　ＰＥＮ－００１　`（前後に全角空白） | 黒いペン（1件） | `PEN-001` 全体 |
+| `ＮＯＴＥ` | 青いノート、赤いノート（2件）。降順選択時は赤いノート、青いノート | 2件の商品コードの `NOTE` |
+| `0` | 全4件 | 各商品コードの `0` を2個ずつ（全体で8個） |
+| `ＮＯＴＥ－９９９`、`ﾉｰﾄ`、`NOTE−001`（U+2212のマイナス記号） | 商品0件と「該当する商品はありません」 | なし |
+| `存在しない商品` | 商品0件と「該当する商品はありません」 | なし |
+| 該当なしの後に入力を全削除 | 全4件に復帰し、該当なしの表示は消える | なし |
 
 キーボードだけでも操作できます。Tabで検索欄に移動して入力し、検索欄でCtrl+A（macOSはCommand+A）→Backspaceで全削除します。
 現行の依存Chromiumでは、「商品名・商品コードで検索」欄にフォーカスがあるときEscで検索語を空にできます。絞り込み中と該当なしのどちらの状態からでも全4件に戻り、件数表示は「全4件中4件を表示」となり、該当なしのメッセージは非表示になります。選択した並び順と検索欄のフォーカスは保持され、そのまま入力して再検索できます。空欄でEscを押しても全件表示、並び順、フォーカスを保持し、続けて検索できます。これは `type="search"` のブラウザー標準動作を使う操作で、検索欄以外からのグローバルショートカットではありません。
 「検索をクリア」ボタンは常時表示され、クリック・タップ・Enter・Spaceで検索を解除します。件数表示も全件に戻ります。キーボードでは検索欄からTabでボタンへ移動でき、クリア後もフォーカスはボタンに残ります。Shift+Tabで検索欄へ戻って再検索できます。
-[trial/public/search.js](trial/public/search.js) は商品データを保持したまま行の表示・非表示と並び順を更新するため、全削除後も選択した順で再検索できます。
-ASCIIの幅以外の変換（半角カナ・全角カナ・ひらがなの相互変換、読み仮名の検索、記号一般の同一視）、複数語検索、曖昧検索、通信、保存済み検索、認証、本番配布は対象外です。半角カナの `ﾉｰﾄ` は `ノート` と一致しません。
+[trial/public/search.js](trial/public/search.js) は読み込み時の商品名・商品コードの文字列を保持し、検索のたびに行の表示・非表示とセル内の `<mark>` を組み直します。並び順の切り替えは行を移動するだけでセルの中身を変えません。そのため、全削除後も選択した順で再検索でき、並べ替えた後も強調が残ります。
+ASCIIの幅以外の変換（半角カナ・全角カナ・ひらがなの相互変換、読み仮名の検索、記号一般の同一視）、複数語検索、曖昧検索、読みによる強調、`<mark>` の独自配色、通信、保存済み検索、認証、本番配布は対象外です。半角カナの `ﾉｰﾄ` は `ノート` と一致しません。
 
 検証は次の共通コマンドで実行します。
 
@@ -142,7 +145,7 @@ bun run check
 
 E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。このポートは空けてください。
 [trial/tests/product-list.spec.js](trial/tests/product-list.spec.js) はIssueの固定期待値を使います。Chromiumのデスクトップ（1280×800）とモバイル（375×812）で、全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、ラベルで特定できる検索欄の表示を検証します。
-[trial/tests/product-search.spec.js](trial/tests/product-search.spec.js) は、同じ2画面幅で上記の入力・結果・順序を検証します。キーボードだけの移動や入力ごとの更新、全削除による復帰と再検索、各状態の件数表示と検索欄のフォーカスも確認します。並び順の切り替え、検索との組み合わせ、同じ読みの相対順、再読み込み時の並び順復元も同じ画面処理で検証します。タッチ環境ではselectをtapして開き、選択の確定はキーボードで行います。これは実機の選択UIへのタップ検証ではありません。デスクトップの標準selectのキー操作は、実ブラウザで補足確認します。
+[trial/tests/product-search.spec.js](trial/tests/product-search.spec.js) は、同じ2画面幅で上記の入力・結果・順序を検証します。キーボードだけの移動や入力ごとの更新、全削除による復帰と再検索、各状態の件数表示と検索欄のフォーカスも確認します。並び順の切り替え、検索との組み合わせ、同じ読みの相対順、再読み込み時の並び順復元も同じ画面処理で検証します。強調表示は、`tbody` 内の `<mark>` の個数と文字列を商品名と `<code>` 内の商品コードに分けて検証します。対象は上記の各入力、検索語の変更と非表示の行、クリア・全削除・Esc・再読み込み後の解除、並び順を切り替えた後の保持です。`page.route` で `<b>&` を含む商品名を差し込み、`<b>` の検索で `b` 要素が生成されないことも確認します。タッチ環境ではselectをtapして開き、選択の確定はキーボードで行います。これは実機の選択UIへのタップ検証ではありません。デスクトップの標準selectのキー操作は、実ブラウザで補足確認します。
 [trial/tests/product-order-persistence.spec.js](trial/tests/product-order-persistence.spec.js) は、両画面幅で3種類の保存・再読み込み・タブ再オープン、検索語の非復元、0件・1件での保存、クリア・全削除、未対応値を検証します。あわせて、Storage API境界の取得・読取・書込例外、タブ間で即時同期しないこと、復元後のキーボード操作（既存のモバイルUIエミュレーションを両画面幅で使用）も検証します。OSの一時ディレクトリに永続プロファイルを作成し、Chromiumプロセスを終了・再起動して同じURLで復元することや、別プロファイルへ引き継がないことも確認します。storageStateの注入を再起動の代用にはしません。保存例外はブラウザー内のAPIに注入するテストであり、ブラウザー設定による実際の保存拒否を検証したとは扱いません。
 実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
 Esc操作は既存のdesktop・mobileプロジェクトで検証します。検索結果あり・該当なし・空欄の各状態と3種類の並び順を組み合わせ、全件復帰、件数、該当なし表示の解除、並び順保持、検索欄のフォーカス、再検索を確認します。mobileはモバイル画面・タッチ設定でのキー入力検証であり、実機のソフトウェアキーボード対応を保証しません。
@@ -178,18 +181,18 @@ SHARED_HARNESS=$(realpath "$(dirname "$IMPLEMENT_SKILL")/../..")
 bun "$SHARED_HARNESS/scripts/capture/capture.ts" trial/capture.spec.js trial/playwright.config.js /absolute/path/to/capture-output
 ```
 
-[trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での全角コード検索（大小文字混在・前後空白を含む）、`ＮＯＴＥ` の2件、`ＮＯＴＥ－９９９` と `ﾉｰﾄ` の0件、Escでの全件復帰を撮影します。全角の入力値が残ることと、商品の表示・件数・並び順を確認できます。その後、検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。共有アダプターは既存の [trial/playwright.config.js](trial/playwright.config.js) のprojects・画面幅・webServerを再利用し、出力先を `CAPTURE_OUTPUT` としてspecへ渡します。PNGとWebMだけをその直下へ保存し、動画contextを閉じて確定します。runnerの設定・レポート・一時生成物もcheckout外へ出力します。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。`trial/capture.config.js` と `trial/package.json` の `capture` は商品側の直接撮影用として保持します。
+[trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での全角コード検索（大小文字混在・前後空白を含む）、`ＮＯＴＥ` の2件、`ＮＯＴＥ－９９９` と `ﾉｰﾄ` の0件、Escでの全件復帰を撮影します。全角の入力値が残ることと、商品の表示・件数・並び順、商品コード内の `<mark>` による強調を画像で確認できます。`<mark>` の個数と文字列は撮影では検証せず、E2Eで検証します。その後、検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。共有アダプターは既存の [trial/playwright.config.js](trial/playwright.config.js) のprojects・画面幅・webServerを再利用し、出力先を `CAPTURE_OUTPUT` としてspecへ渡します。PNGとWebMだけをその直下へ保存し、動画contextを閉じて確定します。runnerの設定・レポート・一時生成物もcheckout外へ出力します。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。`trial/capture.config.js` と `trial/package.json` の `capture` は商品側の直接撮影用として保持します。
 
 ホストが収集する最終媒体の参照先（取得状況は各検証記録を参照）:
 
-| 状態 | デスクトップ | モバイル |
-| --- | --- | --- |
-| 降順を復元した全件表示 | [画像](trial/evidence/generated/product-order-restored-desktop.png) | [画像](trial/evidence/generated/product-order-restored-mobile.png) |
-| 選択→検索→再読み込み→復元 | [動画](trial/evidence/generated/product-order-restore-desktop.webm) | [動画](trial/evidence/generated/product-order-restore-mobile.webm) |
-| 該当なしからEscで全件復帰（降順・検索欄にフォーカス） | [画像](trial/evidence/generated/product-search-escape-cleared-desktop.png) | [画像](trial/evidence/generated/product-search-escape-cleared-mobile.png) |
-| `ＮＯＴＥ－００１` で青いノート1件（入力値を保持） | [画像](trial/evidence/generated/product-search-fullwidth-code-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-code-mobile.png) |
-| `ＮＯＴＥ` で赤いノート、青いノートの2件（降順） | [画像](trial/evidence/generated/product-search-fullwidth-filtered-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-filtered-mobile.png) |
-| `ＮＯＴＥ－９９９` で該当なし | [画像](trial/evidence/generated/product-search-fullwidth-no-results-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-no-results-mobile.png) |
-| 全角検索→検索結果あり・該当なし・空欄からEsc→再検索 | [動画](trial/evidence/generated/product-search-escape-desktop.webm) | [動画](trial/evidence/generated/product-search-escape-mobile.webm) |
+| 状態 | 確認する強調 | デスクトップ | モバイル |
+| --- | --- | --- | --- |
+| 降順を復元した全件表示 | `<mark>` なし | [画像](trial/evidence/generated/product-order-restored-desktop.png) | [画像](trial/evidence/generated/product-order-restored-mobile.png) |
+| 選択→検索→再読み込み→復元 | 検索中は2件の商品コードの `NOTE`、再読み込み後は `<mark>` なし | [動画](trial/evidence/generated/product-order-restore-desktop.webm) | [動画](trial/evidence/generated/product-order-restore-mobile.webm) |
+| 該当なしからEscで全件復帰（降順・検索欄にフォーカス） | `<mark>` なし | [画像](trial/evidence/generated/product-search-escape-cleared-desktop.png) | [画像](trial/evidence/generated/product-search-escape-cleared-mobile.png) |
+| `ＮＯＴＥ－００１` で青いノート1件（入力値を保持） | `NOTE-001` 全体 | [画像](trial/evidence/generated/product-search-fullwidth-code-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-code-mobile.png) |
+| `ＮＯＴＥ` で赤いノート、青いノートの2件（降順） | 2件の商品コードの `NOTE` | [画像](trial/evidence/generated/product-search-fullwidth-filtered-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-filtered-mobile.png) |
+| `ＮＯＴＥ－９９９` で該当なし | `<mark>` なし | [画像](trial/evidence/generated/product-search-fullwidth-no-results-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-no-results-mobile.png) |
+| 全角検索→検索結果あり・該当なし・空欄からEsc→再検索 | 検索中は一致部分、Esc後は `<mark>` なし | [動画](trial/evidence/generated/product-search-escape-desktop.webm) | [動画](trial/evidence/generated/product-search-escape-mobile.webm) |
 
 操作の確認点と過去の撮影条件・結果は[並び順復元の検証記録](trial/evidence/order-persistence.md)と[Esc操作の検証記録](trial/evidence/search-escape.md)を参照してください。再撮影では上記媒体を更新するため、過去の記録のハッシュが更新後の媒体と一致するとは扱いません。該当する変更のPRで、対象commit、ホスト撮影ログ、媒体のSHA-256、検証結果と未確認事項を確認してください。撮影テストの標準出力には対象ファイルと媒体のSHA-256、撮影結果を記録します。撮影の成功だけでは、永続プロファイルによるブラウザー再起動や保存失敗の証拠にはしません。
