@@ -31,6 +31,13 @@ for (const { query, products, screenshot } of [
   { query: "青い", products: [["青いノート", "NOTE-001"]] },
   { query: "note", products: notes },
   { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]] },
+  { query: "ＮＯＴＥ－００１", products: [["青いノート", "NOTE-001"]] },
+  { query: "ｎＯｔＥ－００１", products: [["青いノート", "NOTE-001"]] },
+  { query: "　ＰＥＮ－００１　", products: [["黒いペン", "PEN-001"]] },
+  { query: "ＮＯＴＥ", products: notes },
+  { query: "ＮＯＴＥ－９９９", products: [] },
+  { query: "ﾉｰﾄ", products: [] },
+  { query: "NOTE−001", products: [] },
   { query: "存在しない商品", products: [], screenshot: "no-results" },
 ]) {
   test(`検索語 ${JSON.stringify(query)} で表示対象が切り替わる`, async ({ page }, testInfo) => {
@@ -38,6 +45,7 @@ for (const { query, products, screenshot } of [
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
     await search.fill(query);
     await expectProducts(page, products);
+    await expect(search).toHaveValue(query);
     await expect(search).toBeFocused();
     if (screenshot) {
       await page.screenshot({ path: `trial/artifacts/product-search-${screenshot}-${testInfo.project.name}.png`, fullPage: true });
@@ -75,7 +83,8 @@ for (const operation of ["pointer", "Enter"]) {
     const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
     const order = page.getByLabel("並び順", { exact: true });
     await order.selectOption("descending");
-    await search.fill(operation === "pointer" ? "存在しない商品" : "ノート");
+    await search.fill(operation === "pointer" ? "存在しない商品" : "ＮＯＴＥ");
+    await expect(search).toHaveValue(operation === "pointer" ? "存在しない商品" : "ＮＯＴＥ");
     await expectProducts(page, operation === "pointer" ? [] : [allProducts[1], allProducts[0]]);
     let navigations = 0;
     page.on("framenavigated", () => { navigations += 1; });

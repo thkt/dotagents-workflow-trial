@@ -23,7 +23,7 @@
   "capture": {
     "command": [
       "bun",
-      "{harness}/scripts/capture.ts",
+      "{harness}/scripts/capture/capture.ts",
       "trial/capture.spec.js",
       "trial/playwright.config.js"
     ],
