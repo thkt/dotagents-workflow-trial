@@ -1,0 +1,16 @@
+{
+  "existing": {
+    "stage1": "次の要求を /think で設計し、/issue で GitHub Issue を起票し、/qualify で検分してください。最後の行に Issue URL だけを書いてください。\n\n要求: {request}\n\n(計測上の制約: 既存の Issue や PR を再利用・更新せず、この要求のために新しい Issue を作ること。)",
+    "stage2": "build workflow を issue #{issue} に対して Workflow({name: \"build\", args: {issue: {issue}, repo: \"{repo}\"}}) で起動し、完了通知を待ってください。最後の行に draft PR の URL だけを書いてください。stopped で終わったときは最後の行に stopped:<理由> と書いてください。"
+  },
+  "ported": {
+    "stage1": "/scoping {request}\n\n(計測上の制約: 既存の Issue や PR を再利用・更新せず、この要求のために新しい Issue を作ること。)",
+    "stage2": "/implement #{issue}"
+  },
+  "workflow": {
+    "stage1": "/scoping {request}\n\n(計測上の制約: 既存の Issue や PR を再利用・更新せず、この要求のために新しい Issue を作ること。)",
+    "stage2": "/implement #{issue}"
+  },
+  "_note_workflow": "workflow: ported と同じ prompt。/implement が implement workflow の起動役になった後 (PR #760) の版を測る。前回の ported の値は旧 skill 版",
+  "hang_minutes": 90
+}
