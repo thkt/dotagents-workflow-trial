@@ -90,6 +90,15 @@ bun run start
 
 `http://127.0.0.1:3000` をブラウザーで開きます。終了は Ctrl+C です。
 別のポートを使う場合は `PORT=3001 bun run start` とします。
+複数のGit worktreeで同時に画面を開く場合は、Node.js 24以上を用意し、任意のPortlessプレビューを使えます。
+
+```sh
+bun install --cwd trial --frozen-lockfile --ignore-scripts
+bun run start:worktree
+```
+
+表示されたURLを開きます。linked worktreeには `https://<branch>.dotagents-trial.localhost` のような名前が付き、main checkoutは `https://dotagents-trial.localhost` になります。Portlessがアプリのポートも割り当てます。初回の標準HTTPS起動ではローカルCAの生成・信頼設定と443番ポートの待受に管理者権限を求める場合があります。ホスト設定を変えずに試す場合は、`PORTLESS_HTTPS=0 PORTLESS_PORT=48333 PORTLESS_SYNC_HOSTS=0 bun run start:worktree` とし、表示されたHTTP URLを使います。どちらも終了はCtrl+Cです。通常の `bun run start` とE2E・撮影の専用サーバー設定は別の入口です。
+
 画面は静的な HTML/CSS と検索用JavaScript、配信は Bun です。ビルドや外部サービスは不要です。
 固定データは [trial/public/index.html](trial/public/index.html) の `tbody` にあり、青いノート（NOTE-001）、赤いノート（NOTE-002）、黒いペン（PEN-001）、白いマグ（MUG-001）の順です。
 
