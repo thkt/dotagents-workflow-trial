@@ -33,6 +33,10 @@ const STOPPED_RE = /stopped:\S+/;
 // socket and the sandbox refuses it, which made build's test gates fail on every unit.
 const NESTED_SETTINGS = ["--settings", JSON.stringify({ sandbox: { enabled: false } })];
 const TOOLS = "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,LS,Agent,Skill,Workflow,TodoWrite,WebFetch";
+// A --print session has no AskUserQuestion even when allowed. Tell the model how the relay
+// stands in for it, so a question reaches the human instead of being written down as unagreed.
+const RELAY_NOTE =
+  "\n\n(実行環境: この session では AskUserQuestion を使えません。人の判断が要るときは、選択肢と推奨を文で書いて turn を終えてください。人の返答が次のメッセージで届きます。)";
 
 const sh = (cmd, cmdArgs, cwd) =>
   new Promise((resolve) => {
@@ -61,7 +65,7 @@ const asker = (dir, label) => async (text, k) => {
 // Drive one stage in a single live session. The session stays open so background work
 // (the build or implement workflow, background agents) can notify the model.
 const stage = async (prompt, cwd, want, ask) => {
-  const r = await live({ prompt, cwd, want: new RegExp(want.source + "|" + STOPPED_RE.source), ask, hangMs: arms.hang_minutes * 60000, tools: TOOLS, extraArgs: NESTED_SETTINGS });
+  const r = await live({ prompt: prompt + RELAY_NOTE, cwd, want: new RegExp(want.source + "|" + STOPPED_RE.source), ask, hangMs: arms.hang_minutes * 60000, tools: TOOLS, extraArgs: NESTED_SETTINGS });
   const m = r.match ? r.match.match(want) : null;
   return { rounds: r.turns, session_id: r.session_id, why: r.why, wall_ms: r.wall_ms, human_wait_ms: r.human_wait_ms, match: r.match, id: m?.[1] ?? null, human_decisions: r.human_decisions };
 };
