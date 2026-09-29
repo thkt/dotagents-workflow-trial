@@ -177,3 +177,52 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 強調は表示だけの変更なので、一致箇所は画面上の <mark> 要素で確かめる。
+test("検索語「青い」を入力すると、商品名「青いノート」の行見出しの中に「青い」だけが `<mark>` になり、ほかの表示行のセルに `<mark>` がない", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("青い");
+  await expectProducts(page, [["青いノート", "NOTE-001"]]);
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("rowheader", { name: "青いノート", exact: true }).locator("mark")).toHaveText(["青い"]);
+  await expect(table.getByRole("cell").locator("mark")).toHaveCount(0);
+  await expect(table.getByRole("row").locator("mark")).toHaveCount(1);
+});
+
+test("検索語「0」を入力すると、表示された 4 つの商品コードそれぞれに、「0」1 文字ずつの `<mark>` が 2 つある", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("0");
+  await expectProducts(page, allProducts);
+  const cells = page.getByRole("table", { name: "商品一覧", exact: true }).getByRole("cell");
+  await expect(cells).toHaveCount(4);
+  for (const index of [0, 1, 2, 3]) {
+    await expect(cells.nth(index).locator("mark")).toHaveText(["0", "0"]);
+  }
+});
+
+test("検索語「ｐＥＮ－００１」(全角・大小混在) を入力すると、商品コード「PEN-001」全体が、元の表記のまま `<mark>` になる", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ｐＥＮ－００１");
+  await expectProducts(page, [["黒いペン", "PEN-001"]]);
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("cell").locator("mark")).toHaveText(["PEN-001"]);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveCount(0);
+});
+
+test("検索語を入力した後に、空白のみへ書き換える、または「検索をクリア」を押すと、ページ内の `<mark>` が 0 個になり、全 4 件がセルの元のテキストのまま表示される", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const marks = page.locator("mark");
+
+  await search.fill("note");
+  await expect(marks).not.toHaveCount(0);
+  await search.fill("   ");
+  await expect(marks).toHaveCount(0);
+  await expectProducts(page, allProducts);
+
+  await search.fill("note");
+  await expect(marks).not.toHaveCount(0);
+  await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
+  await expect(marks).toHaveCount(0);
+  await expectProducts(page, allProducts);
+});

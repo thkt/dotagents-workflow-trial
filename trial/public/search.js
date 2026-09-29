@@ -10,6 +10,45 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 正規化後も元と同じ長さのセルだけを対象にし、一致の末尾から重ならないように探す。
+function findMatchRanges(text, query) {
+  const normalized = normalizeSearchText(text);
+  const ranges = [];
+  if (query === "" || normalized.length !== text.length) return ranges;
+
+  let start = normalized.indexOf(query);
+  while (start !== -1) {
+    const end = start + query.length;
+    ranges.push([start, end]);
+    start = normalized.indexOf(query, end);
+  }
+  return ranges;
+}
+
+// textContent は変えず、テキストノードと <mark> だけで組み立て直す。
+function renderHighlight(element, ranges) {
+  const text = element.textContent;
+  const nodes = [];
+  let position = 0;
+
+  for (const [start, end] of ranges) {
+    if (start > position) nodes.push(text.slice(position, start));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(start, end);
+    nodes.push(mark);
+    position = end;
+  }
+  if (position < text.length) nodes.push(text.slice(position));
+  element.replaceChildren(...nodes);
+}
+
+function highlightRow(row, query) {
+  for (const cell of row.cells) {
+    const target = cell.querySelector("code") ?? cell;
+    renderHighlight(target, findMatchRanges(target.textContent, query));
+  }
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -20,6 +59,7 @@ function updateSearch() {
     );
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
+    highlightRow(row, query);
   }
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;

@@ -73,6 +73,9 @@ tbody th { font-weight: 600; }
 
 code { font-family: ui-monospace, monospace; font-size: 16px; }
 
+/* 背景 #ffe08a に #182b3a の文字を重ねる。 */
+mark { background: #ffe08a; color: #182b3a; }
+
 @media (max-width: 480px) {
   main { margin: 32px auto; padding: 0 16px; }
   th, td { padding: 16px 12px; }
