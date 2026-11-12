@@ -28,7 +28,9 @@ const ARM_NAMES = (args.arms ?? "existing,ported").split(",");
 const REPO_URL = "https://github.com/thkt/dotagents-workflow-trial.git";
 const ISSUE_RE = /github\.com\/thkt\/dotagents-workflow-trial\/issues\/(\d+)/;
 const PR_RE = /github\.com\/thkt\/dotagents-workflow-trial\/pull\/(\d+)/;
-const STOPPED_RE = /stopped:\S+/;
+// A reason is a lowercase kebab-case word. \S+ also matched a session quoting the instruction
+// `stopped:<理由>` back in a progress report, which ended the stage while its workflow still ran.
+const STOPPED_RE = /stopped:[a-z][a-z-]*[a-z]/;
 // The nested sessions run without the Bash sandbox: Playwright's web server needs a listening
 // socket and the sandbox refuses it, which made build's test gates fail on every unit.
 const NESTED_SETTINGS = ["--settings", JSON.stringify({ sandbox: { enabled: false } })];
