@@ -50,16 +50,18 @@ test("全角ASCII検索と、検索結果あり・該当なし・空欄からEsc
     await page.getByLabel("商品名・商品コードで検索", { exact: true }).focus();
     await expectEscapeState(page, "", names, codes);
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
-    for (const { query, expectedNames, expectedCodes, state } of [
-      { query: "ＮＯＴＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], state: "code" },
-      { query: "ｎＯｔＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"] },
-      { query: "　ＰＥＮ－００１　", expectedNames: ["黒いペン"], expectedCodes: ["PEN-001"] },
-      { query: "ＮＯＴＥ", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], state: "filtered" },
-      { query: "ＮＯＴＥ－９９９", expectedNames: [], expectedCodes: [], state: "no-results" },
-      { query: "ﾉｰﾄ", expectedNames: [], expectedCodes: [] },
+    for (const { query, expectedNames, expectedCodes, marks, state } of [
+      { query: "ＮＯＴＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], marks: ["NOTE-001"], state: "code" },
+      { query: "ｎＯｔＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], marks: ["NOTE-001"] },
+      { query: "　ＰＥＮ－００１　", expectedNames: ["黒いペン"], expectedCodes: ["PEN-001"], marks: ["PEN-001"] },
+      { query: "ＮＯＴＥ", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], marks: ["NOTE", "NOTE"], state: "filtered" },
+      { query: "ＮＯＴＥ－９９９", expectedNames: [], expectedCodes: [], marks: [], state: "no-results" },
+      { query: "ﾉｰﾄ", expectedNames: [], expectedCodes: [], marks: [] },
     ]) {
       await search.fill(query);
       await expectEscapeState(page, query, expectedNames, expectedCodes);
+      // 撮影する媒体に一致部分の強調が写っていることを確認する。
+      await expect(page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark")).toHaveText(marks);
       if (state) {
         const name = `product-search-fullwidth-${state}-${testInfo.project.name}.png`;
         await page.screenshot({ path: join(output, name), fullPage: true });

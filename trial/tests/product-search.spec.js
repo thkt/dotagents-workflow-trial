@@ -53,6 +53,63 @@ for (const { query, products, screenshot } of [
   });
 }
 
+// 各行の強調の期待値。商品コードは<code>の内側の<mark>だけを数える。
+async function expectHighlights(page, nameMarks, codeMarks) {
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  for (const [index, marks] of nameMarks.entries()) {
+    await expect(table.getByRole("rowheader").nth(index).locator("mark")).toHaveText(marks);
+  }
+  for (const [index, marks] of codeMarks.entries()) {
+    await expect(table.getByRole("cell").nth(index).locator("code > mark")).toHaveText(marks);
+  }
+  await expect(table.locator("mark")).toHaveCount([...nameMarks, ...codeMarks].flat().length);
+}
+
+for (const { query, products, nameMarks, codeMarks } of [
+  { query: "ノート", products: notes, nameMarks: [["ノート"], ["ノート"]], codeMarks: [[], []] },
+  { query: "ＮＯＴＥ", products: notes, nameMarks: [[], []], codeMarks: [["NOTE"], ["NOTE"]] },
+  { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]], nameMarks: [[]], codeMarks: [["PEN-001"]] },
+  { query: "0", products: allProducts, nameMarks: [[], [], [], []], codeMarks: [["0", "0"], ["0", "0"], ["0", "0"], ["0", "0"]] },
+]) {
+  test(`検索語 ${JSON.stringify(query)} の一致部分を表示文字のまま<mark>で強調する`, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    // 表示文字列が変わらないことはexpectProductsのテキスト比較で確認する。
+    await expectProducts(page, products);
+    await expectHighlights(page, nameMarks, codeMarks);
+  });
+}
+
+test("降順で検索語を変えると前の強調を外し、該当なし・全削除・クリア・Escの後は強調を残さない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const marks = page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark");
+  const orderedNotes = [allProducts[1], allProducts[0]];
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await search.fill("ノート");
+  await expectProducts(page, orderedNotes);
+  await expectHighlights(page, [["ノート"], ["ノート"]], [[], []]);
+  await search.fill("ＮＯＴＥ");
+  await expectProducts(page, orderedNotes);
+  await expectHighlights(page, [[], []], [["NOTE"], ["NOTE"]]);
+  await search.fill("存在しない商品");
+  await expectProducts(page, []);
+  await expect(marks).toHaveCount(0);
+
+  for (const clearSearch of [
+    () => search.press("ControlOrMeta+A").then(() => search.press("Backspace")),
+    () => page.getByRole("button", { name: "検索をクリア", exact: true }).click(),
+    () => search.press("Escape"),
+  ]) {
+    await search.fill("note");
+    await expectHighlights(page, [[], []], [["NOTE"], ["NOTE"]]);
+    await clearSearch();
+    await expect(search).toHaveValue("");
+    await expectProducts(page, reversedProducts);
+    await expect(marks).toHaveCount(0);
+  }
+});
+
 test("キーボードだけで検索欄へ移動し、入力ごとの更新と該当なしからの復帰ができる", async ({ page }) => {
   await page.goto("/");
   const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
