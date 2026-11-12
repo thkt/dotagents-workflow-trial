@@ -25,7 +25,13 @@ async function expectEscapeState(page, query, names, codes) {
   await expect(page.getByText("該当する商品はありません", { exact: true })).toBeVisible({ visible: names.length === 0 });
 }
 
-test("全角ASCII検索と、検索結果あり・該当なし・空欄からEscと再検索を撮影する", async ({ browser, baseURL, viewport, isMobile, hasTouch }, testInfo) => {
+// 撮影する画像の強調が説明と一致するよう、一覧内のmarkを文書順に確認する。
+async function expectMarks(page, marks) {
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect.poll(() => table.locator("mark").allTextContents()).toEqual(marks);
+}
+
+test("商品名の強調、全角ASCII検索と、検索結果あり・該当なし・空欄からEscと再検索を撮影する", async ({ browser, baseURL, viewport, isMobile, hasTouch }, testInfo) => {
   const startedAt = new Date().toISOString();
   const sourceFiles = await Promise.all([
     "../README.md", "../package.json", "../bun.lock", "public/index.html", "public/search.js",
@@ -34,7 +40,8 @@ test("全角ASCII検索と、検索結果あり・該当なし・空欄からEsc
   ].map((path) => fingerprint(path, new URL(path, import.meta.url))));
   const screenshotName = `product-search-escape-cleared-${testInfo.project.name}.png`;
   const videoName = `product-search-escape-${testInfo.project.name}.webm`;
-  const mediaNames = [screenshotName, videoName];
+  const highlightName = `product-search-highlight-name-${testInfo.project.name}.png`;
+  const mediaNames = [screenshotName, videoName, highlightName];
   const names = ["白いマグ", "黒いペン", "赤いノート", "青いノート"];
   const codes = ["MUG-001", "PEN-001", "NOTE-002", "NOTE-001"];
   await mkdir(output, { recursive: true });
@@ -50,17 +57,23 @@ test("全角ASCII検索と、検索結果あり・該当なし・空欄からEsc
     await page.getByLabel("商品名・商品コードで検索", { exact: true }).focus();
     await expectEscapeState(page, "", names, codes);
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
-    for (const { query, expectedNames, expectedCodes, state } of [
-      { query: "ＮＯＴＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], state: "code" },
+    await search.fill("ノート");
+    await expectEscapeState(page, "ノート", names.slice(2), codes.slice(2));
+    await expectMarks(page, ["ノート", "ノート"]);
+    await page.screenshot({ path: join(output, highlightName), fullPage: true });
+    await page.waitForTimeout(900); // 動画で商品名の強調を読める間隔。
+    for (const { query, expectedNames, expectedCodes, state, marks } of [
+      { query: "ＮＯＴＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], state: "code", marks: ["NOTE-001"] },
       { query: "ｎＯｔＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"] },
       { query: "　ＰＥＮ－００１　", expectedNames: ["黒いペン"], expectedCodes: ["PEN-001"] },
-      { query: "ＮＯＴＥ", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], state: "filtered" },
-      { query: "ＮＯＴＥ－９９９", expectedNames: [], expectedCodes: [], state: "no-results" },
+      { query: "ＮＯＴＥ", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], state: "filtered", marks: ["NOTE", "NOTE"] },
+      { query: "ＮＯＴＥ－９９９", expectedNames: [], expectedCodes: [], state: "no-results", marks: [] },
       { query: "ﾉｰﾄ", expectedNames: [], expectedCodes: [] },
     ]) {
       await search.fill(query);
       await expectEscapeState(page, query, expectedNames, expectedCodes);
       if (state) {
+        await expectMarks(page, marks);
         const name = `product-search-fullwidth-${state}-${testInfo.project.name}.png`;
         await page.screenshot({ path: join(output, name), fullPage: true });
         mediaNames.push(name);
@@ -80,6 +93,7 @@ test("全角ASCII検索と、検索結果あり・該当なし・空欄からEsc
       await page.keyboard.press("Escape");
       await expectEscapeState(page, "", names, codes);
       if (query === "missing") {
+        await expectMarks(page, []);
         await page.screenshot({ path: join(output, screenshotName), fullPage: true });
       }
       await page.waitForTimeout(900);

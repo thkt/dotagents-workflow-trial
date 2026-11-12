@@ -10,16 +10,47 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 正規化は1文字を1文字へ写すため、正規化後の一致位置を表示文字列の位置として使う。
+function findMatchRanges(text, query) {
+  const ranges = [];
+  if (!query) return ranges;
+  const normalized = normalizeSearchText(text);
+  for (let start = normalized.indexOf(query); start !== -1; start = normalized.indexOf(query, start + query.length)) {
+    ranges.push([start, start + query.length]);
+  }
+  return ranges;
+}
+
+// 検索語をHTMLとして解釈しないよう、文字列とmark要素だけで組み立てる。
+function highlightCell(container, ranges) {
+  const text = container.textContent;
+  const parts = [];
+  let position = 0;
+  for (const [start, end] of ranges) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(start, end);
+    parts.push(text.slice(position, start), mark);
+    position = end;
+  }
+  parts.push(text.slice(position));
+  container.replaceChildren(...parts);
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
 
   for (const row of rows) {
-    const matchesQuery = Array.from(row.cells).some((cell) =>
-      normalizeSearchText(cell.textContent).includes(query),
-    );
+    // 行の表示と強調が食い違わないよう、同じ一致範囲から両方を決める。
+    const cells = Array.from(row.cells, (cell) => {
+      const container = cell.querySelector("code") ?? cell;
+      return { container, ranges: findMatchRanges(container.textContent, query) };
+    });
+    const matchesQuery = !query || cells.some(({ ranges }) => ranges.length > 0);
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
+    // 非表示の行はどのセルも範囲が空のため、古いmarkも外れる。
+    for (const { container, ranges } of cells) highlightCell(container, ranges);
   }
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;

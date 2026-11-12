@@ -24,17 +24,37 @@ async function expectProducts(page, products) {
   }
 }
 
-for (const { query, products, screenshot } of [
+// 表示中の各行の [商品名のmark, 商品コードのmark] を表示順に検証する。
+// 非表示の行を含む一覧全体のmark数も数え、期待しない強調が残っていないことを確かめる。
+async function expectMarks(page, marks) {
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect.poll(() => table.locator("tbody").getByRole("row").evaluateAll((rows) =>
+    rows.map((row) => [
+      Array.from(row.querySelectorAll("th > mark"), (mark) => mark.textContent),
+      Array.from(row.querySelectorAll("td > code > mark"), (mark) => mark.textContent),
+    ]),
+  )).toEqual(marks);
+  await expect(table.locator("mark")).toHaveCount(marks.flat(2).length);
+}
+
+async function expectNoMarks(page) {
+  await expect(page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark")).toHaveCount(0);
+}
+
+// marks は表示行ごとの [商品名のmark, 商品コードのmark]。省略した行はどのセルにも強調がない。
+for (const { query, products, marks = products.map(() => [[], []]), screenshot } of [
   { query: "   ", products: allProducts },
-  { query: "ノート", products: notes, screenshot: "filtered" },
+  { query: "　　", products: allProducts },
+  { query: "ノート", products: notes, marks: [[["ノート"], []], [["ノート"], []]], screenshot: "filtered" },
   { query: "あおいのーと", products: [] },
-  { query: "青い", products: [["青いノート", "NOTE-001"]] },
-  { query: "note", products: notes },
-  { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]] },
-  { query: "ＮＯＴＥ－００１", products: [["青いノート", "NOTE-001"]] },
-  { query: "ｎＯｔＥ－００１", products: [["青いノート", "NOTE-001"]] },
-  { query: "　ＰＥＮ－００１　", products: [["黒いペン", "PEN-001"]] },
-  { query: "ＮＯＴＥ", products: notes },
+  { query: "青い", products: [["青いノート", "NOTE-001"]], marks: [[["青い"], []]] },
+  { query: "note", products: notes, marks: [[[], ["NOTE"]], [[], ["NOTE"]]] },
+  { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]], marks: [[[], ["PEN-001"]]] },
+  { query: "ＮＯＴＥ－００１", products: [["青いノート", "NOTE-001"]], marks: [[[], ["NOTE-001"]]] },
+  { query: "ｎＯｔＥ－００１", products: [["青いノート", "NOTE-001"]], marks: [[[], ["NOTE-001"]]] },
+  { query: "　ＰＥＮ－００１　", products: [["黒いペン", "PEN-001"]], marks: [[[], ["PEN-001"]]] },
+  { query: "ＮＯＴＥ", products: notes, marks: [[[], ["NOTE"]], [[], ["NOTE"]]] },
+  { query: "0", products: allProducts, marks: allProducts.map(() => [[], ["0", "0"]]) },
   { query: "ＮＯＴＥ－９９９", products: [] },
   { query: "ﾉｰﾄ", products: [] },
   { query: "NOTE−001", products: [] },
@@ -45,6 +65,7 @@ for (const { query, products, screenshot } of [
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
     await search.fill(query);
     await expectProducts(page, products);
+    await expectMarks(page, marks);
     await expect(search).toHaveValue(query);
     await expect(search).toBeFocused();
     if (screenshot) {
@@ -64,12 +85,15 @@ test("キーボードだけで検索欄へ移動し、入力ごとの更新と�
   await expectProducts(page, notes);
   await page.keyboard.type("-001");
   await expectProducts(page, [["青いノート", "NOTE-001"]]);
+  await expectMarks(page, [[[], ["NOTE-001"]]]);
   await page.keyboard.type("x");
   await expectProducts(page, []);
+  await expectNoMarks(page);
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.press("Backspace");
   await expect(search).toHaveValue("");
   await expectProducts(page, allProducts);
+  await expectNoMarks(page);
   await page.keyboard.type("mug");
   await expectProducts(page, [["白いマグ", "MUG-001"]]);
   await expect(search).toBeFocused();
@@ -101,6 +125,7 @@ for (const operation of ["pointer", "Enter"]) {
     await expect(search).toHaveValue("");
     await expect(order).toHaveValue("descending");
     await expectProducts(page, reversedProducts);
+    await expectNoMarks(page);
     if (operation === "Enter") {
       await page.keyboard.press("Shift+Tab");
       await page.keyboard.type("mug");
@@ -130,6 +155,7 @@ for (const query of ["note", "missing"]) {
     await page.keyboard.press("Escape");
     await expect(search).toHaveValue("");
     await expectProducts(page, reversedProducts);
+    await expectNoMarks(page);
     await expect(order).toHaveValue("descending");
     await expect(search).toBeFocused();
     // locatorのfill/pressで再フォーカスせず、Esc後の入力先を検証する。
@@ -140,6 +166,18 @@ for (const query of ["note", "missing"]) {
     await expect(search).toBeFocused();
   });
 }
+
+test("検索中に並び順を変えても、表示中の行の強調を保つ", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expectProducts(page, notes);
+  await expectMarks(page, [[["ノート"], []], [["ノート"], []]]);
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expectMarks(page, [[["ノート"], []], [["ノート"], []]]);
+  await expect(search).toHaveValue("ノート");
+});
 
 test("同じ読みの商品は昇順・降順とも元の相対順を保つ", async ({ page }) => {
   // 配信する商品データだけを変更し、実際の画面と並べ替え処理を通す。
