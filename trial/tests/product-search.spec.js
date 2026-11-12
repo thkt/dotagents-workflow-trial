@@ -220,3 +220,39 @@ test("大小文字混在の検索語「pEn」で商品コード内の「PEN」�
   await expect(table.locator("mark")).toHaveCount(1);
   await expect(table.getByRole("row", { name: /黒いペン/ }).locator("code mark")).toHaveText("PEN");
 });
+
+test("「ノート」で強調した後に「検索をクリア」を押すと mark が1つもなくなり全4件が表示される", async ({ page, hasTouch }) => {
+  await page.goto("/");
+  const marks = page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ノート");
+  await expect(marks).toHaveCount(2);
+  const clear = page.getByRole("button", { name: "検索をクリア", exact: true });
+  if (hasTouch) await clear.tap();
+  else await clear.click();
+  await expect(marks).toHaveCount(0);
+  await expectProducts(page, allProducts);
+});
+
+test("「ノート」で強調した後に検索欄で Esc を押すと mark が1つもなくなり全4件が表示される", async ({ page }) => {
+  await page.goto("/");
+  const marks = page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expect(marks).toHaveCount(2);
+  await search.press("Escape");
+  await expect(marks).toHaveCount(0);
+  await expectProducts(page, allProducts);
+});
+
+test("「ノート」で強調中に並び順を降順へ変えると赤いノート・青いノートの順で両方の「ノート」が mark のまま残る", async ({ page }) => {
+  await page.goto("/");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ノート");
+  await expect(table.locator("mark")).toHaveCount(2);
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveText(["ノート", "ノート"]);
+  await expect(table.locator("mark")).toHaveCount(2);
+  await expect(table.getByRole("row", { name: /赤いノート/ }).locator("mark")).toHaveText("ノート");
+  await expect(table.getByRole("row", { name: /青いノート/ }).locator("mark")).toHaveText("ノート");
+});
