@@ -177,3 +177,64 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 強調は表の中の mark 要素だけで判定し、実装の検索処理は参照しない。
+test("検索語「ノート」では該当する商品名の「ノート」部分だけが mark で囲まれ商品コードには mark が入らない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await search.fill("ノート");
+  await expectProducts(page, notes);
+  await expect(table.locator("mark")).toHaveText(["ノート", "ノート"]);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveCount(2);
+  await expect(table.getByRole("cell").locator("mark")).toHaveCount(0);
+});
+
+test("降順選択中に検索語「ＮＯＴＥ」を入力すると並べ替え後の各行の商品コード内で元の表記「NOTE」が mark で囲まれる", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await search.fill("ＮＯＴＥ");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expect(table.getByRole("cell").locator("mark")).toHaveText(["NOTE", "NOTE"]);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveCount(0);
+  const rows = table.getByRole("row");
+  await expect(rows.nth(1).getByRole("cell").locator("mark")).toHaveText("NOTE");
+  await expect(rows.nth(2).getByRole("cell").locator("mark")).toHaveText("NOTE");
+});
+
+test("初期表示と空白のみの検索語では mark が1つも表示されない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await expectProducts(page, allProducts);
+  await expect(page.locator("mark")).toHaveCount(0);
+  // 比較対象として、検索語を入れると mark が出ることを先に確かめる。
+  await search.fill("ノート");
+  await expect(page.locator("mark")).toHaveCount(2);
+  await search.fill("   ");
+  await expectProducts(page, allProducts);
+  await expect(page.locator("mark")).toHaveCount(0);
+});
+
+test("検索語「note」の後に検索をクリア・Esc・全削除のいずれかで検索語を空にすると mark が1つも残らない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  for (const operation of ["クリア", "Esc", "全削除"]) {
+    await search.focus();
+    await page.keyboard.type("note");
+    await expectProducts(page, notes);
+    await expect(page.locator("mark")).toHaveText(["NOTE", "NOTE"]);
+    if (operation === "クリア") {
+      await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
+    } else if (operation === "Esc") {
+      await page.keyboard.press("Escape");
+    } else {
+      await page.keyboard.press("ControlOrMeta+A");
+      await page.keyboard.press("Backspace");
+    }
+    await expect(search).toHaveValue("");
+    await expectProducts(page, allProducts);
+    await expect(page.locator("mark")).toHaveCount(0);
+  }
+});

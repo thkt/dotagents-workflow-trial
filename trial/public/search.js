@@ -10,6 +10,34 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 一致位置は normalizeSearchText(text) 上で求める。正規化で文字列長が変わると
+// 元の文字列の位置に対応づけられないため、その場合は強調せず元の文字列を表示する。
+function highlightRanges(text, query) {
+  if (query === "") return [];
+  const normalized = normalizeSearchText(text);
+  if (normalized.length !== text.length) return [];
+  const ranges = [];
+  for (let start = normalized.indexOf(query); start !== -1; start = normalized.indexOf(query, start + query.length)) {
+    ranges.push([start, start + query.length]);
+  }
+  return ranges;
+}
+
+function renderHighlight(element, query) {
+  const text = element.textContent;
+  const nodes = [];
+  let position = 0;
+  for (const [start, end] of highlightRanges(text, query)) {
+    if (start > position) nodes.push(document.createTextNode(text.slice(position, start)));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(start, end);
+    nodes.push(mark);
+    position = end;
+  }
+  nodes.push(document.createTextNode(text.slice(position)));
+  element.replaceChildren(...nodes);
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -19,6 +47,8 @@ function updateSearch() {
       normalizeSearchText(cell.textContent).includes(query),
     );
     row.hidden = !matchesQuery;
+    renderHighlight(row.querySelector("th"), query);
+    renderHighlight(row.querySelector("td code"), query);
     if (matchesQuery) matches += 1;
   }
 
