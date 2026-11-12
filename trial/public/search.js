@@ -42,6 +42,7 @@ function updateSearch() {
     );
     row.hidden = !matchesQuery;
     highlightText(row.querySelector("th"), query);
+    highlightText(row.querySelector("code"), query);
     if (matchesQuery) matches += 1;
   }
 

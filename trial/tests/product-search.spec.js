@@ -200,3 +200,23 @@ test("初期表示と空白のみの検索語では一覧に mark が1つもな�
   await expect(marks).toHaveCount(0);
   await expectProducts(page, allProducts);
 });
+
+test("全角の検索語「ＮＯＴＥ－００１」で商品コード NOTE-001 が半角表記のまま mark で強調される", async ({ page }) => {
+  await page.goto("/");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ＮＯＴＥ－００１");
+  await expectProducts(page, [["青いノート", "NOTE-001"]]);
+  await expect(table.locator("code mark")).toHaveText(["NOTE-001"]);
+  await expect(table.locator("mark")).toHaveCount(1);
+  await expect(table.getByRole("row", { name: /青いノート/ }).locator("code mark")).toHaveText("NOTE-001");
+});
+
+test("大小文字混在の検索語「pEn」で商品コード内の「PEN」が元の大文字のまま mark で強調される", async ({ page }) => {
+  await page.goto("/");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("pEn");
+  await expectProducts(page, [["黒いペン", "PEN-001"]]);
+  await expect(table.locator("code mark")).toHaveText(["PEN"]);
+  await expect(table.locator("mark")).toHaveCount(1);
+  await expect(table.getByRole("row", { name: /黒いペン/ }).locator("code mark")).toHaveText("PEN");
+});
