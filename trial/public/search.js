@@ -10,6 +10,28 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// query は正規化済みの検索語。一致位置は絞り込みと同じ正規化後の文字列で求め、元のテキストを切り出す。
+function highlightText(element, query) {
+  const text = element.textContent;
+  const normalized = normalizeSearchText(text);
+  // 空の検索語は indexOf("") が毎回一致する。正規化で長さが変わると元のテキスト上の位置を求められない。
+  if (query === "" || normalized.length !== text.length) {
+    element.replaceChildren(document.createTextNode(text));
+    return;
+  }
+
+  const nodes = [];
+  let start = 0;
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    nodes.push(document.createTextNode(text.slice(start, index)), mark);
+    start = index + query.length;
+  }
+  nodes.push(document.createTextNode(text.slice(start)));
+  element.replaceChildren(...nodes);
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -19,6 +41,7 @@ function updateSearch() {
       normalizeSearchText(cell.textContent).includes(query),
     );
     row.hidden = !matchesQuery;
+    highlightText(row.querySelector("th"), query);
     if (matchesQuery) matches += 1;
   }
 

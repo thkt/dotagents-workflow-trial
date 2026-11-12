@@ -177,3 +177,26 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+test("検索語「ノート」で表示中の商品名内の「ノート」だけが mark で強調される", async ({ page }) => {
+  await page.goto("/");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ノート");
+  await expectProducts(page, notes);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveText(["ノート", "ノート"]);
+  await expect(table.locator("mark")).toHaveCount(2);
+  await expect(table.getByRole("row", { name: /青いノート/ }).locator("mark")).toHaveText("ノート");
+});
+
+test("初期表示と空白のみの検索語では一覧に mark が1つもない", async ({ page }) => {
+  await page.goto("/");
+  const marks = page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await expect(marks).toHaveCount(0);
+  // 強調が有効な状態を先に作り、空白のみの検索語で外れることを確かめる。
+  await search.fill("ノート");
+  await expect(marks).toHaveCount(2);
+  await search.fill("   ");
+  await expect(marks).toHaveCount(0);
+  await expectProducts(page, allProducts);
+});
