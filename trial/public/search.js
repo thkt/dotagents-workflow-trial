@@ -10,14 +10,41 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 検索語に一致した部分を、表示中の文字列のまま重ならない範囲ごとに<mark>で囲み、一致があったかを返す。
+// 空の検索語は全行を表示するため、一致ありとして返す。
+// normalizeSearchTextは1文字を1文字へ変換するため、変換後の一致位置を表示文字列の位置に使う。
+function highlightMatches(element, query) {
+  const text = element.textContent;
+  if (!query) {
+    // 以前の<mark>を取り除く。空の検索語はindexOfが進まないため、ここで終える。
+    element.textContent = text;
+    return true;
+  }
+
+  const normalized = normalizeSearchText(text);
+  const parts = [];
+  let start = 0;
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    parts.push(text.slice(start, index), mark);
+    start = index + query.length;
+  }
+  parts.push(text.slice(start));
+  element.replaceChildren(...parts.filter((part) => part !== ""));
+  return start > 0;
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
 
   for (const row of rows) {
-    const matchesQuery = Array.from(row.cells).some((cell) =>
-      normalizeSearchText(cell.textContent).includes(query),
-    );
+    let matchesQuery = false;
+    for (const cell of row.cells) {
+      // 商品コードの<mark>は<code>の内側に置き、表構造を保つ。前の検索語の<mark>を消すため、全セルを走査する。
+      if (highlightMatches(cell.querySelector("code") ?? cell, query)) matchesQuery = true;
+    }
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
   }
