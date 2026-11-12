@@ -24,6 +24,21 @@ async function expectProducts(page, products) {
   }
 }
 
+// 強調のない行のマークアップ。非表示の行も含めて表の行順で比較し、残った強調も検出する。
+const plainRows = [
+  ["青いノート", "<code>NOTE-001</code>"],
+  ["赤いノート", "<code>NOTE-002</code>"],
+  ["黒いペン", "<code>PEN-001</code>"],
+  ["白いマグ", "<code>MUG-001</code>"],
+];
+
+async function expectRowMarkup(page, expected) {
+  const rows = page.getByRole("table", { name: "商品一覧", exact: true }).locator("tbody tr");
+  await expect.poll(() => rows.evaluateAll((elements) =>
+    elements.map((row) => [row.cells[0].innerHTML, row.cells[1].innerHTML]),
+  )).toEqual(expected);
+}
+
 for (const { query, products, screenshot } of [
   { query: "   ", products: allProducts },
   { query: "ノート", products: notes, screenshot: "filtered" },
@@ -75,6 +90,84 @@ test("キーボードだけで検索欄へ移動し、入力ごとの更新と�
   await expect(search).toBeFocused();
 });
 
+test("一致した部分を商品名・商品コード内の<mark>で強調し、検索語を変えると前の強調を残さない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expectProducts(page, notes);
+  await expectRowMarkup(page, [
+    ["青い<mark>ノート</mark>", "<code>NOTE-001</code>"],
+    ["赤い<mark>ノート</mark>", "<code>NOTE-002</code>"],
+    plainRows[2],
+    plainRows[3],
+  ]);
+  const highlightedCodes = [
+    ["青いノート", "<code><mark>NOTE</mark>-001</code>"],
+    ["赤いノート", "<code><mark>NOTE</mark>-002</code>"],
+    plainRows[2],
+    plainRows[3],
+  ];
+  await search.fill("note");
+  await expectProducts(page, notes);
+  await expectRowMarkup(page, highlightedCodes);
+  await search.fill("0");
+  await expectProducts(page, allProducts);
+  await expectRowMarkup(page, [
+    ["青いノート", "<code>NOTE-<mark>0</mark><mark>0</mark>1</code>"],
+    ["赤いノート", "<code>NOTE-<mark>0</mark><mark>0</mark>2</code>"],
+    ["黒いペン", "<code>PEN-<mark>0</mark><mark>0</mark>1</code>"],
+    ["白いマグ", "<code>MUG-<mark>0</mark><mark>0</mark>1</code>"],
+  ]);
+  await search.fill("ＮＯＴＥ");
+  await expectProducts(page, notes);
+  await expectRowMarkup(page, highlightedCodes);
+  await search.fill("   ");
+  await expectProducts(page, allProducts);
+  await expectRowMarkup(page, plainRows);
+});
+
+test("強調したまま並び順を変えても強調が残り、全削除で強調がなくなる", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("note");
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expectRowMarkup(page, [
+    plainRows[3],
+    plainRows[2],
+    ["赤いノート", "<code><mark>NOTE</mark>-002</code>"],
+    ["青いノート", "<code><mark>NOTE</mark>-001</code>"],
+  ]);
+  await search.press("ControlOrMeta+A");
+  await search.press("Backspace");
+  await expect(search).toHaveValue("");
+  await expectProducts(page, reversedProducts);
+  await expectRowMarkup(page, [plainRows[3], plainRows[2], plainRows[1], plainRows[0]]);
+});
+
+test("HTMLや正規表現の記号を含む検索語を文字列として比較し、マークアップを挿入しない", async ({ page }) => {
+  // 固定データには < > & がないため、文字としての <b> を含む商品名を配信して挿入の誤りを検出する。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace("青いノート", "&lt;b&gt;青い&lt;/b&gt;ノート") });
+  });
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const plainSuppliedRows = [["&lt;b&gt;青い&lt;/b&gt;ノート", "<code>NOTE-001</code>"], ...plainRows.slice(1)];
+  // 各記号の前に1件・強調ありの状態へ戻し、記号の入力で検索処理が例外停止すると前の状態が残って失敗するようにする。
+  for (const query of [".", "("]) {
+    await search.fill("<b>");
+    await expectProducts(page, [["<b>青い</b>ノート", "NOTE-001"]]);
+    await expectRowMarkup(page, [
+      ["<mark>&lt;b&gt;</mark>青い&lt;/b&gt;ノート", "<code>NOTE-001</code>"],
+      ...plainRows.slice(1),
+    ]);
+    await search.fill(query);
+    await expectProducts(page, []);
+    await expectRowMarkup(page, plainSuppliedRows);
+  }
+});
+
 // Click/tap and keyboard activation share the button's click handler.
 for (const operation of ["pointer", "Enter"]) {
   test(`${operation}で検索をクリアし、並び順とフォーカスを保って再検索できる`, async ({ page, hasTouch }) => {
@@ -86,6 +179,7 @@ for (const operation of ["pointer", "Enter"]) {
     await search.fill(operation === "pointer" ? "存在しない商品" : "ＮＯＴＥ");
     await expect(search).toHaveValue(operation === "pointer" ? "存在しない商品" : "ＮＯＴＥ");
     await expectProducts(page, operation === "pointer" ? [] : [allProducts[1], allProducts[0]]);
+    await expect(page.locator("mark")).toHaveCount(operation === "pointer" ? 0 : 2);
     let navigations = 0;
     page.on("framenavigated", () => { navigations += 1; });
     await expect(clear).toBeInViewport();
@@ -101,6 +195,7 @@ for (const operation of ["pointer", "Enter"]) {
     await expect(search).toHaveValue("");
     await expect(order).toHaveValue("descending");
     await expectProducts(page, reversedProducts);
+    await expect(page.locator("mark")).toHaveCount(0);
     if (operation === "Enter") {
       await page.keyboard.press("Shift+Tab");
       await page.keyboard.type("mug");
@@ -125,11 +220,13 @@ for (const query of ["note", "missing"]) {
     await page.keyboard.type(query);
     await expect(search).toHaveValue(query);
     await expectProducts(page, query === "note" ? orderedNotes : []);
+    await expect(page.locator("mark")).toHaveCount(query === "note" ? 2 : 0);
     await expect(search).toBeFocused();
 
     await page.keyboard.press("Escape");
     await expect(search).toHaveValue("");
     await expectProducts(page, reversedProducts);
+    await expect(page.locator("mark")).toHaveCount(0);
     await expect(order).toHaveValue("descending");
     await expect(search).toBeFocused();
     // locatorのfill/pressで再フォーカスせず、Esc後の入力先を検証する。
