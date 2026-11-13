@@ -10,6 +10,30 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 強調する商品名・商品コードの要素。tdを書き換えるとcode要素が消えるため、codeの中だけを対象にする。
+const highlightTargets = rows.flatMap((row) => [row.cells[0], row.querySelector("td code")]);
+
+function highlightMatches(element, query) {
+  // 前回の<mark>を外し、表示文字列だけに戻す。
+  const text = element.textContent;
+  element.textContent = text;
+  if (query === "") return;
+
+  // 正規化は1文字を1文字へ変換するため、正規化後の一致位置で元の表示文字を切り出せる。
+  const normalized = normalizeSearchText(text);
+  const fragment = document.createDocumentFragment();
+  let start = 0;
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    fragment.append(text.slice(start, index), mark);
+    start = index + query.length;
+  }
+  if (start === 0) return;
+  fragment.append(text.slice(start));
+  element.replaceChildren(fragment);
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -21,6 +45,7 @@ function updateSearch() {
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
   }
+  for (const element of highlightTargets) highlightMatches(element, query);
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
   noResults.hidden = matches > 0;
