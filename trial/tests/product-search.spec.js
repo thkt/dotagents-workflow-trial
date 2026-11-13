@@ -177,3 +177,97 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 強調の期待値は要求の例から固定し、実装の正規化処理を使わない。
+async function expectMarks(page, { names, codes }) {
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveText(names);
+  await expect(table.locator("td > code > mark")).toHaveText(codes);
+  await expect(table.locator("mark")).toHaveCount(names.length + codes.length);
+}
+
+for (const { query, products, marks } of [
+  { query: "ノート", products: notes, marks: { names: ["ノート", "ノート"], codes: [] } },
+  { query: "note", products: notes, marks: { names: [], codes: ["NOTE", "NOTE"] } },
+  { query: "ＮＯＴＥ", products: notes, marks: { names: [], codes: ["NOTE", "NOTE"] } },
+  { query: "  pEn-001  ", products: [["黒いペン", "PEN-001"]], marks: { names: [], codes: ["PEN-001"] } },
+  // 隣り合う一致も1つにまとめず、セル内の一致ごとに囲む。
+  { query: "0", products: allProducts, marks: { names: [], codes: Array(8).fill("0") } },
+]) {
+  test(`検索語 ${JSON.stringify(query)} の一致部分を、名前・セル構造を保って強調する`, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    await expectProducts(page, products);
+    await expectMarks(page, marks);
+    // toHaveTextはアクセシブルネームとcode要素の有無を確かめないため、別に確認する。
+    const table = page.getByRole("table", { name: "商品一覧", exact: true });
+    for (const [name, code] of products) {
+      await expect(table.getByRole("rowheader", { name, exact: true })).toBeVisible();
+      await expect(table.getByRole("cell", { name: code, exact: true }).locator("code")).toHaveText(code);
+    }
+  });
+}
+
+for (const operation of ["空白だけの入力", "クリア", "Esc", "全削除"]) {
+  test(`強調中に${operation}で検索語を空にすると、一覧に強調が残らない`, async ({ page }) => {
+    await page.goto("/");
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    await search.fill("note");
+    await expectMarks(page, { names: [], codes: ["NOTE", "NOTE"] });
+    if (operation === "空白だけの入力") {
+      await search.fill("   ");
+    } else if (operation === "クリア") {
+      await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
+    } else if (operation === "Esc") {
+      await page.keyboard.press("Escape");
+    } else {
+      await page.keyboard.press("ControlOrMeta+A");
+      await page.keyboard.press("Backspace");
+    }
+    await expect(search).toHaveValue(operation === "空白だけの入力" ? "   " : "");
+    await expectProducts(page, allProducts);
+    await expect(page.getByRole("table", { name: "商品一覧", exact: true }).locator("mark")).toHaveCount(0);
+  });
+}
+
+test("並び順を変更した後も、現在の検索語の強調を保つ", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("note");
+  await order.selectOption("descending");
+  await expectProducts(page, [allProducts[1], allProducts[0]]);
+  await expectMarks(page, { names: [], codes: ["NOTE", "NOTE"] });
+  await order.selectOption("original");
+  await expectProducts(page, notes);
+  await expectMarks(page, { names: [], codes: ["NOTE", "NOTE"] });
+});
+
+test("HTMLに見える検索語は要素を生成せず、文字列のまま強調する", async ({ page }) => {
+  // 入力データだけを差し替え、`<b>`を文字として含む商品名を配信する。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(">黒いペン<", ">&lt;b&gt;黒いペン<") });
+  });
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("<b>");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("rowheader")).toHaveText(["<b>黒いペン"]);
+  await expect(table.getByRole("cell")).toHaveText(["PEN-001"]);
+  await expectMarks(page, { names: ["<b>"], codes: [] });
+  await expect(table.locator("b")).toHaveCount(0);
+});
+
+test("正規化で長さが変わる文字を含むセルは、絞り込みに含めて強調しない", async ({ page }) => {
+  // U+0130はtoLowerCaseで2文字になり、後ろの一致位置が元の文字列とずれる。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace("<code>NOTE-002</code>", "<code>İNOTE-002</code>") });
+  });
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("note");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("rowheader")).toHaveText(["青いノート", "赤いノート"]);
+  await expect(table.getByRole("cell")).toHaveText(["NOTE-001", "İNOTE-002"]);
+  await expect(page.getByText("全4件中2件を表示", { exact: true })).toBeVisible();
+  await expectMarks(page, { names: [], codes: ["NOTE"] });
+});
