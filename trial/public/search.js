@@ -10,16 +10,50 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 商品コードは <code> の中を強調し、<code> 要素自体は残す。
+// セルの文字列は読み込み後に変わらないため、正規化は読み込み時に一度だけ行う。
+const highlightTargets = rows.map((row) =>
+  Array.from(row.cells, (cell) => {
+    const element = cell.querySelector("code") ?? cell;
+    const text = element.textContent;
+    const normalized = normalizeSearchText(text);
+    // 正規化で長さが変わる文字列では一致位置を元の文字列へ対応させられないため、強調しない（null）。
+    return { element, text, normalized: normalized.length === text.length ? normalized : null };
+  }),
+);
+
+function highlightMatches({ element, text, normalized }, query) {
+  if (!query || normalized === null) {
+    element.replaceChildren(text);
+    return;
+  }
+  const parts = [];
+  let start = 0;
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    if (index > start) parts.push(text.slice(start, index));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    parts.push(mark);
+    start = index + query.length;
+  }
+  if (start < text.length) parts.push(text.slice(start));
+  element.replaceChildren(...parts);
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
 
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
     const matchesQuery = Array.from(row.cells).some((cell) =>
       normalizeSearchText(cell.textContent).includes(query),
     );
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
+    // 非表示の行には強調を残さない。
+    for (const target of highlightTargets[rowIndex]) {
+      highlightMatches(target, matchesQuery ? query : "");
+    }
   }
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
