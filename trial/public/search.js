@@ -10,6 +10,32 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 一致部分を囲む対象。th直下と td > code の中に <mark> を入れ、セルの構造を保つ。
+const highlightTargets = rows.flatMap((row) =>
+  [row.querySelector("th"), row.querySelector("td code")].filter(Boolean),
+);
+
+function highlightMatches(element, query) {
+  const text = element.textContent;
+  const normalized = normalizeSearchText(text);
+  // 正規化で文字数が変わる文字（例：İ）では元の文字の位置を特定できないため強調しない。
+  if (!query || normalized.length !== text.length) {
+    element.replaceChildren(text);
+    return;
+  }
+  const parts = [];
+  let start = 0;
+  // 一致の末尾から次を探し、重ならない一致を隣り合っても別々の <mark> にする。
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    parts.push(text.slice(start, index), mark);
+    start = index + query.length;
+  }
+  parts.push(text.slice(start));
+  element.replaceChildren(...parts.filter((part) => part !== ""));
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -21,6 +47,7 @@ function updateSearch() {
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
   }
+  for (const element of highlightTargets) highlightMatches(element, query);
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
   noResults.hidden = matches > 0;

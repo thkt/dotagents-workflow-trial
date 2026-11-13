@@ -161,3 +161,30 @@ test("並び順の選択から再読み込み・復元までを撮影する", as
     )),
   }));
 });
+
+// 表示だけを変える機能のため、動画は撮らず画像1枚にする。
+test("ノートで検索し、商品名の一致部分の強調を撮影する", async ({ page, browser, baseURL, viewport, isMobile, hasTouch }, testInfo) => {
+  const startedAt = new Date().toISOString();
+  const sourceFiles = await Promise.all([
+    "../README.md", "../package.json", "../bun.lock", "public/index.html", "public/search.js",
+    "public/styles.css", "server.js", "playwright.config.js", "capture.spec.js",
+    "tests/product-search.spec.js",
+  ].map((path) => fingerprint(path, new URL(path, import.meta.url))));
+  const screenshotName = `product-search-highlight-${testInfo.project.name}.png`;
+  await mkdir(output, { recursive: true });
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("ノート");
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("rowheader")).toHaveText(["青いノート", "赤いノート"]);
+  await expect(table.getByRole("rowheader").locator("mark")).toHaveText(["ノート", "ノート"]);
+  await expect(table.locator("mark")).toHaveCount(2);
+  await expect(page.getByText("全4件中2件を表示", { exact: true })).toBeVisible();
+  await page.screenshot({ path: join(output, screenshotName), fullPage: true });
+  console.log("CAPTURE_PROVENANCE " + JSON.stringify({
+    startedAt, completedAt: new Date().toISOString(), result: "passed",
+    project: testInfo.project.name, baseURL, viewport, isMobile, hasTouch,
+    browserVersion: browser.version(), output,
+    sourcePathBase: "trial/", sourceFiles,
+    media: [await fingerprint(`trial/evidence/generated/${screenshotName}`, join(output, screenshotName))],
+  }));
+});
