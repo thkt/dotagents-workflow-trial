@@ -10,14 +10,37 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 一致部分を <mark> で囲み直し、一致の有無を返す。絞り込みもこの結果を使い、判定を1つにする。
+function highlightMatches(element, query) {
+  const text = element.textContent;
+  if (!query) {
+    element.replaceChildren(text);
+    return true;
+  }
+  // 正規化は1文字を1文字に変換するため、正規化後の一致位置を元の文字の位置に使える。
+  const normalized = normalizeSearchText(text);
+  const nodes = [];
+  let start = 0;
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    nodes.push(text.slice(start, index), mark);
+    start = index + query.length;
+  }
+  nodes.push(text.slice(start));
+  element.replaceChildren(...nodes.filter((node) => node !== ""));
+  return start > 0;
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
 
   for (const row of rows) {
-    const matchesQuery = Array.from(row.cells).some((cell) =>
-      normalizeSearchText(cell.textContent).includes(query),
-    );
+    // 非表示になる行も前の検索語の <mark> を消すため、両方のセルに適用してから判定する。
+    const nameMatches = highlightMatches(row.querySelector("th"), query);
+    const codeMatches = highlightMatches(row.querySelector("td > code"), query);
+    const matchesQuery = nameMatches || codeMatches;
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
   }
