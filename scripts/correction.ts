@@ -46,7 +46,10 @@ function killGroup(pid: number | undefined) {
   try {
     process.kill(-pid, 'SIGKILL');
   } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'ESRCH')) {
+    // A group whose members have all exited is gone (ESRCH). Until the last of them is reaped,
+    // macOS answers EPERM instead, and the group is just as finished.
+    const code = error instanceof Error && 'code' in error ? error.code : undefined;
+    if (code !== 'ESRCH' && code !== 'EPERM') {
       throw error;
     }
   }
