@@ -177,3 +177,72 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 強調の期待値は要求から書く。各行は [商品名, 商品コード, 商品名内の<mark>, 商品コード内の<mark>]。
+async function expectHighlights(page, rows) {
+  await expectProducts(page, rows.map(([name, code]) => [name, code]));
+  const table = page.getByRole("table", { name: "商品一覧", exact: true });
+  await expect(table.getByRole("cell").locator("code")).toHaveText(rows.map(([, code]) => code));
+  // 非表示の行も数え、前回の検索語の強調が残っていないことを確かめる。
+  await expect(table.locator("mark")).toHaveCount(rows.flatMap(([, , nameMarks, codeMarks]) => [...nameMarks, ...codeMarks]).length);
+  for (const [index, [, , nameMarks, codeMarks]] of rows.entries()) {
+    await expectMarkTexts(table.getByRole("rowheader").nth(index).locator("mark"), nameMarks);
+    await expectMarkTexts(table.getByRole("cell").nth(index).locator("code mark"), codeMarks);
+  }
+}
+
+// 配列で比べ、一致ごとに別の <mark> であること（隣り合う一致もまとめない）を確かめる。
+async function expectMarkTexts(marks, texts) {
+  if (texts.length === 0) await expect(marks).toHaveCount(0);
+  else await expect(marks).toHaveText(texts);
+}
+
+const noteCodeMarks = [[...allProducts[0], [], ["NOTE"]], [...allProducts[1], [], ["NOTE"]]];
+
+for (const { query, rows } of [
+  { query: "ノート", rows: [[...allProducts[0], ["ノート"], []], [...allProducts[1], ["ノート"], []]] },
+  { query: "ＮＯＴＥ", rows: noteCodeMarks },
+  { query: "note", rows: noteCodeMarks },
+  { query: "0", rows: allProducts.map((product) => [...product, [], ["0", "0"]]) },
+]) {
+  test(`検索語 ${JSON.stringify(query)} の一致部分を商品名・商品コード内の元の文字で強調する`, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    await expectHighlights(page, rows);
+  });
+}
+
+test("検索語を変えると前回の強調を外し、今回の一致だけを強調する", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("ノート");
+  await expectHighlights(page, [[...allProducts[0], ["ノート"], []], [...allProducts[1], ["ノート"], []]]);
+  await search.fill("青い");
+  await expectHighlights(page, [[...allProducts[0], ["青い"], []]]);
+});
+
+test("全削除・検索をクリア・Esc・空白のみの入力の後は強調が残らない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  const unmarked = allProducts.map((product) => [...product, [], []]);
+  await expectHighlights(page, unmarked);
+  for (const clear of [
+    () => page.keyboard.press("ControlOrMeta+A").then(() => page.keyboard.press("Backspace")),
+    () => page.getByRole("button", { name: "検索をクリア", exact: true }).click(),
+    () => page.keyboard.press("Escape"),
+    () => search.fill("   "),
+  ]) {
+    await search.fill("ノート");
+    await expectHighlights(page, [[...allProducts[0], ["ノート"], []], [...allProducts[1], ["ノート"], []]]);
+    await clear();
+    await expectHighlights(page, unmarked);
+  }
+});
+
+test("強調中に並び順を変えても、同じ商品の同じ文字の強調を保つ", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("0");
+  await expectHighlights(page, allProducts.map((product) => [...product, [], ["0", "0"]]));
+  await page.getByLabel("並び順", { exact: true }).selectOption("descending");
+  await expectHighlights(page, reversedProducts.map((product) => [...product, [], ["0", "0"]]));
+});
