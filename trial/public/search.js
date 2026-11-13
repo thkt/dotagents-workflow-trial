@@ -10,6 +10,25 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 正規化は1文字を1文字に変換するため、正規化後の一致位置を表示中の元の文字に使う。
+// 検索語はHTMLとして挿入せず、テキストノードと<mark>要素で組み立てる。
+function highlightMatches(element, query) {
+  const text = element.textContent;
+  const normalized = normalizeSearchText(text);
+  const parts = [];
+  let start = 0;
+  // 空の検索語では強調しない（indexOf("")は常に一致する）。
+  for (let index = query ? normalized.indexOf(query) : -1; index !== -1; index = normalized.indexOf(query, start)) {
+    if (index > start) parts.push(text.slice(start, index));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    parts.push(mark);
+    start = index + query.length;
+  }
+  if (start < text.length) parts.push(text.slice(start));
+  element.replaceChildren(...parts);
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -20,6 +39,9 @@ function updateSearch() {
     );
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
+    // 非表示の行も組み直し、前の検索語の<mark>を残さない。
+    highlightMatches(row.querySelector("th"), query);
+    highlightMatches(row.querySelector("td > code"), query);
   }
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
