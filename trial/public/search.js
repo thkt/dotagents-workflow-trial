@@ -10,14 +10,38 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 一致した表示文字を<mark>で囲み直し、一致の有無を返す。空の検索語は全件に一致する。
+// 正規化は1文字を1文字へ変換するため、位置は表示文字と対応する。
+function highlightMatches(element, query) {
+  const text = element.textContent;
+  if (!query) {
+    element.textContent = text;
+    return true;
+  }
+  const normalized = normalizeSearchText(text);
+  const fragment = document.createDocumentFragment();
+  let start = 0;
+  for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    fragment.append(text.slice(start, index), mark);
+    start = index + query.length;
+  }
+  fragment.append(text.slice(start));
+  element.replaceChildren(fragment);
+  return start > 0;
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
 
   for (const row of rows) {
-    const matchesQuery = Array.from(row.cells).some((cell) =>
-      normalizeSearchText(cell.textContent).includes(query),
+    // someで途中終了させず全セルを処理し、非表示行にも前の検索語の<mark>を残さない。
+    const cellMatches = Array.from(row.cells, (cell) =>
+      highlightMatches(cell.querySelector("code") ?? cell, query),
     );
+    const matchesQuery = cellMatches.includes(true);
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
   }

@@ -177,3 +177,112 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 非表示行を含む全行の商品名と商品コード内のHTMLを、画面の行順で比べる。<mark>の位置と囲む表示文字を確かめる。
+async function expectHighlights(page, products) {
+  const rows = page.locator("tbody tr");
+  await expect.poll(() => rows.evaluateAll((elements) => elements.map((row) => [
+    row.querySelector("th").innerHTML,
+    row.querySelector("td > code").innerHTML,
+  ]))).toEqual(products);
+  const markCount = products.flat().join("").split("<mark>").length - 1;
+  await expect(page.locator("mark")).toHaveCount(markCount);
+}
+
+const zeroMarked = [
+  ["青いノート", "NOTE-<mark>0</mark><mark>0</mark>1"],
+  ["赤いノート", "NOTE-<mark>0</mark><mark>0</mark>2"],
+  ["黒いペン", "PEN-<mark>0</mark><mark>0</mark>1"],
+  ["白いマグ", "MUG-<mark>0</mark><mark>0</mark>1"],
+];
+const noteCodeMarked = [
+  ["青いノート", "<mark>NOTE</mark>-001"],
+  ["赤いノート", "<mark>NOTE</mark>-002"],
+  allProducts[2],
+  allProducts[3],
+];
+
+for (const { query, highlights } of [
+  { query: "ノート", highlights: [["青い<mark>ノート</mark>", "NOTE-001"], ["赤い<mark>ノート</mark>", "NOTE-002"], allProducts[2], allProducts[3]] },
+  { query: "ＮＯＴＥ", highlights: noteCodeMarked },
+  { query: "　ＰＥＮ－００１　", highlights: [allProducts[0], allProducts[1], ["黒いペン", "<mark>PEN-001</mark>"], allProducts[3]] },
+]) {
+  test(`検索語 ${JSON.stringify(query)} の一致部分を商品名・商品コード内の<mark>で囲む`, async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill(query);
+    await expectHighlights(page, highlights);
+  });
+}
+
+for (const { path, emptySearch } of [
+  { path: "空白のみの入力", emptySearch: (page, search) => search.fill("   ") },
+  { path: "全削除", emptySearch: async (page) => {
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Backspace");
+  } },
+  { path: "検索をクリアボタン", emptySearch: (page) => page.getByRole("button", { name: "検索をクリア", exact: true }).click() },
+  { path: "Esc", emptySearch: (page) => page.keyboard.press("Escape") },
+  { path: "再読み込み", emptySearch: (page) => page.reload() },
+]) {
+  test(`${path}で検索語を空にすると<mark>が残らない`, async ({ page }) => {
+    await page.goto("/");
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    await search.focus();
+    await page.keyboard.type("note");
+    await expectHighlights(page, noteCodeMarked);
+    await emptySearch(page, search);
+    await expectProducts(page, allProducts);
+    await expectHighlights(page, allProducts);
+  });
+}
+
+test("該当なしにした時点で非表示行の<mark>を消し、クリア後も残さない", async ({ page }) => {
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.focus();
+  await page.keyboard.type("note");
+  await expectHighlights(page, noteCodeMarked);
+  await page.keyboard.type("x");
+  await expectProducts(page, []);
+  await expectHighlights(page, allProducts);
+  await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
+  await expectProducts(page, allProducts);
+  await expectHighlights(page, allProducts);
+});
+
+test("検索語があるまま並び順を切り替えても、同じ商品の同じ部分を<mark>で囲む", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await page.getByLabel("商品名・商品コードで検索", { exact: true }).fill("0");
+  await expectHighlights(page, zeroMarked);
+  await order.selectOption("descending");
+  await expectHighlights(page, zeroMarked.toReversed());
+  await order.selectOption("ascending");
+  await expectHighlights(page, zeroMarked);
+  await order.selectOption("original");
+  await expectHighlights(page, zeroMarked);
+});
+
+test("商品データの全角英数字も変換前の文字のまま囲み、重なる一致は囲まない", async ({ page }) => {
+  // 配信する商品コードだけを全角を含む値へ差し替え、実際の画面処理を通す。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace("<code>NOTE-002</code>", "<code>ＮＯＴＥ-000</code>") });
+  });
+  await page.goto("/");
+  const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+  await search.fill("note-0");
+  await expectHighlights(page, [
+    ["青いノート", "<mark>NOTE-0</mark>01"],
+    ["赤いノート", "<mark>ＮＯＴＥ-0</mark>00"],
+    allProducts[2],
+    allProducts[3],
+  ]);
+  await search.fill("00");
+  await expectHighlights(page, [
+    ["青いノート", "NOTE-<mark>00</mark>1"],
+    ["赤いノート", "ＮＯＴＥ-<mark>00</mark>0"],
+    ["黒いペン", "PEN-<mark>00</mark>1"],
+    ["白いマグ", "MUG-<mark>00</mark>1"],
+  ]);
+});
