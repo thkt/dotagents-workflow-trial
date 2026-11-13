@@ -50,18 +50,21 @@ test("全角ASCII検索と、検索結果あり・該当なし・空欄からEsc
     await page.getByLabel("商品名・商品コードで検索", { exact: true }).focus();
     await expectEscapeState(page, "", names, codes);
     const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
-    for (const { query, expectedNames, expectedCodes, state } of [
-      { query: "ＮＯＴＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], state: "code" },
+    for (const { query, expectedNames, expectedCodes, marks, media } of [
+      { query: "ＮＯＴＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"], media: "product-search-fullwidth-code" },
       { query: "ｎＯｔＥ－００１", expectedNames: ["青いノート"], expectedCodes: ["NOTE-001"] },
       { query: "　ＰＥＮ－００１　", expectedNames: ["黒いペン"], expectedCodes: ["PEN-001"] },
-      { query: "ＮＯＴＥ", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], state: "filtered" },
-      { query: "ＮＯＴＥ－９９９", expectedNames: [], expectedCodes: [], state: "no-results" },
+      { query: "ＮＯＴＥ", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], media: "product-search-fullwidth-filtered" },
+      // 降順のまま、商品名の一致部分を<mark>で強調した状態を撮影する。
+      { query: "ノート", expectedNames: ["赤いノート", "青いノート"], expectedCodes: ["NOTE-002", "NOTE-001"], marks: ["ノート", "ノート"], media: "product-search-highlight" },
+      { query: "ＮＯＴＥ－９９９", expectedNames: [], expectedCodes: [], media: "product-search-fullwidth-no-results" },
       { query: "ﾉｰﾄ", expectedNames: [], expectedCodes: [] },
     ]) {
       await search.fill(query);
       await expectEscapeState(page, query, expectedNames, expectedCodes);
-      if (state) {
-        const name = `product-search-fullwidth-${state}-${testInfo.project.name}.png`;
+      if (marks) await expect(page.locator("tbody mark")).toHaveText(marks);
+      if (media) {
+        const name = `${media}-${testInfo.project.name}.png`;
         await page.screenshot({ path: join(output, name), fullPage: true });
         mediaNames.push(name);
       }

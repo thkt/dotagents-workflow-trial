@@ -10,6 +10,31 @@ function normalizeSearchText(value) {
   ).toLowerCase();
 }
 
+// 商品コードは<code>の構造を保つため、その内側を強調する。
+function highlightTarget(cell) {
+  return cell.querySelector("code") ?? cell;
+}
+
+// 一致範囲を元の文字のまま<mark>で囲む。文字列はテキストノードとして扱い、HTMLとして解釈しない。
+function highlightMatches(element, query) {
+  const text = element.textContent;
+  const normalized = normalizeSearchText(text);
+  const nodes = [];
+  let start = 0;
+  // 正規化で文字数が変わるセルは一致位置を元の文字へ対応づけられないため、強調しない。
+  if (query && normalized.length === text.length) {
+    for (let index = normalized.indexOf(query); index !== -1; index = normalized.indexOf(query, start)) {
+      nodes.push(text.slice(start, index));
+      const mark = document.createElement("mark");
+      mark.textContent = text.slice(index, index + query.length);
+      nodes.push(mark);
+      start = index + query.length;
+    }
+  }
+  nodes.push(text.slice(start));
+  element.replaceChildren(...nodes.filter((node) => node !== ""));
+}
+
 function updateSearch() {
   const query = normalizeSearchText(search.value.trim());
   let matches = 0;
@@ -20,6 +45,9 @@ function updateSearch() {
     );
     row.hidden = !matchesQuery;
     if (matchesQuery) matches += 1;
+    for (const cell of row.cells) {
+      highlightMatches(highlightTarget(cell), matchesQuery ? query : "");
+    }
   }
 
   resultCount.textContent = `全${rows.length}件中${matches}件を表示`;
