@@ -1,0 +1,190 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "existing",
+    "n": 1,
+    "issue": {
+      "number": 159,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": true,
+      "has_non_goals": false,
+      "length": 3826
+    },
+    "pr": {
+      "number": 161,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 93,
+      "deletions": 2,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "reasons": [
+        "trial/public/search.js の updateSearch は、各行で renderHighlight を row.querySelector(\"th\")（商品名）と row.querySelector(\"td code\")（商品コード）に適用する。highlightRanges は normalizeSearchText を通した文字列で、検索語の出現位置を重ならないようにすべて求める。renderHighlight はその範囲の元の表記を <mark> の textContent に入れ、ほかの部分は text node として replaceChildren で置き換える。index.html の構造は <th scope=row>商品名</th><td><code>コード</code></td> で、この選択対象と一致している。追加した e2e では、「ノート」で rowheader 内の mark が2つ、cell 内が0、「ＮＯＴＥ」で cell 内の mark が NOTE×2 であることを確認している。",
+        "検索語は search.value.trim() のあと正規化され、空文字になると highlightRanges が [] を返す。renderHighlight は元のテキストを text node 1つにして replaceChildren するため、既存の <mark> は消える。この処理は入力のたびに全行で実行されるので、空にしたときに mark は残らない。e2e では、初期表示、空白のみ、検索をクリア、Esc、全削除のいずれの後も page.locator(\"mark\") が0件であることを確認している。",
+        "ローカルで bun scripts/test.ts playwright trial/playwright.config.js（desktop/mobile）を実行し、67 passed。product-list、product-search、product-order-persistence の既存テストも含まれる。対象は HEAD 56cddb4 で、PR の headRefOid と一致する。sandbox 内では Chromium の起動が mach port の拒否で失敗したため、sandbox の外で実行した。CI の結果は確認していない。",
+        "product-search.spec.js に4件の新しいテストがあり、desktop と mobile の両方で通った。toHaveText と toHaveCount で <mark> の数と中身を確かめている。確認内容は、商品名だけの強調、商品コードだけの強調、全角入力でも元の表記 NOTE が強調されること、降順に並べ替えた後の各行の強調、空にしたときの消去。",
+        "README で変更された行は「## セットアップと検証」（81行目以降）にある、検索仕様の段落（96行目付近）。「## 提供する機能」（73〜79行目）は変更されておらず、強調表示の説明はこの節に加わっていない。"
+      ],
+      "scope_creep": [
+        "README「セットアップと検証」の e2e 説明段落（product-search.spec.js の検証範囲）に、強調表示テストの説明を追記している（受け入れ条件は『提供する機能』への追記だけ）",
+        "正規化で文字列長が変わる場合は強調しないフォールバックを実装し、README にも仕様として記載している（受け入れ条件に無い挙動の規定）"
+      ],
+      "cost_usd": 0.8321754000000001
+    }
+  },
+  {
+    "task": "T1-highlight",
+    "arm": "existing",
+    "n": 2,
+    "issue": {
+      "number": 162,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": true,
+      "has_non_goals": false,
+      "length": 5363
+    },
+    "pr": {
+      "number": 164,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 106,
+      "deletions": 3,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "reasons": [
+        "search.js の updateSearch が各行の th（商品名）と code（商品コード）に highlightText を適用する。この関数は正規化後の文字列で indexOf を使って一致位置を求め、その範囲の元テキストを document.createElement('mark') で包む。index.html の行構造（<th scope=row> と <td><code>）は、この 2 つのセレクタに一致する。e2e では「ノート」で th 内の mark=['ノート','ノート']、「ＮＯＴＥ－００１」で code mark='NOTE-001'、「pEn」で code mark='PEN' を確認しており、desktop と mobile の両方で通過した。",
+        "highlightText は query==='' のとき replaceChildren(textNode) で mark を除去する。updateSearch は trim 後に正規化した値を渡すため、空白のみの入力でも mark が外れる。e2e で次を確認した：初期表示、空白のみの入力、「検索をクリア」（click/tap）、Esc。どの場合も、強調を一度出したあとに mark が 0 件になる。",
+        "ローカル HEAD を PR の head（222c32a）に合わせ、product-search / product-list / product-order-persistence の 3 spec を desktop と mobile で実行した。結果は 73 passed。PR の CI（checks / verify）も SUCCESS。Chromium は sandbox の Mach port 制限で起動できなかったため、sandbox の外で実行した。",
+        "product-search.spec.js に強調表示の e2e が 7 件追加された。確認内容は mark の文字列と件数、元の表記の保持、空入力・クリア・Esc での mark の除去、並び替え後の mark の保持。",
+        "README の変更箇所は 96・115・145 行で、すべて『## セットアップと検証』（81 行〜）の中にある。『## 提供する機能』（73〜80 行）には差分がなく、強調表示の説明は加わっていない。"
+      ],
+      "scope_creep": [
+        "README『セットアップと検証』の search.js の説明に、内部の実装方針を追記した（innerHTML を使わずに組み立てる、正規化で文字数が変わるテキストは強調しない）",
+        "README の product-search.spec.js の説明に、強調表示テストの検証内容を追記した"
+      ],
+      "cost_usd": 0.5560178
+    }
+  },
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 1,
+    "issue": {
+      "number": 160,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 3815
+    },
+    "pr": null,
+    "rubric": null
+  },
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 3,
+    "issue": {
+      "number": 165,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 4811
+    },
+    "pr": {
+      "number": 166,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/capture.spec.js",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/evidence/generated/product-search-highlight-name-desktop.png",
+        "trial/evidence/generated/product-search-highlight-name-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 127,
+      "deletions": 40,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "reasons": [
+        "trial/public/search.js の findMatchRanges が正規化後の文字列で一致位置をすべて求め、highlightCell が createElement(\"mark\") と textContent でセルを組み直す。商品名は th を直接、商品コードは td > code を対象にする（index.html のマークアップと一致）。product-search.spec.js の expectMarks は th > mark と td > code > mark の文字列を検索語ごとに検証している。",
+        "検索語が空のとき findMatchRanges は空配列を返し、highlightCell が全セルを mark なしのテキストに置き換える。テストでは、空白のみの入力（'   ' と '　　'）の後、全削除の後、クリア（pointer・Enter）の後、Esc の後に mark が 0 個であること（toHaveCount(0)）を検証している。",
+        "PR は product-list.spec.js と product-order-persistence.spec.js を変更していない。表示文字列（textContent）は変わらないため、既存のテキスト検証には影響しない。product-search.spec.js の既存アサーションも残っている。CI の checks ジョブは bun run check（test:e2e を含む）を実行し、PR head で SUCCESS になっている。ローカルでは再実行していない。",
+        "product-search.spec.js で強調表示を確認している。検索語テーブルに marks の列を追加し、'0'（1セル内の複数一致）と '　　' の行を加えた。あわせて、並び替え後も強調が残ることを確かめる新規テスト『検索中に並び順を変えても、表示中の行の強調を保つ』と、キーボード操作・クリア・Esc 後の mark 検証を追加している。",
+        "README の『## 提供する機能』セクション（73〜80行目）は PR の前後で変わっていない。強調表示の説明は、その次の『## セットアップと検証』セクションの検索説明段落と入力例の表に追加されている。"
+      ],
+      "scope_creep": [
+        "trial/capture.spec.js に撮影用の expectMarks と、商品名の強調の撮影（product-search-highlight-name-*.png）を追加",
+        "強調と関係しない撮影媒体の再生成（product-order-restore-desktop/mobile.webm）",
+        "trial/evidence/generated/ の既存媒体の更新（product-search-escape-*.webm、product-search-fullwidth-code/filtered-*.png）と新規画像2枚の追加",
+        "README の検証範囲（product-search.spec.js の説明）、レビュー用キャプチャの説明と媒体一覧の表の書き換え"
+      ],
+      "cost_usd": 0.6726314
+    }
+  }
+]

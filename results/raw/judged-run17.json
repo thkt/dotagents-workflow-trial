@@ -1,0 +1,64 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 17,
+    "issue": {
+      "number": 173,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 4508
+    },
+    "pr": {
+      "number": 174,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 106,
+      "deletions": 26,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "search.js の highlightMatches が、正規化後の一致位置に合わせて表示文字列を <mark> で囲む（textContent で設定するため HTML として解釈しない）。商品コードは cell.querySelector(\"code\") ?? cell により <code> の内側を対象にし、商品名は行見出しセル内で囲む。全セルを走査するので前回の <mark> も残らない。",
+        "クエリが空のとき、element.textContent = text で子要素を文字列に置き換えて <mark> を除去する。trim 後に判定するため、空白だけの入力も同じ扱いになる。テストでは空白のみ・検索をクリア・全削除・Esc の後に expectHighlights(page) で table 内の mark が 0 件であることを確認している。",
+        "変更されたテストファイルは product-search.spec.js だけで、product-list と product-order-persistence の spec は変わっていない。セルの textContent は保たれるため、既存の文字列比較は影響を受けない。CI の ci.yml は bun run check（test:e2e を含む）を実行し、PR #174 の checks / verify はどちらも pass。ただしローカルでの再実行と CI ログ内の件数確認は、サンドボックスの制限で行えていない。",
+        "product-search.spec.js に expectHighlights が追加された。rowheader 内の mark と code > mark の文字列、および mark の総数を検証する。対象は、既存の入力表への marks 期待値（ノート/note/pEn-001/ＮＯＴＥ/0）、クリア・Esc の各テストへの追記、新規テスト 2 件（検索語の変更・並び順の変更・全削除、および HTML・正規表現の記号）。",
+        "README の『## 提供する機能』の段落に『検索語に一致した部分は商品名・商品コードの中で `<mark>` により強調表示します』が追加された。同じ節の検索説明と入力例の表にも、<mark> で囲む部分の説明と列が加わった。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ 配下のバイナリ 8 件（product-order-restore-*.webm、product-search-escape-*.webm、product-search-fullwidth-*.png）の再生成。いずれも要求に含まれない",
+        "README の検証説明（product-search.spec.js の記述）の拡張。受け入れ条件 5 は『提供する機能』節だけを求めている",
+        "HTML・正規表現の記号の扱い（`<b>` や `(.)` を文字どおりに一致させるテストと README の記述）。受け入れ条件には無い追加の仕様"
+      ],
+      "cost_usd": 0.5267062
+    }
+  }
+]

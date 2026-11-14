@@ -20,7 +20,7 @@ node report.mjs
 - 出力が `hang_minutes`（90 分）届かなければ打ち切る。
 - `report.mjs` の wall は、人の返答を待った時間を引いて数える。
 - nested session は sandbox を切って走る。Playwright の web server が listen socket を使い、sandbox がそれを拒むため。
-- 結果は `runs/`（git 管理外）に出る。残したい結果は `results/` に置く。
+- 結果は `runs/`（git 管理外）に出る。残したい結果は `results/` に置く。`results/raw/` には、T1 を含むこれまでの run の結果（`results-*.json`）と判定（`judged-*.json`）がそのまま入っている。
 - `--stage1only 1` を付けると、stage1（要求 → Issue）だけを走らせる。`/scoping` の変更だけを測るときに使う。
 - `drive.sh <task> <arm> <最後の run 番号> [stage1only]` は、`run.mjs` を走らせながら stage1 の質問に定型の返答を返す。
 

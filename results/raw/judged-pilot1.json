@@ -1,0 +1,71 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "existing",
+    "n": 1,
+    "issue": {
+      "number": 159,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": true,
+      "has_non_goals": false,
+      "length": 3826
+    },
+    "pr": {
+      "number": 161,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 93,
+      "deletions": 2,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "reasons": [
+        "search.js の updateSearch() は各行で renderHighlight を呼び、対象は商品名セル（th）と商品コードセル（td code）の2つ。normalizeSearchText 済みの文字列で一致位置を求め、その範囲だけを <mark> に包む。e2e で次を確認した：「ノート」は rowheader の mark が2つで cell には0、「ＮＯＴＥ」は cell 内で元の表記「NOTE」が mark になる。例外として、正規化で文字列長が変わるセルは強調されないが、今の4商品には該当しない",
+        "query が空文字のとき highlightRanges は [] を返す。renderHighlight はそのまま全子ノードを1つのテキストノードに置き換えるため、既存の mark が消える。追加 e2e で次を確認した：初期表示、空白のみ、検索をクリア、Esc、全削除の後、mark の数は0",
+        "PR の head（56cddb4）で bun run test:e2e をローカル実行した。desktop と mobile で 67 passed、失敗0。product-list / product-search / product-order-persistence の既存テストをすべて含む",
+        "product-search.spec.js に強調表示の e2e が4件加わった：商品名だけの強調、降順＋全角入力でのコードの強調と行ごとの確認、初期表示と空白のみ、クリア・Esc・全削除。どれも locator('mark') の個数と文字列で判定しており、desktop と mobile の両方で通った",
+        "強調表示の説明は README の『セットアップと検証』節（81行目以降）の検索説明の段落に加わった。『提供する機能』節（73〜79行）には変更がない"
+      ],
+      "scope_creep": [
+        "README『セットアップと検証』の e2e 説明段落（product-search.spec.js の検証範囲）に強調表示テストの説明を追記",
+        "README に正規化の前後で文字列長が変わる場合の強調省略など実装詳細の仕様記述を追加（要求は『提供する機能』への説明追加のみ）"
+      ],
+      "cost_usd": 0.38934880000000005
+    }
+  },
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 1,
+    "issue": {
+      "number": 160,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 3815
+    },
+    "pr": null,
+    "rubric": null
+  }
+]

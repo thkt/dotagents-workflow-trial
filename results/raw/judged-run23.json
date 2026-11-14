@@ -1,0 +1,67 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 23,
+    "issue": {
+      "number": 193,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 4949
+    },
+    "pr": {
+      "number": 194,
+      "is_draft": false,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/capture.spec.js",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/evidence/generated/product-search-highlight-desktop.png",
+        "trial/evidence/generated/product-search-highlight-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search-highlight.spec.js"
+      ],
+      "additions": 172,
+      "deletions": 4,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が対象とする要素は、商品名セル（row.cells[0]）と商品コードセル内の code 要素（td code）の 2 つだけです。正規化後の文字列で indexOf を使って重ならない一致を探し、元の表示文字を切り出して createElement('mark') で包み、replaceChildren で差し替えます。updateSearch の絞り込みの後に、全行の対象要素に対して呼ばれます。product-search-highlight.spec.js は、`ノート`・`ＮＯＴＥ`・`note`・`0` の各検索で、rowheader 内と td code 内の mark の文字列を検証しています。",
+        "highlightMatches は、毎回 element.textContent = text で前回の mark を外します。query が '' のとき（trim 後の空白のみを含む）は mark を付けずに return します。テスト『全削除・検索をクリア・Esc・空白のみの入力で強調が残らない』は、4 つの操作それぞれの後に、一覧全体の mark が 0 個（allUnmarked）であることを確認しています。読み込み直後に 0 個であることも、各テストの冒頭で確認しています。",
+        "この PR は既存の product-search / product-list / product-order-persistence の spec を変更していません。差分のある tests ファイルは新規の highlight spec 1 件だけです。強調は textContent を変えないため、既存 spec の toHaveText は影響を受けません。既存 spec には innerHTML や子ノードの構造に依存する検証もありません。CI の .github/workflows/ci.yml は `bun run check` を実行し、その中に test:e2e が含まれます。PR head の checks / verify はどちらも SUCCESS です。",
+        "新規ファイル trial/tests/product-search-highlight.spec.js を追加しています。検索語ごとの mark の位置と個数、隣り合う一致が別々の mark になること、検索語を変えたときの付け替え、クリア系の操作、並び順を変えた後の強調、HTML に似た文字列を HTML として解釈しないことを、要求から書いたリテラルの期待値で検証しています。playwright の testDir 配下にあるため、check で実行されます。",
+        "README.md の『## 提供する機能』（73 行目）の直下に、検索中に一致部分を `<mark>` で囲んで強調するという説明の段落が加わっています。"
+      ],
+      "scope_creep": [
+        "trial/capture.spec.js に、`ノート` の強調を撮影するテストを新規追加している（受け入れ条件に撮影の要求はない）",
+        "trial/evidence/generated/ の既存の媒体 8 件（webm 4 本、全角検索の png 4 枚）を再生成で置き換え、highlight の png 2 枚を新規追加している",
+        "README の『提供する機能』以外も変更している。セットアップの検索説明の段落追加、『入力欄の文字や商品の名前・コード・元データは書き換えません』の文言変更、test:e2e の表、spec の説明、レビュー用キャプチャの説明と媒体表"
+      ],
+      "cost_usd": 0.8072775999999999
+    }
+  }
+]

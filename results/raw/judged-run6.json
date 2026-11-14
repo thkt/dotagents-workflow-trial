@@ -1,0 +1,63 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 6,
+    "issue": {
+      "number": 169,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 4068
+    },
+    "pr": {
+      "number": 170,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 130,
+      "deletions": 12,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が、商品名セル（th）と商品コードセルの code 要素の中で一致部分を createElement(\"mark\") で包む。一致の判定は検索と同じ normalizeSearchText を使い、mark に入れる文字列は表示中の文字列から slice で取る。innerHTML は使わない。例外として、正規化で文字列の長さが変わるセルは強調しない（現行の固定4商品には該当しない）。",
+        "query が空のとき highlightMatches はループに入らず、replaceChildren で各セルをプレーンテキストに戻す。非表示の行もすべて作り直す。新しい e2e では空白だけの入力・クリアボタン・全選択+Backspace・Esc の4経路で、page.locator(\"mark\") の個数が 0 になることを検証している。",
+        "既存の spec ファイルは書き換えず、product-search.spec.js の末尾に追加しただけ。product-list と product-order-persistence の spec は変更していない。強調は code 要素を残したまま mark を入れるだけなので、セルの textContent とアクセシブルな名前は変わらず、toHaveText などで比較する既存のアサーションに影響しないと判断した。さらに PR の CI チェック（checks / verify）は pass。ただし CI ログの閲覧が権限で拒否されたため、e2e が個別に全件 pass したことはログで確認できていない。",
+        "product-search.spec.js に新しいテストが加わった。内容は `ノート`・`note`・`ＮＯＴＥ`・`0` での mark の文字列と個数、商品名と商品コードのどちらを囲むか、アクセシブルな名前が変わらないこと、`<`・`.`・`(` を HTML や正規表現として解釈しないこと、強調の解除、検索語を変えたときの更新、並び替え後も強調が残ること、`<b>` を含む商品名を配信データに注入したときに要素が入らないこと。",
+        "README の `## 提供する機能`（73行目）の直下、77行目に強調表示の説明段落が加わった。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ の撮影媒体8件（webm 4件、png 4件）を再生成して差し替えている",
+        "README の『提供する機能』以外も更新している。検索仕様の段落、search.js の説明、product-search.spec.js の検証内容の説明、e2e が出力する画像の説明と表、レビュー用キャプチャの説明と表が対象。どれも強調表示に伴う記述の同期だが、要求には含まれていない"
+      ],
+      "cost_usd": 0.7612177999999999
+    }
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "host",
+    "n": 3,
+    "issue": {
+      "number": 183,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 3679
+    },
+    "pr": {
+      "number": 184,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-cleared-desktop.png",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 148,
+      "deletions": 13,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が、正規化後の文字列で indexOf を使って重ならない一致を順に探し、正規化前の表示文字の同じ範囲を textContent で <mark> に入れます。updateSearch は行の全セルについて呼び、商品名は th、商品コードは td 内の <code> に適用します（cell.querySelector(\"code\") ?? cell）。index.html の tbody は th と td > code だけで構成されています。product-search.spec.js の expectHighlights は th と td > code の innerHTML を、要求から書いた期待文字列と比べます（例: 青い<mark>ノート</mark>、<mark>NOTE</mark>-001、NOTE-<mark>0</mark><mark>0</mark>1）。",
+        "検索語を trim して正規化した結果が空のとき、highlightMatches は element.textContent = text を再代入して子の <mark> を除きます。some による途中終了をやめて全行・全セルを処理するため、非表示行の <mark> も消えます。テストは空白のみ・全削除・クリアボタン・Esc・再読み込みの 5 経路と、notex で該当なしにした後のクリアについて、expectHighlights(page, allProducts) と page.locator(\"mark\") の個数 0 を確認しています。",
+        "product-list.spec.js と product-order-persistence.spec.js は diff に含まれず変更がありません。product-search.spec.js は追加だけで、既存テストと expectProducts は変わっていません。<mark> は textContent を変えないため、既存のテキスト比較に影響しません。CI の checks ジョブは bun run check を実行し、その中に test:e2e が含まれます。このジョブは PR の head で SUCCESS です。個別のテスト結果ログは sandbox のネットワーク制限で取得できず、ジョブの結論で判定しました。",
+        "product-search.spec.js に強調表示のテストを 9 種類追加しています。内訳は検索語 3 種、空にする 5 経路、notex からのクリア、並び順 3 種での保持、page.route で商品コードを全角に差し替えた場合の変換前文字の囲みと重なる一致です。いずれも innerHTML と <mark> の個数を比べます。",
+        "README の『## 提供する機能』の冒頭段落に「検索語に一致した部分は、商品名・商品コードの中で強調表示します。」が加わっています。同じ節に <mark> の詳細な挙動を説明する段落も追加されています。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ 配下の撮影媒体 9 件（webm 4 件、png 5 件）の再撮影・差し替え",
+        "README の撮影媒体表（trial/artifacts と trial/evidence/generated の両方）の各行の説明に、強調の有無を追記",
+        "README の capture.spec.js 説明段落に「商品コード内の一致部分の強調を確認できます」を追記",
+        "README の product-search.spec.js 検証範囲の段落に、強調テストの説明を追記",
+        "README の search.js の役割説明の書き換え",
+        "一致判定の対象を td のセル全体の文字から td 内の <code> の文字へ変更。固定データでは結果が同じになります"
+      ],
+      "cost_usd": 0.5916054000000001
+    }
+  }
+]

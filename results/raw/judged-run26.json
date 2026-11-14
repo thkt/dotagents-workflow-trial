@@ -1,0 +1,63 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 26,
+    "issue": {
+      "number": 199,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 3984
+    },
+    "pr": {
+      "number": 200,
+      "is_draft": false,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 138,
+      "deletions": 6,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "search.js: updateSearch が各行の全セルについて、td なら内側の code、それ以外ならセル自身を対象にする。findMatches で正規化済み文字列の一致範囲を求め、highlight が document.createElement(\"mark\") とテキストノードで中身を組み直す。product-search.spec.js の expectMarks は rowheader 内の mark と td > code > mark の文字列・件数を照合する（ノート / note / ＮＯＴＥ / '  pEn-001  ' / 0）。正規化で長さが変わるセル（İ）は意図的に強調しない例外として実装・テストされている。",
+        "search.js: query が空なら全セルで target.replaceChildren(text) を呼び、mark を除去する。空白だけ・クリア・Esc・全削除の 4 操作それぞれで、表内の mark が toHaveCount(0) になることを新テストが確認している。",
+        "product-list.spec.js と product-order-persistence.spec.js は diff で変更されていない。product-search.spec.js は末尾への追記だけで、既存テストは変更されていない。CI の checks ジョブは bun run check を実行し、check には test:e2e が含まれる。PR #200 ではこのジョブが pass している。ただし実行ログは sandbox のネットワーク制限で取得できず、ローカルでの再実行もしていない。",
+        "product-search.spec.js に強調表示の e2e が追加されている。内容は、5 種類の検索語での mark の文字列と位置、空にする 4 操作での mark 0 件、並び順変更後の強調維持、<b> が要素化されないこと、İ を含むセルの非強調である。",
+        "README の『## 提供する機能』（73 行目の見出し）直下に、<mark> による強調表示の説明段落が追加されている。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ の webm 4 件と png 4 件のバイナリが再生成されている。強調表示の要求に含まれない既存キャプチャ（並び順の復元、Esc、全角検索）の差し替えである",
+        "README の『提供する機能』以外にも追記がある。『セットアップと検証』の検索仕様の段落、search.js の説明、product-search.spec.js のテスト内容の説明の 3 か所で、要求は『提供する機能』への説明追加だけである"
+      ],
+      "cost_usd": 0.4715738
+    }
+  }
+]

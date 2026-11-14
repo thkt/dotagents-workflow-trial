@@ -1,0 +1,65 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "host",
+    "n": 2,
+    "issue": {
+      "number": 181,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 4873
+    },
+    "pr": {
+      "number": 182,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-cleared-desktop.png",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 86,
+      "deletions": 7,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が、行ごとに th（商品名）と td > code（商品コード）へ適用される。正規化後の文字列で一致位置を探し、元の文字を slice して <mark> に入れる。重ならない一致はすべて囲む。index.html の構造（<th scope=\"row\">名前</th><td><code>コード</code></td>）と合っている。新しいテストで note / ＮＯＴＥ / ノート / 青い / 0 の場合に、該当セル内の mark の文字が期待どおりであることを確認している。",
+        "query が空のとき（trim と正規化の後で空文字）、element.replaceChildren(text) で中身をテキストだけに戻す。この処理は非表示の行も含む全行に毎回走るので、前の mark は残らない。テストでは、初期表示、空白のみ、Ctrl/Cmd+A→Backspace、「検索をクリア」（pointer / Enter）、Esc のそれぞれの後に page.locator(\"mark\") の件数が 0 であることを確認している。",
+        "playwright.config.js の testDir は ./tests で、product-list / product-order-persistence / product-search の 3 本すべてが対象になる。CI（ci.yml）は PR head SHA d3a9f9e で bun run check を実行し、その中に test:e2e が含まれる。gh pr checks では checks / verify の両ジョブが pass だった。差分を読んでも、textContent と表構造は変わらず、code 要素も残るので、既存の名前・コードの検証は壊れない。ローカルでは再実行していない。",
+        "product-search.spec.js に、検索語 5 件のパラメタライズドテストと、並び順の変更・空白のみ・全削除の連続シナリオを追加している。さらに既存のクリアと Esc のテストにも mark の件数確認を足している。これらが <mark> の位置と文字を検証している。",
+        "README の「## 提供する機能」の段落に「表示中の商品名・商品コードのうち検索語に一致した部分を `<mark>` で強調します。」が加わっている。"
+      ],
+      "scope_creep": [
+        "強調表示と関係のない撮影媒体の再生成（product-order-restore-desktop.webm / product-order-restore-mobile.webm）",
+        "撮影媒体（escape / fullwidth 系の png・webm）の差し替え。要求は e2e と README であり、撮影の更新は求めていない",
+        "README の「提供する機能」以外の節への追記。「セットアップと検証」に強調の仕様詳細とテスト内容、「レビュー用キャプチャ」に強調の撮影確認点を追加している"
+      ],
+      "cost_usd": 0.7371033999999999
+    }
+  }
+]

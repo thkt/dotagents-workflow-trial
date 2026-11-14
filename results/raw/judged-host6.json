@@ -1,0 +1,68 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "host",
+    "n": 6,
+    "issue": {
+      "number": 188,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 6000
+    },
+    "pr": {
+      "number": 189,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/capture.spec.js",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/evidence/generated/product-search-highlight-desktop.png",
+        "trial/evidence/generated/product-search-highlight-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 178,
+      "deletions": 22,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "search.js の updateSearch() は、全セルに対して highlightMatches(highlightTarget(cell), …) を呼ぶ。highlightTarget は商品コードのセルでは <code> を返し、商品名の <th> ではセル自体を返す。highlightMatches は正規化後の文字列を indexOf で走査し、一致ごとに document.createElement('mark') で作った <mark> に元の文字列の slice を textContent で入れ、replaceChildren で差し替える。product-search.spec.js の expectHighlights は表示行を [..] 記法で直列化し、手書きの期待値と完全一致で比較する。対象は '青い[ノート]'、'<code>[NOTE]-001</code>'、'NOTE-[0][0]1' など。例外が1つある。正規化で文字数が変わるセルは強調しない（normalized.length === text.length のガード）。現行の4商品はどれも該当しない。",
+        "query が空のとき、highlightMatches の if (query && …) を通らない。その結果、元のテキスト1つだけで replaceChildren し、既存の <mark> を除去する。非表示行にも matchesQuery ? query : '' によって空の検索語が渡る。テストは 'ノート' で強調した状態から、クリアボタン・Esc・全削除・空白のみの4操作を行う。それぞれの後に expectHighlights(plainRows) で <mark> が無いことを確認する。再読み込み後も tbody mark が0個であることを確認する。tr[hidden] mark が0個であることも毎回確認する。",
+        "CI の checks ジョブは bun run check を実行し、その中に test:e2e が含まれる。PR の head 627b480 に対して pull_request イベントで実行され、SUCCESS だった（run 43369521012）。製品側の変更は search.js だけである。product-list.spec.js と product-order-persistence.spec.js は変更されていない。product-search.spec.js の既存ケースは products の期待値を変えず、highlights を追加しただけである。<code>、表構造、data-reading 属性は replaceChildren の影響を受けない。ローカルでの再実行はしていない。",
+        "product-search.spec.js に強調専用の e2e が追加された。追加されたのは次のとおり。1) 検索語の変更と、並び順3種の切り替え後の強調。2) 空にする4操作。3) 再読み込み。4) HTML 文字（<b>、&、<img src=x>）を要素として解釈しないこと。既存のパラメータ化テストにも highlights の期待値が追加され、隣接一致 '0'、全角 'ＮＯＴＥ'、<code> の内側への配置を確認する。",
+        "README の『## 提供する機能』の段落に次の1文が追加された。『検索中は、表示中の行の商品名・商品コードのうち検索語に一致した部分を `<mark>` で強調します。』"
+      ],
+      "scope_creep": [
+        "trial/capture.spec.js: 撮影用 spec に 'ノート' の強調撮影ケースを追加し、state を media にリネームしてファイル名の組み立て方を変更",
+        "trial/evidence/generated/ 配下: 新規 PNG 2件（product-search-highlight-*）と、既存媒体8件（order-restore と search-escape の webm、fullwidth-code と fullwidth-filtered の png）の再生成",
+        "README の『提供する機能』以外の追記: セットアップと検証の節に強調仕様の詳細段落、強調の対象外（かな変換、U+0130 など）、search.js の説明変更、product-search.spec.js の検証内容、test:e2e の画像の表、レビュー用キャプチャの説明と媒体の表の行追加・変更",
+        "search.js: 正規化で文字数が変わるセルでは強調しない分岐（受け入れ条件に無い仕様の追加）"
+      ],
+      "cost_usd": 0.8649114000000001
+    }
+  }
+]

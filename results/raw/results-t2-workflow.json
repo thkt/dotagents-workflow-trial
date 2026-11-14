@@ -1,0 +1,143 @@
+[
+  {
+    "task": "T2-code-order",
+    "arm": "workflow",
+    "n": 1,
+    "started": "2026-11-14T04:11:02.823Z",
+    "finished": "2026-11-14T04:33:22.172Z",
+    "repo": "/private/tmp/claude/claude-501/-Users-thkt--claude/8b0d77c1-dca9-4255-9888-daeb550b9300/scratchpad/bench/runs/T2-code-order-workflow-1/repo",
+    "stage1": {
+      "rounds": [
+        {
+          "at": 192188,
+          "num_turns": 13,
+          "cost_usd": 1.6332818,
+          "duration_ms": 191816,
+          "is_error": false,
+          "running": 0,
+          "text": "Issue 本文の下書きはできました。まだ公開していません。実装に入る前に決める必要がある項目が4つ残っているので、回答をお願いします。\n\n下書き: `/private/tmp/claude/claude-501/-private-tmp-claude-claude-501--Users-thkt--claude-8b0d77c1-dca9-4255-9888-daeb550b9300-scratchpad-bench-runs-T2-code-order-workflow-1-repo/20bc7ac6-ecf6-4d4d-97f2-f7816add2ae8/scratchpad/issue-draft.md`\n\n## 確認したこと\n- 現在の4商品を商品コード順に並べると、MUG-001（白いマグ）→ NOTE-001（青いノート）→ NOTE-002（赤いノート）→ PEN-001（黒いペン）になります。元の順序とも商品名順とも違うので、E2E で違いを確かめられます。\n- 4商品の商品コードはすべて異なります。そのため「同じコードでは元の順を保つ」はそのままでは確かめられません。既存テストと同じく `page.route` で表示する商品を差し替え、同じコードの商品を作って確かめます。\n- 同じ要求の Issue が #129・#130・#203・#204 にあり、どれもクローズ済みです。計測上の制約に従ってどれも参照・編集せず、新しい Issue を作ります。\n\n## 決めてほしいこと（各問の1番目が推奨案）\n\n**Q1. 「文字列として比較」の意味**\n1. 商品コードをそのまま文字コード順で比べる（推奨）。全角→半角の変換も大文字・小文字の同一視もしません。このため `NOTE-10` は `NOTE-9` より前に、`B-1` は `a-1` より前に並びます。E2E では、大文字と小文字が混ざったコードを差し替えデータで並べて、この規則を確かめます。\n2. 1と同じ比べ方だが、E2E では比較規則を確かめない。\n3. `Intl.Collator`（日本語の照合順）で比べる。\n\n**Q2. 保存値・表示名・位置**\n1. 保存値は `code-ascending`、表示名は「商品コード：昇順」、位置は「商品名：降順」の後（推奨）。\n2. 別の名前や位置にする（指定してください）。\n\n**Q3. 撮影**\nコードを変えるので、実装時の撮影は設定どおり実行され、`trial/evidence/generated` の画像・動画は撮り直したものに置き換わります。\n1. 撮影手順 `trial/capture.spec.js` に「商品コード昇順を選択 → 再読み込み → 復元」の画像を追加する（推奨）。デスクトップとモバイルの両方で撮り、README の媒体表にも載せます。\n2. 撮影手順は変えず、既存の場面を撮り直すだけにする。\n\n**Q4. 実装の自動処理では実行できない手順**\n次の3つは、自動の実装処理では実行できません。\n- README の変更と PR 本文の Gemini による日本語確認。参照先である共有 `scripts/README.md` の「日本語の確認と修正」節がありません。\n- デスクトップの標準 select を実ブラウザでキー操作する補足確認。人の操作が必要です。\n- 実際の PR 画面で、画像・動画の表示と配置を確認すること。\n\n選択肢:\n1. 3つとも担当者（thkt）へ引き継ぎ、PR レビュー時（マージ前）に行う（推奨）。\n2. 個別に「確認と撮影の設定に組み込む」か「今回の範囲から外す」を選ぶ（どれをどうするか指定してください）。\n\nあわせて、この Issue を公開する前の日本語確認の進め方も確認させてください。`agy`（Gemini 3.8 Flash）は入っています。手順の節は見つかりませんが、公開前に私が DEVELOPMENT.md の記述どおり、Gemini での修正と、意味が変わっていないかの別確認を行うつもりです。\n\n回答をいただいたら下書きに反映し、新しい Issue として `thkt/dotagents-workflow-trial` に公開して URL をお知らせします。"
+        },
+        {
+          "at": 277064,
+          "num_turns": 7,
+          "cost_usd": 2.0031947999999997,
+          "duration_ms": 74858,
+          "is_error": false,
+          "running": 0,
+          "text": "新しい Issue #206 を作成しました。公開後に GitHub から本文を読み戻し、手元の下書きと末尾の改行以外は一致することを確認しています。\n\n- **本文に書いた決定**: 4項目とも推奨どおりです。\n  - 商品コードは文字コード順でそのまま比べます。\n  - 保存値は `code-ascending`、表示名は「商品コード：昇順」、位置は「商品名：降順」の後です。\n  - 撮影手順に、商品コード昇順を復元した画像（デスクトップ・モバイル）を追加します。\n  - 自動の実装処理では実行できない3つの手順は、thkt へ引き継ぎます。時期は PR レビュー時（マージ前）です。\n- **本文に書いた手順と判定の表**: 8手順を載せました。5手順は自動の実装処理で実行でき、3手順は実行できないため thkt へ引き継ぎます。引き継ぐ3手順は完了条件に含めず、PR では未確認事項として扱います。\n- **Gemini での日本語確認はしていません**: `agy` が `GEMINI_API_KEY` 未設定の認証エラーで止まりました。DEVELOPMENT.md は、認証障害など利用できない理由を確認できた場合に限り、確認を飛ばして原文を使うことを認めています。そのため原文のまま公開し、その理由を本文の「本文の日本語確認」節に書きました。この本文は Gemini 確認済みではありません。\n- **既存の Issue**: #129・#130・#203・#204 は重複候補として本文に記録しただけで、内容は読まず、編集もしていません。\n- **未決事項**: ありません。実装は `/implement 206` で始められます。撮影で Chromium を起動するため、sandbox を外したセッションで実行してください。\n\nhttps://github.com/thkt/dotagents-workflow-trial/issues/206"
+        }
+      ],
+      "session_id": "20bc7ac6-ecf6-4d4d-97f2-f7816add2ae8",
+      "why": "matched",
+      "wall_ms": 277065,
+      "human_wait_ms": 10005,
+      "match": "github.com/thkt/dotagents-workflow-trial/issues/206",
+      "id": "206",
+      "human_decisions": 1
+    },
+    "stage2": {
+      "rounds": [
+        {
+          "at": 24329,
+          "num_turns": 4,
+          "cost_usd": 0.5303162,
+          "duration_ms": 23946,
+          "is_error": false,
+          "running": 0,
+          "text": "#206 はまだ launch していません。本文に「実装担当が決める」とされた未決事項が1件残っているため、`/scoping` に戻す必要があります。\n\n**止めた根拠**\n- 読んだ文書: `/Users/thkt/.claude/skills/implement/SKILL.md` の Phase 1 step 1\n- 該当する文: \"An unagreed point is … a decision left to the implementer … Count a deferral in any section, even when the open-items section says \"none\".\"\n- Issue 本文「撮影と媒体」節の該当箇所: 「ファイル名は既存の `product-order-restored-*.png` に合わせて実装担当が決める。」\n- 規定にあるのは「実装担当に委ねた決定は未合意として扱う」という条件です。これが当てはまるため、「未決事項: なし」と書かれていても launch できないと判断しました。workflow は実行中に人へ確認できないので、ここで決めずに進めると、レビュー段階で `human-decision-required` として止まるおそれがあります。\n\n**それ以外の launch 前確認はすべて通っています**\n- Issue は OPEN です。比較規則、保存値、撮影、引き継ぎ3件（担当者 thkt、PR レビュー時）はすべて本文に記録されています。\n- `.dotagents.json` は commit 済みで、作業ツリーに変更はありません。\n- `capture.required: false` かつコードの変更なので、撮影して媒体を置き換えます。Issue の記載と一致しています。\n\n**決めていただきたいこと（推奨あり）**\n- 推奨: ファイル名を `product-order-code-restored-desktop.png` と `product-order-code-restored-mobile.png` に決めます。既存の `product-order-restored-{project}.png`（`trial/capture.spec.js:115`）と並び、並び順の種類が名前で区別できます。\n- 決めた名前を Issue 本文の「撮影と媒体」に書き、「実装担当が決める」の文を消します。媒体表にも同じ名前を載せます。\n\nこの案で進めてよければ、そう返信してください。`/scoping` で本文を更新してから、改めて `/implement #206` を実行します。別の名前にする場合は、その名前をお知らせください。"
+        },
+        {
+          "at": 83043,
+          "num_turns": 6,
+          "cost_usd": 0.7086205000000001,
+          "duration_ms": 38693,
+          "is_error": false,
+          "running": 1,
+          "text": "Issue #206 のファイル名を推奨どおりに直し、ワークフローを起動しました。今は完了の通知を待っています。\n\n- **Issue 本文:** 「撮影と媒体」節の「実装担当が決める」を削除しました。代わりに `product-order-code-restored-desktop.png` と `product-order-code-restored-mobile.png` を、2026-11-14 に承認済みとして記載しています。README の媒体表もこの名前で載せる、と書き加えました。\n- **起動前の確認:**\n  - sandbox は外れており、ローカルポートの待ち受けも許可されています。\n  - 子セッションの権限確認では、`git status --short` と `bun --version` がどちらも拒否されずに実行できました。\n  - repo に `docs/wiki`・`docs/decisions`・`docs/research` がないため、引き渡す参照資料はありません。\n- **起動:** 引数は `{\"issue\":\"206\"}` で、PR を公開する設定です。\n\n完了したら結果を確認し、draft PR ができていれば最後の行にその URL を書きます。"
+        },
+        {
+          "at": 1062278,
+          "num_turns": 11,
+          "cost_usd": 1.3275743000000002,
+          "duration_ms": 92112,
+          "is_error": false,
+          "running": 0,
+          "text": "PR #207 は draft のまま止めてあります。CI（`checks`・`verify`）は同じ head（`3fb9fa8`）で成功し、独立レビューは1回目で指摘なしのまま accepted でした。\n\ndraft のままにしたのは、媒体の確認が残っているためです。ready にする前に、PR 画面で添付画像と動画が表示・再生されることを確かめる手順があります。Issue ではこの確認をあなたの担当（PR レビュー時、マージ前）と決めているので、私は行っていません。\n\n- **branch:** `feat/206-product-code-sort-persist`\n- **worktree:** `/private/tmp/claude/claude-501/-Users-thkt--claude/8b0d77c1-dca9-4255-9888-daeb550b9300/scratchpad/bench/runs/T2-code-order-workflow-1/repo/.claude/worktrees/implement-206`\n- **変更内容:**\n  - 「商品コード：昇順」（`code-ascending`）を追加し、商品コードの文字列をそのままの順で比べます。同じコードの商品は元の並びを保ちます。\n  - E2E テスト2本、撮影定義、README を更新しました。\n  - 新しい画像は `product-order-code-restored-desktop.png` と `-mobile.png` です。\n- **作業手順の外の変更:** README の「セットアップと検証」で、もう削除済みのテストを説明していた古い記述もワークフローが書き直しました。レビューは、4種類目を加えると事実に反する箇所なので範囲内と判断しています。\n- **テストの限界:** 保存と再読み込みのテストは、既存の `@storage` タグの設定によりデスクトップだけで実行されます。モバイルでの復元は、撮影時の表示確認と画像で確かめています。わざと不具合を入れてテストが失敗するかの確認や、実際にブラウザーを再起動しての確認はしていません。\n- **PR 本文:** 日本語の文章チェックで指摘された長い文と助詞の重なりを分け、全角と半角の間のスペースを揃えて更新しました。意味は変えていません。英語の定型行への指摘は残しています。\n\n**レビュー時にお願いしたいこと（Issue で決めた引き継ぎ）**\n- README と PR 本文を Gemini で日本語確認する。参照先の手順の節が存在しないため、実行していません。\n- デスクトップの select をキーボードで操作し、実ブラウザーで確かめる。\n- PR 画面で、媒体が表示・再生されること、説明と配置が合っていることを目で確かめる。\n- 上の確認が済んだら、ready への切り替え、承認、マージを判断する。\n\n作業を再開するときの state ファイル: `/var/folders/mv/9vj8x1010916rllt6m9c06cm0000gn/T/claude-run-J5pYm0/calls.jsonl`\n\nhttps://github.com/thkt/dotagents-workflow-trial/pull/207"
+        }
+      ],
+      "session_id": "ed58c66e-01a1-40f0-9b8a-69bba8d6beae",
+      "why": "matched",
+      "wall_ms": 1062279,
+      "human_wait_ms": 20013,
+      "match": "github.com/thkt/dotagents-workflow-trial/pull/207",
+      "id": "207",
+      "human_decisions": 1
+    }
+  },
+  {
+    "task": "T2-code-order",
+    "arm": "workflow",
+    "n": 2,
+    "started": "2026-11-14T04:34:07.446Z",
+    "finished": "2026-11-14T04:49:18.785Z",
+    "repo": "/private/tmp/claude/claude-501/-Users-thkt--claude/8b0d77c1-dca9-4255-9888-daeb550b9300/scratchpad/bench/runs/T2-code-order-workflow-2/repo",
+    "stage1": {
+      "rounds": [
+        {
+          "at": 122224,
+          "num_turns": 10,
+          "cost_usd": 1.2683994000000003,
+          "duration_ms": 121838,
+          "is_error": false,
+          "running": 0,
+          "text": "まだ Issue は作成していません。比較規則・テスト方法・撮影・手順の扱いに人の判断が要るため、ここで止めて回答を待ちます。各項目の 1 番目が推奨案です。\n\n## 確認した現状（main 46bbf5e）\n- `trial/public/index.html` の `select#product-order` は `original`・`ascending`・`descending` の 3 つです。\n- `trial/public/search.js` の `readOrder` はこの 3 値だけを受け付け、それ以外は `original` として扱います。選択は `localStorage[\"product-order\"]` に保存されます。\n- 固定データの 4 商品のコードはすべて異なります。そのため「同じコードでは元の相対順を保つ」は、今のデータのままでは確かめられません。\n- 商品コード昇順で並べた期待値は MUG-001, NOTE-001, NOTE-002, PEN-001 です。この順は「元の順序」とも「商品名：昇順」とも異なります。\n- 同じ題名の Issue が過去に 3 件ありますが、すべて closed です。指示どおり再利用も参照もしません。下の推奨案はその内容と同じなので、そのまま採用するなら 1 回の返信で済みます。\n\n## 判断してほしい項目\n1. **比較方法**\n   - (a) 推奨: `code` 要素の文字列を、全角→半角の変換も大文字・小文字の同一視もせず、そのままの文字コード順（UTF-16）で比べます。たとえば `NOTE-10` は `NOTE-9` より前、`B-1` は `a-1` より前に並びます。検索のほうは全角と半角、大文字と小文字を区別しないので、並び順の規則とは揃いません。これは仕様として扱います。\n   - (b) 検索と同じ正規化をしてから比べます。\n   - (c) `Intl.Collator` を使い、数字を数として比べます。\n2. **同じコードの扱いと比較規則の検証**\n   - (a) 推奨: E2E で `page.route` を使って HTML を差し替え、同じコードの商品や、大文字・小文字が混ざったコードを用意して確かめます。DEVELOPMENT.md の「期待値は要求から定める」に沿う方法です。\n   - (b) `toSorted` が並びを保つ仕様に任せ、テストしません。\n3. **保存値・表示名・位置**\n   - (a) 推奨: 保存値は `code-ascending`、表示名は「商品コード：昇順」で、「商品名：降順」の後に置きます。すでに保存されている `ascending` は、これまでどおり商品名の昇順を意味します。\n4. **撮影**: `capture.required` は `false` です。今回はコードを変えるので、撮影と `trial/evidence/generated` の媒体の置き換えは必ず実行されます。\n   - (a) 推奨: `trial/capture.spec.js` に「商品コード昇順を選択→再読み込み→復元」の画像をデスクトップとモバイルで追加します。ファイル名は `product-order-code-restored-{desktop,mobile}.png` とし、README の媒体表に載せます。操作の流れは変わらないので、動画は追加しません。\n   - (b) 撮影する場面は追加せず、既存の媒体を撮り直すだけにします。\n5. **implement の workflow が実行できない手順の扱い**: 扱いの名前は sufficiency.md の表記のままにしています。\n\n| 手順 | 出典 | 実行できない理由 | 推奨の扱い |\n| --- | --- | --- | --- |\n| README の差分と PR 本文の Gemini＋Codex による日本語確認 | DEVELOPMENT.md「Issue・PR・文書の日本語確認」 | 参照先の手順「日本語の確認と修正」が共有の `~/.agents/scripts/README.md` に見つかりません。check・capture・CI のどれも実行しません | Hand it over to a named owner（thkt、PR レビュー時・マージ前） |\n| PR に添付した画像を実際の PR 画面で表示確認する（`rendered_media_check`） | DEVELOPMENT.md「レビューを助ける説明」 | 人がブラウザーで行う作業です | Hand it over to a named owner（thkt、PR レビュー時・マージ前） |\n| デスクトップの標準 select のキー操作を実ブラウザーで補足確認する | README の E2E の説明 | 人がブラウザーで行う作業です | Leave it out of this scope（select のキー処理は変わらず、復元後のキーボード操作は既存の E2E が確かめているため） |\n\n   workflow が実行できる手順は `bun run check`、capture、CI（`checks`・`verify`）です。\n6. **この Issue 本文の公開前の Gemini 確認**: `agy` は入っていますが、上の手順書が見つかりません。\n   - (a) 推奨: 確認は行わず、理由を Issue に「未実施」と記録して公開します。\n   - (b) 手順が見つかるまで公開を止めます。\n\n## 回答後に Issue に書く予定の内容（推奨案を採る場合）\n- **README**\n  - 「提供する機能」: 選べる並び順を 4 種類にし、比較規則と同じコードの扱いを書きます。\n  - 「セットアップと検証」: E2E の説明にある「3種類」を、対象の並び順を名指す記述にします。\n  - 「レビュー用キャプチャ」: 媒体表に商品コード昇順の行を加えます。\n- **E2E**: `trial/tests/product-order-persistence.spec.js` の保存・復元のテストに `code-ascending` を加え、`trial/tests/product-search.spec.js` に切り替え・`ノート` 検索との組み合わせ・項目 2 のテストを加えます。期待値は固定の配列で書き、アプリの比較関数から作りません。\n- **Esc のテスト**: 現在は降順だけで確かめています。値を増やしても新しい不具合は見つからないため、追加しません（DEVELOPMENT.md「実装とテストの整理」）。\n\n「すべて推奨」の一言でも、項目ごとの回答でも構いません。回答を受けたら下書きを作り、`gh issue create` で新しい Issue を作ります。"
+        },
+        {
+          "at": 180860,
+          "num_turns": 4,
+          "cost_usd": 1.5264569000000006,
+          "duration_ms": 48623,
+          "is_error": false,
+          "running": 0,
+          "text": "新しい Issue #208 を作成しました。合意した 6 項目と、手順と判定の表はすべて本文に入っています。本文を GitHub から読み戻して下書きと比べ、違いは末尾の改行だけでした。\n\n- **書いた内容**: 目的、現状（main 46bbf5e）、決定事項、要求 1〜5 と前提、範囲外、完了条件、検証方法、文書の更新、撮影と媒体、手順と判定の表、未実施の確認。\n- **実行の注意**: 今回の変更はコードを含むため、`/implement 208` は撮影と `trial/evidence/generated` の媒体の置き換えを行います。macOS の sandbox 内では Chromium が起動しないので、sandbox を外したセッションで実行してください。\n- **未実施のもの**:\n  - Gemini による日本語確認は、合意どおり実施していません。参照先の手順が共有の `scripts/README.md` に見つからないためで、その理由を本文に書きました。\n  - critic-design による独立評価は実行していません。要求の中に、解消していない矛盾や偏りが残らなかったためです。\n- **残っている判断**: ありません。日本語確認と、PR 画面での媒体の表示確認の 2 件は、thkt さんが PR レビュー時（マージ前）に行う手順として Issue に書いてあります。\n\nhttps://github.com/thkt/dotagents-workflow-trial/issues/208"
+        }
+      ],
+      "session_id": "9e3ea384-88bf-4059-aa74-b5b580d83cb8",
+      "why": "matched",
+      "wall_ms": 180860,
+      "human_wait_ms": 10007,
+      "match": "github.com/thkt/dotagents-workflow-trial/issues/208",
+      "id": "208",
+      "human_decisions": 1
+    },
+    "stage2": {
+      "rounds": [
+        {
+          "at": 41886,
+          "num_turns": 8,
+          "cost_usd": 0.5497681999999999,
+          "duration_ms": 41505,
+          "is_error": false,
+          "running": 1,
+          "text": "#208 の implement workflow をホストで起動しました（バックグラウンド ID `bs0nc6t2d`）。完了通知が来たら結果を処理します。それまで状態の確認やワークツリーの編集はしません。\n\n起動前に次を確認しました。\n- **Issue:** OPEN で、未合意の項目や先送りした判断はありません。コメントもありません。\n- **方針が課す手順:** すべてに判定と扱いがあります。引き継ぎの2件はどちらも担当 thkt、時期は「PR レビュー時・マージ前」と書かれています。\n- **`.dotagents.json`:** コミット済みです。`capture.required: false` で、コードを変える Issue なので撮影して媒体を置き換えます。これは Issue の記述と一致します。\n- **sandbox:** `sandboxed: false`、`local_binding: true` でした。子セッションの probe も `ran: true` で、拒否されたコマンドはありません。\n- **参照:** `docs/wiki`、`docs/decisions`、`docs/research` がないので、固定する参照はありません。"
+        },
+        {
+          "at": 700463,
+          "num_turns": 5,
+          "cost_usd": 0.7614992,
+          "duration_ms": 33530,
+          "is_error": false,
+          "running": 0,
+          "text": "Workflow は `human-decision-required` で止まりました。実装とテストは worktree に未コミットのまま残っています。check・撮影・レビュー・公開はどれも0回で、PR はありません。`retry_next` が null なので再開はできず、続けるには新しく起動し直す必要があります。\n\n- branch: `feat/208-product-code-sort-persist`\n- worktree: `/private/tmp/claude/claude-501/-Users-thkt--claude/8b0d77c1-dca9-4255-9888-daeb550b9300/scratchpad/bench/runs/T2-code-order-workflow-2/repo/.claude/worktrees/implement-208`\n- commit / URL: なし\n- remaining: `local_verification`、`publication`、`ci`、`published_body_check`、`mark_ready`、`human_review`\n\n## 止まった理由\n実装担当のセッションは、Issue の次の行を「担当者が決まっていない検証」と判断して止まりました。\n\n> CI（`checks`・`verify`）が同じ PR head で成功することの確認 | … | 実行できる | workflow が公開時に確認する\n\n- **指示に書かれていること:** 実装担当への指示 `/Users/thkt/.claude/workflows/implement.js:966` には次の文があります。workflow が実行するものとして check と capture だけを挙げています。\n  > \"The host runs the configured check and capture after you return. When the agreed Issue assigns a verification to a run by this workflow's host that is neither of those, and names no other owner for it, return needs_human.\"\n- **Issue 側の根拠:** `scoping/references/sufficiency.md` には次の文があり、公開時の CI も workflow が実行するとしています。\n  > \"The verifications the workflow runs itself are the `check` of `.dotagents.json`, the capture, and CI when publishing, and no other.\"\n- **私の解釈:** Issue は sufficiency.md に従って書かれています。止まった原因は、workflow の指示が「公開時の CI」を挙げていないことにあり、二つの文書が食い違っています。Issue のこの行の書き方を変えても、完了条件に「CI が同じ PR head で成功する」が残る限り、同じ理由で止まる可能性があります。\n\n## 判断してほしいこと\n**推奨は選択肢1です。**\n\n1. `implement.js:966` の文に公開時の CI（`ciChecks`）を加え、`implement.behavior.test.js:506` のテストも合わせて直してから、新しく起動します。Issue 本文は変えません。食い違いの元を直すので、ほかの Issue でも同じ理由で止まらなくなります。ただし、この Issue の範囲外の変更になります。\n2. `/scoping` で Issue の CI の行と完了条件を書き直してから、新しく起動します。workflow の指示は変えないので、再び止まる可能性があります。\n\nどちらを選んでも、起動し直す前に既存の branch と worktree の扱いを決めてください。残したまま起動すると `branch-exists` で止まります。\n\n- **(a)** 削除して、最初から実装し直します。\n- **(b)** 中身を確認してから削除します。\n\nその worktree の README には、Issue の「文書の更新」にない書き換えも入っています。既存の E2E の説明のうち、実際のテストと合っていなかった記述を直したものです。この扱いも合わせて決めてください。"
+        }
+      ],
+      "session_id": "5208eaa1-a5fb-403e-b579-ad8451bcd65e",
+      "why": "stopped-by-human",
+      "wall_ms": 730476,
+      "human_wait_ms": 30013,
+      "match": null,
+      "id": null,
+      "human_decisions": 1
+    }
+  }
+]

@@ -1,0 +1,64 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 20,
+    "issue": {
+      "number": 178,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 4203
+    },
+    "pr": {
+      "number": 179,
+      "is_draft": false,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 90,
+      "deletions": 22,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の updateSearch が、全行の th（商品名）と td > code（商品コード）に highlightMatches を呼ぶ。highlightMatches は正規化後の一致位置を元の文字列に当て、一致部分ごとに createElement(\"mark\") で <mark> を作る。正規化は1文字を1文字に置き換えるだけなので、位置はずれない。product-search.spec.js の expectHighlights は、表示行の innerHTML を期待値（例: \"<mark>NOTE</mark>-001\"、\"青い<mark>ノート</mark>\"、\"NOTE-<mark>0</mark><mark>0</mark>1\"）と比べる。",
+        "query が空のとき、ループの初期値は -1 になり、各セルは元のテキストだけで replaceChildren される。非表示の行も毎回組み直すため、前の検索語の <mark> は残らない。テストは初期表示、空白だけの入力 \"   \"、Ctrl+A→Backspace、「検索をクリア」（pointer・Enter）、Esc の後に expectHighlights(allProducts / reversedProducts) を確認する。ページ全体の mark 数も 0 であることを確認している。",
+        "package.json の check は test:e2e（playwright trial/playwright.config.js）を含み、CI の checks ジョブが bun run check を実行する。PR head の CI では checks と verify がどちらも SUCCESS だった（statusCheckRollup）。product-list.spec.js と product-order-persistence.spec.js は変更されていない。product-search.spec.js の既存のアサーションも消されておらず、追加だけである。ただし、ローカルでは実行していない。",
+        "既存の検索語ごとのテストに highlights の期待値と expectHighlights が加わった。'0' で一致が複数あるケースと、新しいテスト「検索中に並び順を変えても、検索語と一致部分の強調を保つ」も追加された。これらは強調の位置と <mark> の数を DOM で確認している。",
+        "README の『## 提供する機能』の段落に『検索中は…検索語に一致した部分を `<mark>` で強調します。』が加わった。その節の続きにも、強調の詳しい仕様と表の `0` の行が追加された。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ の撮影成果物 8 件（webm 4件・png 4件）の再生成。受け入れ条件に撮影の更新は含まれない",
+        "README の capture.spec.js の説明に、強調の撮影内容を追記（capture.spec.js 自体は変更されていない）",
+        "README のテスト説明（product-search.spec.js の検証内容）の追記。条件5が求めるのは『提供する機能』の説明だけ"
+      ],
+      "cost_usd": 0.7234414
+    }
+  }
+]

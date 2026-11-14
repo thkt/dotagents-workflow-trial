@@ -1,0 +1,66 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "host",
+    "n": 4,
+    "issue": {
+      "number": 185,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 5100
+    },
+    "pr": {
+      "number": 186,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/capture.spec.js",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 167,
+      "deletions": 18,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が、正規化後の一致位置で元の文字列を切り出し、document.createElement(\"mark\") で包む。対象は商品名 th と商品コード td 内の <code> で、<code> は残る。全角ASCIIの変換と toLowerCase はどちらも1文字を1文字に置き換えるため、一致位置と元の文字列の位置がずれない。新しい e2e が th > mark と td > code > mark の文字列を確認している",
+        "query が空なら highlightMatches は <mark> を作らず、replaceChildren でテキストノードだけに組み直す。前回の <mark> は非表示の行からも消える。新しい e2e『検索語を変えると前の強調を外し…』が、空白のみ・全選択と Backspace・クリアボタン・Esc の4操作の後に表全体の mark が0個であることを確認している",
+        "既存の spec ファイルで変わったのは product-search.spec.js の末尾への追記だけで、既存のテストは書き換えていない。PR head 5d88611 の CI ジョブ checks は pass。このジョブは bun run check を実行し、その中に test:e2e が含まれる。ただし CI ログの取得は権限で拒否されたため、3つの spec の個別の合否はログで確かめていない",
+        "product-search.spec.js に強調表示の e2e を追加している。検索語ごとに3種類の並び順で、商品名と商品コード内の mark の個数と文字列、セルの表示文字列、<code> が残ることを確認する。加えて、強調が消える操作のテストと、<b> を HTML として解釈しないテストがある",
+        "README の『提供する機能』の段落に、一致部分を <mark> で強調する説明が追加され、強調の段落と入力例の表も加わっている"
+      ],
+      "scope_creep": [
+        "trial/capture.spec.js に、撮影中に <mark> の文字列を確かめる検証を追加している",
+        "trial/evidence/generated/ の PNG 4件と WebM 4件を撮り直している。このうち強調表示と関係しない product-order-restore-*.webm も含まれる",
+        "README の『提供する機能』以外の節を編集している。テスト説明の段落、capture の説明、証跡表の行の説明の3か所",
+        "README の既存の文を言い換えている（『元データ』を『元データの表示文字列』に変更）。また、対象外の一覧に『一致箇所を支援技術へ追加で告知すること』を追加している"
+      ],
+      "cost_usd": 0.6114779
+    }
+  }
+]

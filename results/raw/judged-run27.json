@@ -1,0 +1,65 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 27,
+    "issue": {
+      "number": 201,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 4422
+    },
+    "pr": {
+      "number": 202,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 177,
+      "deletions": 26,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が、各セルの <code> 内または セル直下で正規化後の一致位置を元の文字列から切り出し、document.createElement(\"mark\") で包む。商品名セルとコードセル(<code> は保持)の両方を対象にしている。検索語は textContent で入れるため、<b> などの HTML は解釈されない。product-search.spec.js の expectHighlights が innerHTML の固定期待値(例: \"<code><mark>NOTE</mark>-001</code>\"、\"青い<mark>ノート</mark>\")と照合している。",
+        "query が空のとき highlightMatches は element.replaceChildren(text) で元の文字列だけに戻す。updateSearch は trim 後の値で判定し、非表示の行には \"\" を渡す。テストでは、空白のみ、Ctrl+A→Backspace、「検索をクリア」(pointer/Enter)、Esc、再読み込みの各操作の後に、plainCells との一致と page.locator(\"mark\") の件数(0)を確認している。",
+        "product-list.spec.js と product-order-persistence.spec.js は変更されていない。これらは toHaveText でセルの文字列を比べており、<mark> を足しても textContent は変わらないため影響を受けない。product-search の既存ケースは、元のアサーションを残したまま強調のアサーションを追加している。CI の checks ジョブが実行する bun run check には test:e2e が含まれ、PR head で SUCCESS になっている(statusCheckRollup で確認)。",
+        "既存の検索ケース 15 件以上に expectHighlights を追加している。新規テストは 2 件ある。1 件目は「強調中に再読み込み」。2 件目は「<b> で <mark> 以外の要素を生成しない、00 の重なった一致を重ねて囲まない、İ で長さが変わる商品名は強調しない」。複数一致(\"0\")と全角検索の強調もテストしている。",
+        "README の『## 提供する機能』の段落に「検索中は、表示中の各行で検索語に一致した部分を `<mark>` で強調します」が追加されている。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ の撮影媒体 8 件(PNG 4、WebM 4)を再生成している。強調表示と関係しない product-order-restore-desktop.webm と product-order-restore-mobile.webm も差し替えている。",
+        "README で『提供する機能』以外の節も変更している。『セットアップと検証』には強調の詳細仕様と E2E の説明を追記し、『レビュー用キャプチャ』では capture.spec の説明と媒体一覧表の文言を変えている。",
+        "正規化で文字数が変わる商品名・商品コードは強調せず絞り込みだけ行う仕様と、そのテストケース(İ)を追加している。受け入れ条件にはこの挙動の要求がない。",
+        "既存 e2e のテスト名を変更している(例: 「…で表示対象が切り替わる」→「…で表示対象と一致部分の強調が切り替わる」)。"
+      ],
+      "cost_usd": 0.5591494
+    }
+  }
+]

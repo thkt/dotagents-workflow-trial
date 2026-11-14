@@ -1,0 +1,64 @@
+[
+  {
+    "task": "T1-highlight",
+    "arm": "workflow",
+    "n": 16,
+    "issue": {
+      "number": 171,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 4426
+    },
+    "pr": {
+      "number": 172,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-cleared-desktop.png",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/evidence/generated/product-search-fullwidth-code-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-code-mobile.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-desktop.png",
+        "trial/evidence/generated/product-search-fullwidth-filtered-mobile.png",
+        "trial/public/search.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 128,
+      "deletions": 7,
+      "tests_touched": 1,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/search.js の highlightMatches が、各セル（商品コードのセルでは <code> の内側）について、正規化後の文字列で検索語を indexOf で探します。一致した範囲の表示文字列は document.createElement('mark') で包み、replaceChildren で差し替えます。対象のセルは index.html の行にある <th>（商品名）と <td><code>（商品コード）の2つだけです。",
+        "検索語が空（trim 後に空白だけの入力も含む）だと index が -1 になり、replaceChildren にはプレーンなテキストだけが渡るため、既存の <mark> は消えます。テストでは、空白だけ・全削除・並び順変更後の状態を expectRowMarkup で全行の innerHTML と比較しています。クリアと Esc の後は page.locator('mark') の個数が 0 であることを確認しています。",
+        "CI の checks ジョブ（run 43242077990）は PR の head SHA db4cffe で実行され、SUCCESS でした。このジョブは bun run check を実行し、その中で test:e2e も走ります。ログでは 65 件すべてが passed で、内訳は product-list 4件、product-order-persistence 13件、product-search 48件です。product-list と product-order-persistence の spec は変更されていません。",
+        "product-search.spec.js に新しいテストが3件あります。1件目は商品名・商品コード内の <mark> の位置、同じ欄の複数一致、全角での検索、検索語を変えた後と空白だけにした後を検証します。2件目は並び順を変えても強調が残ることと、全削除で強調が消えることを検証します。3件目は HTML や正規表現の記号を含む検索語でマークアップが挿入されないことを検証します。既存のクリアと Esc のテストにも mark の個数の検証が加わっています。",
+        "README.md の『## 提供する機能』（73行目〜）の75行目に、『検索中は、商品名・商品コードのうち検索語に一致した部分を強調表示します。』が追加されています。"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ 配下の証跡用バイナリ9件（webm 4件、png 5件）を作り直しています。強調表示の受け入れ条件には含まれません。",
+        "README の『提供する機能』以外にも説明を加えています。『セットアップと検証』節の検索仕様の段落（強調の詳しい仕様）、search.js の説明、product-search.spec.js の検証内容です。強調表示の記述なので関連はありますが、条件5が求める範囲を超えています。"
+      ],
+      "cost_usd": 0.8168510000000001
+    }
+  }
+]

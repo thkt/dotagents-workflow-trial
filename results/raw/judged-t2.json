@@ -1,0 +1,222 @@
+[
+  {
+    "task": "T2-code-order",
+    "arm": "existing",
+    "n": 1,
+    "issue": {
+      "number": 203,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": true,
+      "has_non_goals": false,
+      "length": 5379
+    },
+    "pr": null,
+    "rubric": null
+  },
+  {
+    "task": "T2-code-order",
+    "arm": "existing",
+    "n": 2,
+    "issue": {
+      "number": 204,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": false,
+      "has_plan_section": true,
+      "has_non_goals": false,
+      "length": 5377
+    },
+    "pr": {
+      "number": 205,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/public/index.html",
+        "trial/public/search.js",
+        "trial/tests/product-order-persistence.spec.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 59,
+      "deletions": 11,
+      "tests_touched": 2,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "reasons": [
+        "trial/public/index.html に <option value=\"code-ascending\">商品コード：昇順</option> が追加された。search.js の compareCode は <code> のテキストを `<`/`>` で比較し、updateOrder は comparators[order.value] で並べ替える。固定データ (NOTE-001, NOTE-002, PEN-001, MUG-001) は MUG-001, NOTE-001, NOTE-002, PEN-001 の順になる。persistence.spec の codeAscending 期待値 [original[3], original[0], original[1], original[2]] も同じ順序。",
+        "search.js の readOrder の許可リストに \"code-ascending\" が加わり、保存値を復元する。persistence.spec のループに code-ascending が加わった。このテストは選択→localStorage 保存→reload の後、select の値と行の順序が codeAscending であることを確認する。",
+        "既存のテストケース (original/ascending/descending、未対応値、Storage 例外など) は削除も弱体化もされていない。PR head 265576c の CI (checks) で desktop/mobile の 62 passed、失敗 0。ローカル実行はポート 4173 を別プロセスが使用していたため実施しておらず、判定は CI ログに基づく。",
+        "コード順は 2 か所で確認している。1 つは persistence.spec の code-ascending ケースで、固定 4 商品のコード順と reload 後の復元を見る。もう 1 つは product-search.spec に追加した page.route テストで、文字列順と同じコードでの安定順を見る。どちらも CI で desktop/mobile とも pass。",
+        "『提供する機能』(README.md:73) にコード順の比較規則は加わったが、『商品コード：昇順は選択した画面でだけ有効で、保存値は復元の対象外です。次の読み込みでは…元の順序で開きます』と書かれている。この記述は readOrder の実装と persistence テストの内容 (復元する) にも、条件 2 にも反する。テスト説明の段落 (persistence と Esc を『3種類』に限定する記述) も、code-ascending を含む実際のテストと食い違う。説明が誤っているため未達と判定した。"
+      ],
+      "scope_creep": [
+        "README の『提供する機能』に、要求に無い仕様を明文化した: UTF-16 コード単位の辞書順、大文字小文字・全角半角を変換しないこと、NOTE-10 < NOTE-2 となること、同じコードでの安定順",
+        "README のテスト説明の段落 (product-search.spec / product-order-persistence.spec / Esc 操作) を書き換えた。『提供する機能』の外で、しかも誤った記述を含む",
+        "product-search.spec に page.route で配信 HTML を差し替えるテストを追加した。小文字コード mug-002、NOTE-10/NOTE-2、重複コードといった、要求に無い仕様を固定するエッジケースを含む",
+        "search.js の updateOrder を comparators マップに構造変更した (compareReading の抽出と descending の表現変更)。挙動は等価で、機能追加に伴う最小限のリファクタの範囲内"
+      ],
+      "cost_usd": 0.8678592
+    }
+  },
+  {
+    "task": "T2-code-order",
+    "arm": "workflow",
+    "n": 1,
+    "issue": {
+      "number": 206,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 4382
+    },
+    "pr": {
+      "number": 207,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/capture.spec.js",
+        "trial/evidence/generated/product-order-code-restored-desktop.png",
+        "trial/evidence/generated/product-order-code-restored-mobile.png",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/public/index.html",
+        "trial/public/search.js",
+        "trial/tests/product-order-persistence.spec.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 128,
+      "deletions": 17,
+      "tests_touched": 2,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/index.html に option value=\"code-ascending\"（商品コード：昇順）が追加された。trial/public/search.js の compareRows[\"code-ascending\"] は、code 要素の textContent を < で比較して元の rows を安定ソートする。固定データの MUG-001 < NOTE-001 < NOTE-002 < PEN-001 は UTF-16 順でもこの並びになる。テストの codeAscending 定数と capture.spec.js の期待値も、この順と一致する。",
+        "readOrder() は許可する保存値を、ハードコードの3値から order.options の値一覧へ変えた。このため保存値 code-ascending が再読み込み後に有効値として復元される。product-order-persistence.spec.js の for ループに code-ascending が加わり、選択直後の localStorage 保存値と、reload 後の select 値・コード順・空の検索欄を検証している。",
+        "既存の product-order-persistence のテストは削除も書き換えもされず、配列とループに code-ascending が1件加わっただけである。既存の original/ascending/descending の期待値は productsFor を書き換えた後も同じ値を返す。PR head 3fb9fa8 の CI では checks ジョブ（bun run check、test:e2e を含む）と verify ジョブがどちらも pass した。ローカルでの再実行はしていない。",
+        "e2e の追加は2か所ある。product-order-persistence.spec.js では code-ascending の保存と再読み込み後の復元を検証する。product-search.spec.js では4件を追加・拡張した。内訳は、差し替えデータでのコード昇順への切り替え、コード昇順での検索と全削除、同一コードでの元の相対順、大文字・小文字の混在と数字の桁が違うコードでの UTF-16 順である。",
+        "README の『## 提供する機能』セクション内の並び順の段落に、商品コードの昇順の説明が追加された。比較基準（UTF-16 コード単位、全角と半角・大文字と小文字・数値を同一視しない）、例、固定データでの順 MUG-001, NOTE-001, NOTE-002, PEN-001 が書かれている。"
+      ],
+      "scope_creep": [
+        "README の product-search.spec.js の説明から、タッチ環境の select 操作に関する記述を削除した。product-search.spec.js の diff にはこれに対応する変更がない。",
+        "README の product-order-persistence.spec.js の説明を全面的に書き直した。両画面幅での検証、ブラウザーの終了と再起動、別プロファイルの検証を『E2Eでは確認しません』に変え、test-behavior-audit.md へのリンクを足した。spec ファイルの diff は code-ascending の追加だけなので、既存の記述のずれを直す変更が要求外で混ざっている。",
+        "README の Esc 操作の説明を『3種類の並び順の組み合わせ』から『商品名の降順』だけに書き換え、空欄での Esc を撮影定義の操作で確認すると変えた。この変更は商品コード順と関係がない。",
+        "trial/capture.spec.js で、既存の撮影テストの sourceFiles を共通定数 orderSourcePaths へ切り出した。あわせて、商品コード昇順の復元を撮影するテストを新しく追加した。",
+        "撮影結果として、新規 PNG 2件（product-order-code-restored-desktop.png / product-order-code-restored-mobile.png）と、README のメディア表の行を追加した。",
+        "既存の webm 4件（product-order-restore-desktop/mobile、product-search-escape-desktop/mobile）を再生成して差し替えた。"
+      ],
+      "cost_usd": 0.5353488
+    }
+  },
+  {
+    "task": "T2-code-order",
+    "arm": "workflow",
+    "n": 2,
+    "issue": {
+      "number": 208,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 4698
+    },
+    "pr": null,
+    "rubric": null
+  },
+  {
+    "task": "T2-code-order",
+    "arm": "workflow",
+    "n": 3,
+    "issue": {
+      "number": 209,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": true,
+      "length": 4772
+    },
+    "pr": {
+      "number": 210,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/capture.spec.js",
+        "trial/evidence/generated/product-order-code-ascending-restored-desktop.png",
+        "trial/evidence/generated/product-order-code-ascending-restored-mobile.png",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/public/index.html",
+        "trial/public/search.js",
+        "trial/tests/product-order-persistence.spec.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 104,
+      "deletions": 17,
+      "tests_touched": 2,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "index.html に <option value=\"code-ascending\">商品コード：昇順</option> が追加された。search.js の compareProductCodes は cells[1].textContent を < と > で比べ、toSorted は安定ソートである。固定データ (NOTE-001, NOTE-002, PEN-001, MUG-001) は MUG-001, NOTE-001, NOTE-002, PEN-001 の順に並ぶ。persistence spec の codeAscending = [original[3], original[0], original[1], original[2]] が表示順を行ごとに検証している。",
+        "readOrder の許可リストは ['original', ...Object.keys(comparators)] で、code-ascending を含む。persistence spec の保存・復元ループに code-ascending が追加された。このテストは選択直後に localStorage の値が code-ascending であることを確認し、検索語を入力してから reload する。reload 後は expectState で select の値、空の検索欄、4 件のコード順を検証している。",
+        "PR head の CI で checks (bun run check、Playwright E2E を含む) と verify の両方が pass している (gh pr checks 210)。既存の persistence テストは削除されていない。変更は値の配列への追加と、検索結果の期待値を matches に変えたリファクタだけである。original・ascending・descending のケースはそのまま残り、通過している。",
+        "コード順は product-search.spec.js の新しいテストで確認している。このテストは page.route で 6 行の HTML を返し、その中にはコードの重複 (NOTE-10 が 2 件)、大文字小文字の違い (NOTE/Note/note)、桁数の違い (NOTE-10 と NOTE-2) が含まれる。期待値は固定の順序で、同じコードの行の元の相対順も検証する。復元は persistence spec で確認している。code-ascending の保存・reload・復元、-001 の 3 件の結果でのクリア・全削除後の順序維持、未対応値 code-descending を検証する。ただし @storage タグのテストは desktop でしか実行されない。タブの開き直しとブラウザーの再起動の後の復元は検証していない。",
+        "README の『提供する機能』の段落に商品コードの昇順の説明が加わった。内容は、UTF-16 コード単位で比較すること、大文字小文字を区別すること、全角を半角に揃えないこと、数字を数値として扱わないこと、NOTE-10 < NOTE-2 < note-1 の例、固定データでの順序 (MUG-001, NOTE-001, NOTE-002, PEN-001)、同じコードの行は元の相対順を保つことである。"
+      ],
+      "scope_creep": [
+        "README の E2E の説明を書き直した。persistence spec の説明から『ブラウザーの終了と再起動、別プロファイルへの非引き継ぎ、タブの開き直し』の検証記述を削除し、『個別に検証しない』と書き換えている。Esc の検証範囲の記述も『3 種類の並び順』から『商品名の降順のみ』に縮めた。base の記述を実際のテストに合わせた修正だが、5 つの受け入れ条件には無い。Issue #209 の完了条件は再起動・タブの開き直しの後の復元を求めているので、要求と食い違う点として残る。",
+        "trial/capture.spec.js に撮影テストを追加し、PNG を 2 枚 (product-order-code-ascending-restored-desktop/mobile.png) 追加した。Issue の決定事項 6 にはあるが、5 つの受け入れ条件には無い。",
+        "既存の webm 4 本 (product-order-restore-*.webm、product-search-escape-*.webm) を撮り直して差し替えた。内容は確認できない。",
+        "search.js の updateOrder を comparators マップ方式にリファクタした。既存の昇順・降順の比較も書き換えている。動作は同じである。",
+        "product-search.spec.js の expectProducts に total 引数を追加した。新しいテストの 6 件表示に対応するための変更である。"
+      ],
+      "cost_usd": 0.6521139
+    }
+  }
+]
