@@ -12,5 +12,10 @@
     "stage2": "/implement #{issue}"
   },
   "_note_workflow": "workflow: ported と同じ prompt。/implement が implement workflow の起動役になった後 (PR #760) の版を測る。前回の ported の値は旧 skill 版",
-  "hang_minutes": 90
+  "hang_minutes": 90,
+  "host": {
+    "stage1": "/scoping {request}\n\n(計測上の制約: 既存の Issue や PR を再利用・更新せず、この要求のために新しい Issue を作ること。)",
+    "stage2": "host"
+  },
+  "_note_host": "host: stage1 は workflow と同じ。stage2 は session を立てず、claude-run.ts で implement workflow を直接実行する"
 }

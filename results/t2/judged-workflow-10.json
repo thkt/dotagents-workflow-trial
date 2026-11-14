@@ -1,0 +1,64 @@
+[
+  {
+    "task": "T2-code-order",
+    "arm": "workflow",
+    "n": 10,
+    "issue": {
+      "number": 217,
+      "state": "CLOSED",
+      "has_done_conditions": true,
+      "has_verification": true,
+      "has_plan_section": false,
+      "has_non_goals": false,
+      "length": 6973
+    },
+    "pr": {
+      "number": 218,
+      "is_draft": true,
+      "state": "CLOSED",
+      "files": [
+        "README.md",
+        "trial/evidence/generated/product-order-restore-desktop.webm",
+        "trial/evidence/generated/product-order-restore-mobile.webm",
+        "trial/evidence/generated/product-search-escape-cleared-desktop.png",
+        "trial/evidence/generated/product-search-escape-desktop.webm",
+        "trial/evidence/generated/product-search-escape-mobile.webm",
+        "trial/public/index.html",
+        "trial/public/search.js",
+        "trial/tests/product-order-persistence.spec.js",
+        "trial/tests/product-search.spec.js"
+      ],
+      "additions": 80,
+      "deletions": 12,
+      "tests_touched": 2,
+      "readme_touched": true,
+      "ci_checks": 2,
+      "ci_all_success": true,
+      "links_issue": true,
+      "body_has_verification": true
+    },
+    "rubric": {
+      "met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "reasons": [
+        "trial/public/index.html の select の末尾に <option value=\"code-ascending\">商品コード：昇順</option> が追加されている。search.js の compareRowsByOrder[\"code-ascending\"] は2列目のコードを UTF-16 のコード単位で比較し、toSorted で並べる。固定データ (NOTE-001, NOTE-002, PEN-001, MUG-001) は MUG-001, NOTE-001, NOTE-002, PEN-001 の順になる。product-search.spec.js の新テストも、この順を固定期待値で確認している",
+        "readOrder は Object.hasOwn(compareRowsByOrder, saved) で保存値を検証するように変わり、'code-ascending' も有効値として受け入れる。product-order-persistence.spec.js の保存・再読み込みのループに 'code-ascending' が加わり、保存値と再読み込み後の select 値・行順を確認している",
+        "既存のケースは削除されていない。変更は 'original'/'ascending'/'descending' のループに値を足したことと、クリア・全削除のテーブルにケースを足したことだけで、既存2ケースの期待値は以前と同じ。CI の checks ジョブは PR の head SHA で bun run check を実行し、SUCCESS になっている。check には test:e2e が含まれ、Playwright の全 spec を対象にする",
+        "product-search.spec.js にコード順のテストが3件追加されている。内容は、固定データの並び、NOTE-10<NOTE-9 と B-001<a-001 の比較、同じコードの行が元の相対順を保つことの3点。復元は persistence spec の code-ascending ケースが確認している。期待値は実装から生成せず、固定値で書かれている",
+        "README の『## 提供する機能』節 (73行目) の段落に、商品コードの昇順の選択肢と比較規則の説明が追加されている"
+      ],
+      "scope_creep": [
+        "trial/evidence/generated/ 以下のバイナリ証跡 (webm 4件・png 1件) の再生成",
+        "README『セットアップと検証』節の、product-search.spec.js / product-order-persistence.spec.js のテスト説明の更新",
+        "search.js の updateOrder/readOrder を比較関数マップ compareRowsByOrder に置き換えたリファクタ。既存の名前順の実装も書き換わっている",
+        "受け入れ条件に無い比較仕様 (大文字と小文字の区別、数字を数値として比較しない、全角を変換しない、同じコードでの安定順) の README 記載と、それを確認する e2e"
+      ],
+      "cost_usd": 0.6784924000000001
+    }
+  }
+]

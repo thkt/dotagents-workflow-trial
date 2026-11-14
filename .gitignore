@@ -1,3 +1,9 @@
 runs/
 trial/
 node_modules/
+acc/*/pr-*/
+acc/*/ref/
+acc/*/*.json
+acc/*/*.log
+verdict-eval/out-*.json
+*.log

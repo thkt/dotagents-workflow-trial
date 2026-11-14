@@ -1,0 +1,38 @@
+{
+ "files": [
+  "tests/zz-probe-t2.spec.js"
+ ],
+ "own": {
+  "failed": [
+   "zz-probe-t2.spec.js › D05b mixed case codes come in locale order",
+   "zz-probe-t2.spec.js › D06b a full width letter comes in locale order"
+  ],
+  "total": 31
+ },
+ "base": {
+  "failed": [
+   "zz-probe-t2.spec.js › D05b mixed case codes come in locale order",
+   "zz-probe-t2.spec.js › D06b a full width letter comes in locale order"
+  ],
+  "total": 31
+ },
+ "caught": {
+  "no-sort": 21,
+  "code-descending": 21,
+  "no-persist": 5,
+  "no-restore": 3,
+  "restore-select-only": 3,
+  "restore-rows-only": 2,
+  "saves-other-value": 5,
+  "original-stuck": 1,
+  "search-resets": 4,
+  "clear-resets": 1,
+  "write-throws": 2,
+  "numeric-compare": 4,
+  "prefix-only": 3,
+  "ties-reversed": 2
+ },
+ "missed": [
+  "unhides-rows"
+ ]
+}

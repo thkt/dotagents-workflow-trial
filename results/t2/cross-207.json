@@ -1,0 +1,33 @@
+{
+ "files": [
+  "tests/product-order-persistence.spec.js",
+  "tests/product-search.spec.js"
+ ],
+ "own": {
+  "failed": [],
+  "total": 37
+ },
+ "base": {
+  "failed": [],
+  "total": 37
+ },
+ "caught": {
+  "no-sort": 5,
+  "code-descending": 5,
+  "no-persist": 1,
+  "no-restore": 1,
+  "restore-select-only": 1,
+  "restore-rows-only": 1,
+  "saves-other-value": 1,
+  "original-stuck": 3,
+  "search-resets": 1,
+  "numeric-compare": 1,
+  "prefix-only": 1,
+  "ties-reversed": 1
+ },
+ "missed": [
+  "unhides-rows",
+  "clear-resets",
+  "write-throws"
+ ]
+}

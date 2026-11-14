@@ -72,6 +72,37 @@ const stage = async (prompt, cwd, want, ask) => {
   return { rounds: r.turns, session_id: r.session_id, why: r.why, wall_ms: r.wall_ms, human_wait_ms: r.human_wait_ms, match: r.match, id: m?.[1] ?? null, human_decisions: r.human_decisions };
 };
 
+// The host arm's second stage: claude-run.ts runs the implement workflow with no session around it. A relay's
+// commands run directly, and only the implementing, reviewing, repairing, and naming calls start a session.
+const hostStage = (issue, repo, dir) =>
+  new Promise((resolve) => {
+    const startedAt = Date.now();
+    const runner = join(process.env.HOME, ".claude", "workflows", "_lib", "claude-run.ts");
+    const child = spawn("bun", [runner, "implement", "--repo", repo, "--issue", issue, "--state", join(dir, "host-calls.jsonl")], {
+      cwd: repo,
+      // The same tools and the same sandbox setting the nested sessions of the other arms get.
+      env: { ...process.env, CLAUDE_RUN_SETTINGS: JSON.stringify({ sandbox: { enabled: false } }), CLAUDE_RUN_TOOLS: "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,LS" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (c) => (out += c));
+    child.stderr.on("data", (c) => (err += c));
+    child.on("close", async (code) => {
+      await writeFile(join(dir, "host-result.json"), out);
+      await writeFile(join(dir, "host.log"), err);
+      const summary = /^claude-run: (\{.*\})$/m.exec(err);
+      const m = out.match(PR_RE);
+      let stopped = null;
+      try {
+        stopped = JSON.parse(out).stopped ?? null;
+      } catch {
+        stopped = `exit-${code}`;
+      }
+      resolve({ rounds: [], session_id: null, why: m ? "matched" : "stopped", wall_ms: Date.now() - startedAt, human_wait_ms: 0, match: m ? m[0] : stopped ? `stopped:${stopped}` : null, id: m?.[1] ?? null, human_decisions: 0, host: summary ? JSON.parse(summary[1]) : null });
+    });
+  });
+
 const one = async (task, arm, n) => {
   const dir = join(here, "runs", `${task.id}-${arm}-${n}`);
   const repo = join(dir, "repo");
@@ -94,9 +125,9 @@ const one = async (task, arm, n) => {
   const started = new Date().toISOString();
   const s1 = await stage(arms[arm].stage1.replaceAll("{request}", task.request), repo, ISSUE_RE, asker(dir, "stage1"));
   let s2 = null;
-  if (s1.id) {
+  if (s1.id && !args.stage1only) {
     const p = arms[arm].stage2.replaceAll("{issue}", s1.id).replaceAll("{repo}", repo);
-    s2 = await stage(p, repo, PR_RE, asker(dir, "stage2"));
+    s2 = arms[arm].stage2 === "host" ? await hostStage(s1.id, repo, dir) : await stage(p, repo, PR_RE, asker(dir, "stage2"));
   }
   const result = { task: task.id, arm, n, started, finished: new Date().toISOString(), repo, stage1: s1, stage2: s2 };
   await writeFile(resultPath, JSON.stringify(result, null, 2));
