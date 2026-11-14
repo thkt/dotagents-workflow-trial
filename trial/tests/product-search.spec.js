@@ -177,3 +177,28 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+test("商品コード：昇順は商品コードを大文字小文字や数値を考慮せず文字列順に並べ、同じコードでは元の相対順を保つ", async ({ page }) => {
+  // 入力データだけを差し替え、期待値は固定値で書く。次の3つの実装を除外する。
+  // - 数値・自然順: NOTE-2 を NOTE-10 より先に出す
+  // - Intl.Collator: 小文字の mug-002 を NOTE-10 より先に出す
+  // - 読みで同値を崩す: 同じ NOTE-10 のうち読みが早い青いノートを先に出す
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
+      <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>mug-002</code></td></tr>
+      <tr data-reading="あかいのーと"><th scope="row">赤いノート</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="くろいぺん"><th scope="row">黒いペン</th><td><code>NOTE-2</code></td></tr>
+      <tr data-reading="あおいのーと"><th scope="row">青いノート</th><td><code>NOTE-10</code></td></tr>
+    </tbody>`) });
+  });
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("code-ascending");
+  await expectProducts(page, [
+    ["赤いノート", "NOTE-10"],
+    ["青いノート", "NOTE-10"],
+    ["黒いペン", "NOTE-2"],
+    ["白いマグ", "mug-002"],
+  ]);
+});
