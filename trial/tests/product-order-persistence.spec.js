@@ -9,7 +9,9 @@ const original = [
   ["白いマグ", "MUG-001"],
 ];
 const descending = [original[3], original[2], original[1], original[0]];
-const productsFor = (value) => value === "descending" ? descending : original;
+// MUG-001, NOTE-001, NOTE-002, PEN-001。元の順序とも商品名順とも異なる。
+const codeAscending = [original[3], original[0], original[1], original[2]];
+const productsFor = (value) => ({ descending, "code-ascending": codeAscending })[value] ?? original;
 const orderControl = (page) => page.getByLabel("並び順", { exact: true });
 const searchControl = (page) => page.getByLabel("商品名・商品コードで検索", { exact: true });
 
@@ -32,7 +34,7 @@ async function savedOrder(page) {
 
 test.describe("保存境界", { tag: "@storage" }, () => {
 
-  for (const value of ["original", "ascending", "descending"]) {
+  for (const value of ["original", "ascending", "descending", "code-ascending"]) {
     test(`${value}を選ぶと直ちに保存し、再読み込みで検索語なしに復元する`, async ({ page }) => {
       await page.goto("/");
       await expectState(page, "original");

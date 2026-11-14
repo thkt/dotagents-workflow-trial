@@ -106,12 +106,14 @@ test("全角ASCII検索と、検索結果あり・該当なし・空欄からEsc
   }));
 });
 
+const orderSourcePaths = [
+  "../package.json", "../bun.lock", "public/index.html", "public/search.js",
+  "public/styles.css", "server.js", "playwright.config.js", "capture.spec.js",
+];
+
 test("並び順の選択から再読み込み・復元までを撮影する", async ({ browser, baseURL, viewport, isMobile, hasTouch }, testInfo) => {
   const startedAt = new Date().toISOString();
-  const sourceFiles = await Promise.all([
-    "../package.json", "../bun.lock", "public/index.html", "public/search.js",
-    "public/styles.css", "server.js", "playwright.config.js", "capture.spec.js",
-  ].map((path) => fingerprint(path, new URL(path, import.meta.url))));
+  const sourceFiles = await Promise.all(orderSourcePaths.map((path) => fingerprint(path, new URL(path, import.meta.url))));
   const screenshotName = `product-order-restored-${testInfo.project.name}.png`;
   const videoName = `product-order-restore-${testInfo.project.name}.webm`;
   await mkdir(output, { recursive: true });
@@ -159,5 +161,43 @@ test("並び順の選択から再読み込み・復元までを撮影する", as
     media: await Promise.all([screenshotName, videoName].map((name) =>
       fingerprint(`trial/evidence/generated/${name}`, join(output, name)),
     )),
+  }));
+});
+
+test("商品コード昇順の選択から再読み込み後の復元を撮影する", async ({ browser, baseURL, viewport, isMobile, hasTouch }, testInfo) => {
+  const startedAt = new Date().toISOString();
+  const sourceFiles = await Promise.all(orderSourcePaths.map((path) => fingerprint(path, new URL(path, import.meta.url))));
+  const screenshotName = `product-order-code-restored-${testInfo.project.name}.png`;
+  await mkdir(output, { recursive: true });
+  const context = await browser.newContext({ baseURL, viewport, isMobile, hasTouch });
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    const order = page.getByLabel("並び順", { exact: true });
+    const search = page.getByLabel("商品名・商品コードで検索", { exact: true });
+    await order.selectOption("code-ascending");
+    await search.fill("note");
+    await expect(page.getByText("全4件中2件を表示", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(order).toHaveValue("code-ascending");
+    await expect(search).toHaveValue("");
+    await expect(page.getByText("全4件中4件を表示", { exact: true })).toBeVisible();
+    await expect(page.getByRole("table").getByRole("rowheader")).toHaveText([
+      "白いマグ", "青いノート", "赤いノート", "黒いペン",
+    ]);
+    await expect(page.getByRole("table").getByRole("cell")).toHaveText([
+      "MUG-001", "NOTE-001", "NOTE-002", "PEN-001",
+    ]);
+    await expect(page.getByText("該当する商品はありません", { exact: true })).toBeHidden();
+    await page.screenshot({ path: join(output, screenshotName), fullPage: true });
+  } finally {
+    await context.close();
+  }
+  console.log("CAPTURE_PROVENANCE " + JSON.stringify({
+    startedAt, completedAt: new Date().toISOString(), result: "passed",
+    project: testInfo.project.name, baseURL, viewport, isMobile, hasTouch,
+    browserVersion: browser.version(), output,
+    sourcePathBase: "trial/", sourceFiles,
+    media: [await fingerprint(`trial/evidence/generated/${screenshotName}`, join(output, screenshotName))],
   }));
 });

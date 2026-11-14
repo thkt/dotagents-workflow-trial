@@ -42,17 +42,31 @@ const orderStorageKey = "product-order";
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ["original", "ascending", "descending"].includes(saved) ? saved : "original";
+    // 選択肢にない保存値は元の順序として扱う。
+    return Array.from(order.options, (option) => option.value).includes(saved) ? saved : "original";
   } catch {
     return "original";
   }
 }
 
+// 商品コードは表示文字列のUTF-16コード単位で比べ、全角・大小文字・数値の読み替えをしない。
+function compareCodes(a, b) {
+  const codeA = a.querySelector("code").textContent;
+  const codeB = b.querySelector("code").textContent;
+  if (codeA === codeB) return 0;
+  return codeA < codeB ? -1 : 1;
+}
+
+const compareRows = {
+  ascending: (a, b) => collator.compare(a.dataset.reading, b.dataset.reading),
+  descending: (a, b) => collator.compare(b.dataset.reading, a.dataset.reading),
+  "code-ascending": compareCodes,
+};
+
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
+  // 元の配列から安定ソートし、同じ読み・同じコードでは元の相対順を保つ。
+  const compare = compareRows[order.value];
+  const ordered = compare ? rows.toSorted(compare) : rows;
   document.querySelector("tbody").append(...ordered);
 }
 
