@@ -177,3 +177,52 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
 });
+
+// 配信するHTMLの商品行だけを差し替え、実際の画面と並べ替え処理を通す。
+async function serveProductRows(page, products) {
+  const body = products.map(([name, reading, code]) =>
+    `<tr data-reading="${reading}"><th scope="row">${name}</th><td><code>${code}</code></td></tr>`,
+  ).join("");
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${body}</tbody>`) });
+  });
+}
+
+test("並び順の末尾に商品コードの昇順があり、固定データをコード順に並べる", async ({ page }) => {
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await expect(order.locator("option")).toHaveText(["元の順序", "商品名：昇順", "商品名：降順", "商品コード：昇順"]);
+  await order.selectOption({ label: "商品コード：昇順" });
+  await expect(order).toHaveValue("code-ascending");
+  await expectProducts(page, [allProducts[3], allProducts[0], allProducts[1], allProducts[2]]);
+});
+
+test("商品コードは文字列のコード単位で比べ、数字を数値として比べず、大文字と小文字を区別する", async ({ page }) => {
+  // 期待順は元の順序・名前の昇順/降順・自然順・Intl.Collator("ja")のいずれとも異なる。
+  await serveProductRows(page, [
+    ["青いノート", "あおいのーと", "NOTE-9"],
+    ["赤いノート", "あかいのーと", "a-001"],
+    ["黒いペン", "くろいぺん", "B-001"],
+    ["白いマグ", "しろいまぐ", "NOTE-10"],
+  ]);
+  await page.goto("/");
+  await page.getByLabel("並び順", { exact: true }).selectOption("code-ascending");
+  await expectProducts(page, [["黒いペン", "B-001"], ["白いマグ", "NOTE-10"], ["青いノート", "NOTE-9"], ["赤いノート", "a-001"]]);
+});
+
+test("同じ商品コードは、直前の名前順ではなく元の相対順を保つ", async ({ page }) => {
+  // 同じコードの2行は、元の順序と名前の昇順で前後が逆になる。
+  await serveProductRows(page, [
+    ["赤いノート", "あかいのーと", "NOTE-001"],
+    ["青いノート", "あおいのーと", "NOTE-001"],
+    ["黒いペン", "くろいぺん", "PEN-001"],
+    ["白いマグ", "しろいまぐ", "MUG-001"],
+  ]);
+  await page.goto("/");
+  const order = page.getByLabel("並び順", { exact: true });
+  await order.selectOption("ascending");
+  await expectProducts(page, [["青いノート", "NOTE-001"], ["赤いノート", "NOTE-001"], ["黒いペン", "PEN-001"], ["白いマグ", "MUG-001"]]);
+  await order.selectOption("code-ascending");
+  await expectProducts(page, [["白いマグ", "MUG-001"], ["赤いノート", "NOTE-001"], ["青いノート", "NOTE-001"], ["黒いペン", "PEN-001"]]);
+});

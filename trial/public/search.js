@@ -39,20 +39,32 @@ const order = document.getElementById("product-order");
 const collator = new Intl.Collator("ja");
 const orderStorageKey = "product-order";
 
+function compareCodeUnits(a, b) {
+  // UTF-16のコード単位で比べる。大小文字を区別し、空白・全角を変換せず、数字を数値として扱わない。
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
+}
+
+const productCode = (row) => row.cells[1].textContent;
+// 元の順序以外の並び順。比較結果が同じ行は、toSortedによりHTMLの並びを保つ。
+const compareRowsByOrder = {
+  ascending: (a, b) => collator.compare(a.dataset.reading, b.dataset.reading),
+  descending: (a, b) => collator.compare(b.dataset.reading, a.dataset.reading),
+  "code-ascending": (a, b) => compareCodeUnits(productCode(a), productCode(b)),
+};
+
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ["original", "ascending", "descending"].includes(saved) ? saved : "original";
+    return Object.hasOwn(compareRowsByOrder, saved) ? saved : "original";
   } catch {
     return "original";
   }
 }
 
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
+  const compareRows = compareRowsByOrder[order.value];
+  const ordered = compareRows ? rows.toSorted(compareRows) : rows;
   document.querySelector("tbody").append(...ordered);
 }
 
