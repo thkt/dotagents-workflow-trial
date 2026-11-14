@@ -9,7 +9,9 @@ const original = [
   ["白いマグ", "MUG-001"],
 ];
 const descending = [original[3], original[2], original[1], original[0]];
-const productsFor = (value) => value === "descending" ? descending : original;
+// 商品コード：昇順（MUG-001、NOTE-001、NOTE-002、PEN-001）。
+const codeAscending = [original[3], original[0], original[1], original[2]];
+const productsFor = (value) => ({ descending, "code-ascending": codeAscending })[value] ?? original;
 const orderControl = (page) => page.getByLabel("並び順", { exact: true });
 const searchControl = (page) => page.getByLabel("商品名・商品コードで検索", { exact: true });
 
@@ -32,7 +34,7 @@ async function savedOrder(page) {
 
 test.describe("保存境界", { tag: "@storage" }, () => {
 
-  for (const value of ["original", "ascending", "descending"]) {
+  for (const value of ["original", "ascending", "descending", "code-ascending"]) {
     test(`${value}を選ぶと直ちに保存し、再読み込みで検索語なしに復元する`, async ({ page }) => {
       await page.goto("/");
       await expectState(page, "original");
@@ -47,7 +49,7 @@ test.describe("保存境界", { tag: "@storage" }, () => {
     });
   }
 
-  for (const value of ["unsupported", " descending "]) {
+  for (const value of ["unsupported", " descending ", "code-descending"]) {
     test(`保存値 ${JSON.stringify(value)} は元の順序で開始する`, async ({ page }) => {
       await page.goto("/");
       await orderControl(page).selectOption("descending");
@@ -59,14 +61,19 @@ test.describe("保存境界", { tag: "@storage" }, () => {
     });
   }
 
-  for (const [query, value] of [["見つからない", "ascending"], ["PEN-001", "original"]]) {
+  for (const { query, value, matches } of [
+    { query: "見つからない", value: "ascending", matches: [] },
+    { query: "PEN-001", value: "original", matches: [original[2]] },
+    // 元の順序（NOTE-001、PEN-001、MUG-001）と商品コード順が異なる3件。
+    { query: "-001", value: "code-ascending", matches: [original[3], original[0], original[2]] },
+  ]) {
     test(`${query}の結果で${value}を保存し、クリア・全削除で維持する`, async ({ page }) => {
       await page.goto("/");
       await orderControl(page).selectOption("descending");
       await page.reload();
       await searchControl(page).fill(query);
       await orderControl(page).selectOption(value);
-      await expectState(page, value, query === "PEN-001" ? [original[2]] : [], query);
+      await expectState(page, value, matches, query);
       expect(await savedOrder(page)).toBe(value);
       await page.getByRole("button", { name: "検索をクリア", exact: true }).click();
       await expectState(page, value);

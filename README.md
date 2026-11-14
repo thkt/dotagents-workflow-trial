@@ -74,7 +74,7 @@ repo・remote・base branch・セットアップ・検証・撮影・CI名の設
 
 架空の4商品を一覧表示し、商品名・商品コードで検索できます。CIとmainの保護設定を適用しています。
 
-「並び順」で元の順序・商品名の昇順・降順を選べます。商品の読みを日本語として比較し、同じ読みでは元の相対順を保ちます。検索・クリア・全削除後も選択した順を維持します。選択時に並び順だけをlocalStorageへ保存します。同じ端末・ブラウザー・プロファイルの同一originであれば、再読み込み、タブの開き直し、ブラウザーの終了と再起動の後に復元します。検索語は保存せず、再訪時は検索欄が空で全4件を保存した順に表示します。読みは検索対象に含めません。
+「並び順」で元の順序・商品名の昇順・商品名の降順・商品コードの昇順を選べます。商品名の並び順は、商品の読みを日本語として比較します。商品コードの昇順は、表の商品コードの文字列を変換せずにUTF-16のコード単位で比較します。大文字と小文字を区別し、全角を半角に揃えず、数字を数値として扱いません。たとえば `NOTE-10` は `NOTE-2` より前、`NOTE-2` は `note-1` より前に並びます。固定データでは白いマグ（MUG-001）、青いノート（NOTE-001）、赤いノート（NOTE-002）、黒いペン（PEN-001）の順です。どの並び順でも、同じ読みや同じ商品コードの行は元の相対順を保ちます。検索・クリア・全削除後も選択した順を維持します。選択時に並び順だけをlocalStorageへ保存します。同じ端末・ブラウザー・プロファイルの同一originであれば、再読み込み、タブの開き直し、ブラウザーの終了と再起動の後に復元します。検索語は保存せず、再訪時は検索欄が空で全4件を保存した順に表示します。読みは検索対象に含めません。
 
 保存値がない場合、未対応の値がある場合、読み出しに失敗した場合は元の順序になります。保存できない場合も画面では選択した順を適用し、検索やクリアを続けられます。通知UIは追加せず、次回は以前の有効な保存値が残っていればそれを使います。「元の順序」も保存対象です。アプリ独自の有効期限は設けませんが、ブラウザーのデータ削除やプライベート閲覧終了で失われた設定は復旧しません。複数タブは即時同期せず、操作中は自分の選択を保ち、次の読み込み時に最新の保存成功値を読みます。同時操作の厳密な時刻順や、別端末・別ブラウザー・別プロファイル・別originとの同期は保証しません。
 
@@ -142,10 +142,10 @@ bun run check
 
 E2Eは専用サーバーを `127.0.0.1:4173` で起動・終了します。このポートは空けてください。
 [trial/tests/product-list.spec.js](trial/tests/product-list.spec.js) はIssueの固定期待値を使います。Chromiumのデスクトップ（1280×800）とモバイル（375×812）で、全4商品の名前・コード・表示順、見出しと表構造、可視性、横はみ出しの有無、ラベルで特定できる検索欄の表示を検証します。
-[trial/tests/product-search.spec.js](trial/tests/product-search.spec.js) は、同じ2画面幅で上記の入力・結果・順序を検証します。キーボードだけの移動や入力ごとの更新、全削除による復帰と再検索、各状態の件数表示と検索欄のフォーカスも確認します。並び順の切り替え、検索との組み合わせ、同じ読みの相対順、再読み込み時の並び順復元も同じ画面処理で検証します。タッチ環境ではselectをtapして開き、選択の確定はキーボードで行います。これは実機の選択UIへのタップ検証ではありません。デスクトップの標準selectのキー操作は、実ブラウザで補足確認します。
-[trial/tests/product-order-persistence.spec.js](trial/tests/product-order-persistence.spec.js) は、両画面幅で3種類の保存・再読み込み・タブ再オープン、検索語の非復元、0件・1件での保存、クリア・全削除、未対応値を検証します。あわせて、Storage API境界の取得・読取・書込例外、タブ間で即時同期しないこと、復元後のキーボード操作（既存のモバイルUIエミュレーションを両画面幅で使用）も検証します。OSの一時ディレクトリに永続プロファイルを作成し、Chromiumプロセスを終了・再起動して同じURLで復元することや、別プロファイルへ引き継がないことも確認します。storageStateの注入を再起動の代用にはしません。保存例外はブラウザー内のAPIに注入するテストであり、ブラウザー設定による実際の保存拒否を検証したとは扱いません。
+[trial/tests/product-search.spec.js](trial/tests/product-search.spec.js) は、同じ2画面幅で上記の入力・結果・順序を検証します。キーボードだけの移動や入力ごとの更新、全削除による復帰と再検索、各状態の件数表示と検索欄のフォーカスも確認します。並び順の切り替え、検索との組み合わせ、同じ読みの相対順も同じ画面処理で検証します。商品コードの昇順は、コードの重複・大文字小文字・桁数の違いを含む6件の入力HTMLへ差し替え、コード単位の比較順と、同じコードでの元の相対順を固定の期待値で検証します。タッチ環境ではselectをtapして開き、選択の確定はキーボードで行います。これは実機の選択UIへのタップ検証ではありません。デスクトップの標準selectのキー操作は、実ブラウザで補足確認します。
+[trial/tests/product-order-persistence.spec.js](trial/tests/product-order-persistence.spec.js) は、4種類の並び順（元の順序、商品名の昇順・降順、商品コードの昇順）それぞれの即時保存、再読み込み後の復元、検索語の非復元を検証します。検索結果が0件・1件・3件の状態での保存と、クリア・全削除後の順序維持、未対応値（`unsupported`、前後に空白のある `descending`、`code-descending`）も検証します。あわせて、Storage API境界の取得・読取・書込例外と、保存に成功した値を例外のない別タブで読み直すこと、タブ間で即時同期しないことを検証します。これらの保存境界はdesktopだけで検証し、復元後のselectのキーボード操作はmobileで検証します。ブラウザーの終了と再起動、別プロファイルへの非引き継ぎ、並び順ごとのタブの開き直しは個別に検証しません。これらは再読み込みと同じ読み込み時の復元処理と、localStorageのブラウザー側の保証に依存するためです（[テストの振る舞い確認と整理](trial/evidence/test-behavior-audit.md#全件再精査後の追加整理)）。保存例外はブラウザー内のAPIに注入するテストであり、ブラウザー設定による実際の保存拒否を検証したとは扱いません。
 実装のデータを期待値として取り込まず、再試行で失敗を隠しません。
-Esc操作は既存のdesktop・mobileプロジェクトで検証します。検索結果あり・該当なし・空欄の各状態と3種類の並び順を組み合わせ、全件復帰、件数、該当なし表示の解除、並び順保持、検索欄のフォーカス、再検索を確認します。mobileはモバイル画面・タッチ設定でのキー入力検証であり、実機のソフトウェアキーボード対応を保証しません。
+Esc操作は既存のdesktop・mobileプロジェクトで検証します。商品名の降順を選んだ状態で、検索結果あり・該当なしからの全件復帰、件数、該当なし表示の解除、並び順保持、検索欄のフォーカス、再検索を確認します。商品コードの昇順はEsc操作の検証に含めません。空欄でのEscはレビュー用キャプチャの撮影中に状態を確認しますが、共通checkのE2Eには含みません。mobileはモバイル画面・タッチ設定でのキー入力検証であり、実機のソフトウェアキーボード対応を保証しません。
 Firefox・WebKit・実機・支援技術・日本語IMEの変換途中の動作はこのE2Eの検出範囲外です。
 
 スクリーンショットの再取得（E2Eも実行）:
@@ -178,13 +178,14 @@ SHARED_HARNESS=$(realpath "$(dirname "$IMPLEMENT_SKILL")/../..")
 bun "$SHARED_HARNESS/scripts/capture/capture.ts" trial/capture.spec.js trial/playwright.config.js /absolute/path/to/capture-output
 ```
 
-[trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での全角コード検索（大小文字混在・前後空白を含む）、`ＮＯＴＥ` の2件、`ＮＯＴＥ－９９９` と `ﾉｰﾄ` の0件、Escでの全件復帰を撮影します。全角の入力値が残ることと、商品の表示・件数・並び順を確認できます。その後、検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。共有アダプターは既存の [trial/playwright.config.js](trial/playwright.config.js) のprojects・画面幅・webServerを再利用し、出力先を `CAPTURE_OUTPUT` としてspecへ渡します。PNGとWebMだけをその直下へ保存し、動画contextを閉じて確定します。runnerの設定・レポート・一時生成物もcheckout外へ出力します。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。`trial/capture.config.js` と `trial/package.json` の `capture` は商品側の直接撮影用として保持します。
+[trial/capture.spec.js](trial/capture.spec.js) は、降順の選択から検索、再読み込みを経て、降順の復元（検索欄が空で全4件表示）までの操作を撮影します。あわせて、降順での全角コード検索（大小文字混在・前後空白を含む）、`ＮＯＴＥ` の2件、`ＮＯＴＥ－９９９` と `ﾉｰﾄ` の0件、Escでの全件復帰を撮影します。全角の入力値が残ることと、商品の表示・件数・並び順を確認できます。その後、検索結果あり・該当なし・空欄からEscで全件復帰し、再検索する操作も撮影します。また、商品コードの昇順を選んで再読み込みし、検索欄が空で全4件が商品コード順に復元された状態を画像で撮影します。共有アダプターは既存の [trial/playwright.config.js](trial/playwright.config.js) のprojects・画面幅・webServerを再利用し、出力先を `CAPTURE_OUTPUT` としてspecへ渡します。PNGとWebMだけをその直下へ保存し、動画contextを閉じて確定します。runnerの設定・レポート・一時生成物もcheckout外へ出力します。撮影中にcheckoutへ画像・動画・レポートを書き込むことはありません。`trial/capture.config.js` と `trial/package.json` の `capture` は商品側の直接撮影用として保持します。
 
 ホストが収集する最終媒体の参照先（取得状況は各検証記録を参照）:
 
 | 状態 | デスクトップ | モバイル |
 | --- | --- | --- |
 | 降順を復元した全件表示 | [画像](trial/evidence/generated/product-order-restored-desktop.png) | [画像](trial/evidence/generated/product-order-restored-mobile.png) |
+| 商品コードの昇順を復元した全件表示 | [画像](trial/evidence/generated/product-order-code-ascending-restored-desktop.png) | [画像](trial/evidence/generated/product-order-code-ascending-restored-mobile.png) |
 | 選択→検索→再読み込み→復元 | [動画](trial/evidence/generated/product-order-restore-desktop.webm) | [動画](trial/evidence/generated/product-order-restore-mobile.webm) |
 | 該当なしからEscで全件復帰（降順・検索欄にフォーカス） | [画像](trial/evidence/generated/product-search-escape-cleared-desktop.png) | [画像](trial/evidence/generated/product-search-escape-cleared-mobile.png) |
 | `ＮＯＴＥ－００１` で青いノート1件（入力値を保持） | [画像](trial/evidence/generated/product-search-fullwidth-code-desktop.png) | [画像](trial/evidence/generated/product-search-fullwidth-code-mobile.png) |

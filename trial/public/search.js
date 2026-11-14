@@ -39,20 +39,33 @@ const order = document.getElementById("product-order");
 const collator = new Intl.Collator("ja");
 const orderStorageKey = "product-order";
 
+function compareProductCodes(a, b) {
+  // UTF-16のコード単位で比べる。大小文字・全角半角・数字の桁は変換しない。
+  const codeA = a.cells[1].textContent;
+  const codeB = b.cells[1].textContent;
+  if (codeA < codeB) return -1;
+  return codeA > codeB ? 1 : 0;
+}
+
+// toSortedは安定ソートのため、比較結果が同じ行は元の順序を保つ。
+const comparators = {
+  ascending: (a, b) => collator.compare(a.dataset.reading, b.dataset.reading),
+  descending: (a, b) => collator.compare(b.dataset.reading, a.dataset.reading),
+  "code-ascending": compareProductCodes,
+};
+
 function readOrder() {
   try {
     const saved = window.localStorage.getItem(orderStorageKey);
-    return ["original", "ascending", "descending"].includes(saved) ? saved : "original";
+    return ["original", ...Object.keys(comparators)].includes(saved) ? saved : "original";
   } catch {
     return "original";
   }
 }
 
 function updateOrder() {
-  const direction = order.value === "descending" ? -1 : 1;
-  const ordered = order.value === "original" ? rows : rows.toSorted((a, b) =>
-    direction * collator.compare(a.dataset.reading, b.dataset.reading),
-  );
+  const compare = comparators[order.value];
+  const ordered = compare ? rows.toSorted(compare) : rows;
   document.querySelector("tbody").append(...ordered);
 }
 

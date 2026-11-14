@@ -9,12 +9,12 @@ const allProducts = [
 ];
 const notes = [["青いノート", "NOTE-001"], ["赤いノート", "NOTE-002"]];
 
-async function expectProducts(page, products) {
+async function expectProducts(page, products, total = 4) {
   const table = page.getByRole("table", { name: "商品一覧", exact: true });
   await expect(table.getByRole("row")).toHaveCount(products.length + 1);
   await expect(table.getByRole("rowheader")).toHaveText(products.map(([name]) => name));
   await expect(table.getByRole("cell")).toHaveText(products.map(([, code]) => code));
-  const resultCount = page.getByText(`全4件中${products.length}件を表示`, { exact: true });
+  const resultCount = page.getByText(`全${total}件中${products.length}件を表示`, { exact: true });
   await expect(resultCount).toBeVisible();
   const emptyMessage = page.getByText("該当する商品はありません", { exact: true });
   if (products.length === 0) {
@@ -176,4 +176,30 @@ test("元の順序と名前順が異なる商品でも、昇順・降順・元�
   await expectProducts(page, reversedProducts);
   await order.selectOption("original");
   await expectProducts(page, suppliedOrder);
+});
+
+test("商品コード：昇順はコード単位で比べ、同じコードでは元の相対順を保つ", async ({ page }) => {
+  // 重複・大文字小文字・桁数の違いを含む入力HTMLだけを差し替える。期待値は要求から定めた固定値。
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>
+      <tr data-reading="ほうがんのーと"><th scope="row">方眼ノート</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="ちいさいのーと"><th scope="row">小さいノート</th><td><code>note-1</code></td></tr>
+      <tr data-reading="むじのーと"><th scope="row">無地ノート</th><td><code>NOTE-2</code></td></tr>
+      <tr data-reading="けいせんのーと"><th scope="row">罫線ノート</th><td><code>NOTE-10</code></td></tr>
+      <tr data-reading="てんせんのーと"><th scope="row">点線ノート</th><td><code>Note-3</code></td></tr>
+      <tr data-reading="しろいまぐ"><th scope="row">白いマグ</th><td><code>MUG-001</code></td></tr>
+    </tbody>`) });
+  });
+  await page.goto("/");
+  await page.getByLabel("並び順", { exact: true }).selectOption("code-ascending");
+  // 大文字は小文字より前、NOTE-10はNOTE-2より前。同じNOTE-10は元の順序（方眼→罫線）のまま。
+  await expectProducts(page, [
+    ["白いマグ", "MUG-001"],
+    ["方眼ノート", "NOTE-10"],
+    ["罫線ノート", "NOTE-10"],
+    ["無地ノート", "NOTE-2"],
+    ["点線ノート", "Note-3"],
+    ["小さいノート", "note-1"],
+  ], 6);
 });

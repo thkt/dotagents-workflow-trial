@@ -161,3 +161,42 @@ test("並び順の選択から再読み込み・復元までを撮影する", as
     )),
   }));
 });
+
+test("商品コード：昇順を選んで再読み込みし、全4件の復元を撮影する", async ({ browser, baseURL, viewport, isMobile, hasTouch }, testInfo) => {
+  const startedAt = new Date().toISOString();
+  const sourceFiles = await Promise.all([
+    "../package.json", "../bun.lock", "public/index.html", "public/search.js",
+    "public/styles.css", "server.js", "playwright.config.js", "capture.spec.js",
+  ].map((path) => fingerprint(path, new URL(path, import.meta.url))));
+  const screenshotName = `product-order-code-ascending-restored-${testInfo.project.name}.png`;
+  await mkdir(output, { recursive: true });
+  const context = await browser.newContext({ baseURL, viewport, isMobile, hasTouch });
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    const order = page.getByLabel("並び順", { exact: true });
+    await expect(order).toHaveValue("original");
+    await order.selectOption("code-ascending");
+    await page.reload();
+    await expect(order).toHaveValue("code-ascending");
+    await expect(page.getByLabel("商品名・商品コードで検索", { exact: true })).toHaveValue("");
+    await expect(page.getByText("全4件中4件を表示", { exact: true })).toBeVisible();
+    await expect(page.getByRole("table").getByRole("rowheader")).toHaveText([
+      "白いマグ", "青いノート", "赤いノート", "黒いペン",
+    ]);
+    await expect(page.getByRole("table").getByRole("cell")).toHaveText([
+      "MUG-001", "NOTE-001", "NOTE-002", "PEN-001",
+    ]);
+    await expect(page.getByText("該当する商品はありません", { exact: true })).toBeHidden();
+    await page.screenshot({ path: join(output, screenshotName), fullPage: true });
+  } finally {
+    await context.close();
+  }
+  console.log("CAPTURE_PROVENANCE " + JSON.stringify({
+    startedAt, completedAt: new Date().toISOString(), result: "passed",
+    project: testInfo.project.name, baseURL, viewport, isMobile, hasTouch,
+    browserVersion: browser.version(), output,
+    sourcePathBase: "trial/", sourceFiles,
+    media: [await fingerprint(`trial/evidence/generated/${screenshotName}`, join(output, screenshotName))],
+  }));
+});
